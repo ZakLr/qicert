@@ -1,8 +1,6 @@
 """Shared helpers for bench modules. ASCII-only output (portable to any
 terminal/CI encoding; the clean-env contract must never crash on stdout)."""
 
-SMOKE_TABLES = frozenset()  # modules opt in via their own SMOKE set
-
 
 def wants(rows: str, table: str, smoke: frozenset[str]) -> bool:
     """Row-selection contract: --rows=all | --rows=<table> | --rows=smoke."""

@@ -14,5 +14,5 @@ def run(rows: str, out: list[str]) -> None:
 
     if wants(rows, "lyapunov-survival", SMOKE):
         out += table_header("N5 - Layer-2b Lyapunov-margin degradation curve + predictor",
-                            ["ID", "Track", "Ratio r", "Survival(r)", "Predicted r*", "Status"])
+                            ["ID", "Experiment", "Seeds", "GPU-h", "Status"])
         out.append(pending_row("N5", "degradation curve + bond-spectrum predictor", "3", "6"))
