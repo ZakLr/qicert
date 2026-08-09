@@ -1,0 +1,14 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qicert per-family pruning certificate (compiler pass 6)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["family", "predicted_cost", "measured_delta"],
+    "properties": {
+      "family": { "type": "string" },
+      "predicted_cost": { "type": "number", "description": "||sum_{a in F} c_a||_1" },
+      "measured_delta": { "type": "number" }
+    }
+  }
+}

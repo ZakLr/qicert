@@ -1,0 +1,15 @@
+name: qicert
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+      - -e .
+      - numpy>=1.26
+      - torch>=2.2
+      # --- Phase-0 pins (freeze at Q19/Q22, then never drift) ---
+      # - cuda-quantum==x.y.z      # Kaggle image vs local build — pin on first working install
+      # - pennylane==a.b.c
+      # - tntorch==d.e.f           # reference path only; compressed path is our CUDA-Q kernel
+      # Julia + SumOfSquares.jl behind a small CLI (no runtime Julia dependency)

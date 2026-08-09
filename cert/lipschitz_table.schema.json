@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "qicert Layer-1 Lipschitz table (N3)",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "required": ["layer", "pareto_ratio", "lipschitz", "input_box_diam", "certified_safe_set_pct"],
+    "properties": {
+      "layer": { "type": "string" },
+      "pareto_ratio": { "type": "number" },
+      "lipschitz": { "type": "number" },
+      "input_box_diam": { "type": "number" },
+      "certified_safe_set_pct": { "type": "number" }
+    }
+  }
+}

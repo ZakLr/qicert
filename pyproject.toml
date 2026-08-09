@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qicert"
+version = "0.1.0.dev0"
+description = "Certified quantum-inspired compression for VLAMs: exact bounds, provable pruning, formal safety tails."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "ZakLr" }]
+dependencies = [
+    "numpy>=1.26",
+    "torch>=2.2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pybind11>=2.12",
+]
+
+[tool.setuptools]
+packages = ["qicert", "qicert.backbones", "qicert.bench"]
+
+[tool.setuptools.package-dir]
+qicert = "python/qicert"
+"qicert.backbones" = "python/qicert/backbones"
+"qicert.bench" = "bench"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Tests / tooling
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# C++ / CMake
+cmake-build-*/
+build_cpp/
+*.o
+*.a
+*.so
+
+# Local artifacts
+*.log
+*.ipynb_checkpoints/
+.DS_Store
