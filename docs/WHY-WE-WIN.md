@@ -48,12 +48,13 @@ The induced linear map `x ↦ Wx` is multilinear, and its **exact** spectral (Li
 constant is
 
 ```
-L(W) = ∏ᵢ ‖Gᵢ‖₂          (exact; computed in O(Σ rᵢ²nᵢ) per layer)
+L(W) = ∏ᵢ ‖Gᵢ‖₂          (bound — the exact product of core norms, not the network's true Lipschitz constant)
 ```
 
 where `‖·‖₂` is the spectral norm of each core viewed as an operator. This is not an
-estimate and not a bound needing data: it is an exact function of the cores themselves.
-The product is deliberately conservative — and the **exact** per-layer operator norm
+estimate and not a bound needing data: it is an exact function of the cores themselves —
+conservative by construction, which is why the exact per-layer norm below matters.
+The **exact** per-layer operator norm
 ‖W‖₂ is available at the same cost class: power iteration on the TT contraction runs
 matvecs `x ↦ Wx` in `O(Σ rᵢ₋₁ nᵢ² rᵢ)` per step (standard TT contraction order), never
 forming the dense matrix. So every
@@ -62,10 +63,10 @@ non-orthogonality across layers — is *measured* as a tightness ratio `κ` at N
 printed at every Pareto point. A conservative certificate shrinks the certified-safe-set
 column; it cannot falsify it, and that column still doesn't exist for INT8 at any ratio.
 Chaining through the network with 1-Lipschitz activations (ReLU et al.), the whole map
-`F̃` has exact Lipschitz constant
+`F̃` has exact composition bound
 
 ```
-L(F̃) = ∏ over all layers ∏ over all cores ‖Gᵢ‖₂
+L(F̃) = ∏ over layers ‖W_l‖₂    (each factor exact by power iteration)
 ```
 
 and with the input box `B` from the slice specification this gives an **exact safe-set
@@ -278,9 +279,10 @@ demoted on 2026-08-07.
 **Q: "Your Lipschitz bound is loose."**
 A: Correct — and quantified. The core-product bound is deliberately conservative; the
 exact per-layer norm ‖W‖₂ is computed by power iteration on the TT contraction (matvec
-cost O(Σrᵢ²nᵢ), dense matrix never formed), so every layer factor in L(F̃) is tight, and
-the residual gap to sup‖∇F̃‖₂ is measured as the tightness ratio κ at N3, printed on
-every Pareto point. Layer 2a (SOS boxes) is tight where the global bound is loose. The
+cost O(Σrᵢ₋₁nᵢ²rᵢ), dense matrix never formed), so every layer factor in L(F̃) is tight, and
+the residual gap to the network's true Lipschitz constant is estimated as the tightness
+ratio κ (power iteration at adversarial sample points in the box) at N3, printed on every
+Pareto point. Layer 2a (SOS boxes) is tight where the global bound is loose. The
 layers answer different questions (Sentence B of `01-thesis.md`); non-emptiness of the
 certified safe set is a measured column gated by R2, never an assumption.
 

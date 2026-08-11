@@ -79,8 +79,8 @@ $\rightarrow$ certify $\rightarrow$ monitor). The contributions are:
 
 \begin{enumerate}
 \item \textbf{Exact-certificate compression}: QTT cores double as the objects
-whose spectral norms yield an exact global Lipschitz constant
-(Sec.~\ref{sec:cert}), giving a certified-safe-set column that no
+of an exact global Lipschitz bound --- exact per-layer factors, residual gap
+measured (Sec.~\ref{sec:cert}) --- giving a certified-safe-set column that no
 quantization-based baseline can produce at any compression ratio.
 \item \textbf{Compilation-as-identity}: cross-modal interaction tensors are
 grouped into commuting Pauli families, simultaneously diagonalized by single
@@ -200,8 +200,9 @@ where each factor is the exact per-layer norm (power iteration), not the
 core-product bound. The residual gap between $L(\F)$ and
 $\sup_x \norm{\nabla \F(x)}_2$ --- activation interleaving and non-orthogonality
 across layers --- is \emph{measured}, not assumed: N3 registers the tightness
-ratio $\kappa = L(\F)\,/\,\sup_{x\in B}\norm{\nabla \F(x)}_2$ (denominator by
-power iteration on the full TT network) and prints it at every Pareto point.
+ratio $\kappa = L(\F)/\widehat{L}_\nabla$, where $\widehat{L}_\nabla$ estimates
+$\sup_{x\in B}\norm{\nabla \F(x)}_2$ by power iteration on the full TT network
+at adversarial sample points in $B$, and prints it at every Pareto point.
 With the input box $B$ from the slice spec this yields the \emph{exact
 safe-set certificate}
 \begin{equation}
@@ -362,8 +363,8 @@ deterministic function of the seed:
 O: \mathrm{seed} \mapsto \mathrm{scenario} \mapsto \mathrm{rollout}(\pi)
 \mapsto \rho \mapsto [\rho < 0].
 \end{equation}
-The oracle is a \emph{rule-based} STL evaluator over the spec library
-(Q21) --- a cheap polynomial program, not a neural rollout --- and the
+The oracle is a \emph{rule-based} STL evaluator over the AD/robotics STL
+specification library --- a cheap polynomial program, not a neural rollout --- and the
 amplitude register holds only the verdict bit $[\rho<0]$ (or $\log_2 b$ bits
 for $b$-bin robustness histograms). The neural network is never placed inside
 the simulated quantum circuit; oracle queries count STL evaluations, and the
