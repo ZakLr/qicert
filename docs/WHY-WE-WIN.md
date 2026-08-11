@@ -94,7 +94,7 @@ compression granularity, and **the exact Lipschitz product holds unchanged for Q
 compression target is ~4× at ≤5% accuracy drop (aiming well beyond the 2× threshold) with
 certificates still attached.
 
-### Asymmetry 2 — Measurement: quadratic query savings on the rarest, most-scored quantity
+### Asymmetry 2 — Measurement: quadratic query-complexity savings under a realized oracle
 
 The challenge's safety metric is the **tail**: Pr[failure] on long-tail scenarios with
 `p ~ 10⁻⁴–10⁻⁶`. Everyone else will Monte-Carlo ~200 episodes and print a bare percentage.
@@ -132,9 +132,11 @@ guard 3 below, never assumed.
 3. **End-to-end race, not a priori speedup.** The claim is framed as *query-complexity
    against a counting problem* with the oracle cost model printed per benchmark (Sentence
    A in `01-thesis.md`) — and whether the idealized advantage survives end-to-end is
-   *measured*: IQAE (certified tail) races RESTART+GEV (empirical tail) at matched
-   **total** budget including the printed oracle cost, the crossover point is a reported
-   N6 output, and R4 pre-registers the demotion. Layers 1–2 stand independently.
+   *measured*: IQAE (certified tail) races RESTART+GEV on the **same certified estimand**
+   (RESTART runs the certified predicate too, so R4 is well-posed) at matched **total**
+   budget including the printed oracle cost; the empirical tail from true rollouts is
+   reported alongside, the crossover point is a reported N6 output, and R4 pre-registers
+   the demotion. Layers 1–2 stand independently.
 4. **Bayesian credible intervals**, not point estimates — Grinko-style posterior updating
    on the amplitude angle; the safety table carries posteriors, the document structure an
    ISO 26262 assessor produces.
@@ -305,8 +307,9 @@ compressed cores and the perturbation (Layer-1 arithmetic; Layer-2a SOS box marg
 small reversible arithmetic/comparison circuit, never a neural rollout; circuit size and
 query budget are printed per benchmark. Layer 3 is *offline evaluation-time* — the ≤100
 ms budget governs the runtime path (compiled diagonal kernels + monitor), which never
-executes IQAE. Pre-registered (R4): if at matched total budget our credible interval is
-wider than RESTART's, we print that and the safety suite still beats every naive
+executes IQAE. Pre-registered R4 — defined on a common estimand (RESTART runs the certified predicate
+too): if at matched total budget our credible interval on p_cert is wider than RESTART's
+on the same quantity, we print that and the safety suite still beats every naive
 competitor via Layers 1–2 + the strong classical arm.
 
 **Q: "Your IQAE oracle is a trap: either a neural rollout inside the circuit (exponential
@@ -318,13 +321,15 @@ compressed cores and the perturbation — Layer-1 margins are arithmetic over co
 and box geometry; Layer-2a margins are the exported per-box SOS constants. A small
 reversible arithmetic/comparison circuit; the policy is deliberately outside the
 circuit. (2) No lookup table: the scenario set is a structured product domain, so the
-uniform superposition is free — `H⊗log₂|S|`, no QRAM, and the full AE circuit uses
-`log₂|S| + O(1)` qubits, keeping simulated state-vector cost at O(|S|) scale. (3)
+uniform superposition is free — `H⊗log₂|S|`, no QRAM; reversible arithmetic for the
+predicates adds O(log₂|S|) ancillas, so the full AE circuit uses O(log₂|S|) qubits and
+simulated state-vector cost is polynomial in |S|. (3)
 Conservative direction: sound certificates give P(true failure) ≤ P(certified
 violation), so the estimated quantity is an upper bound on the scored one, stated as
 such. And we claim no end-to-end speedup a priori: the race against RESTART+GEV at
 matched total budget (including the printed oracle cost) is pre-registered, the
-crossover is a reported N6 output, and R4 demotes IQAE if it loses.
+crossover is a reported N6 output, and R4 — defined on the same certified estimand —
+demotes IQAE if it loses.
 
 **Q: "Clifford circuits are classically simulable (Gottesman–Knill). You relabeled
 classical matrix algebra as quantum — quantum-washing."**

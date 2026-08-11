@@ -280,7 +280,9 @@ Safety requirements are Signal-Temporal-Logic (STL) formulas with quantitative
 robustness $\rho$ (Fainekos--Pappas semantics; $\rho>0$ = satisfied with
 margin)~\cite{stl}. The challenge metric ``\% episodes in a safe equilibrium''
 is the special case $\Pr[\rho \ge 0]$; we report the full $\rho$ distribution
-and its tails.
+and its tails. The scored metric is estimated empirically by the classical arms;
+the Q-arm's certified bound (Sec.~\ref{sec:safety}) is its conservative
+companion, stated with its direction.
 
 % ---------------------------------------------------------------------------
 \section{The Commuting-Pauli Interaction Compiler}
@@ -379,8 +381,9 @@ state-preparation (QRAM) bottleneck. Our design avoids both horns:
 product domain (perturbation ranges per STL predicate, per the Sec.~5.2
 sampling distribution), so the uniform superposition over $\log_2|S|$ seed
 qubits is $H^{\otimes\log_2|S|}$ --- no amplitude-encoding of a lookup table.
-The full AE circuit uses $\log_2|S| + O(1)$ qubits, keeping simulated
-state-vector cost at $O(|S|)$ scale, tractable at our scenario counts under
+Reversible arithmetic for the predicates adds $O(\log|S|)$ ancillas, so the
+full AE circuit uses $O(\log|S|)$ qubits and simulated state-vector cost is
+polynomial in $|S|$ ($|S|^{O(1)}$) --- tractable at our scenario counts under
 the challenge's simulation mandate.
 \item \emph{Closed-form certificate-margin predicates.} The Q-arm oracle
 computes the \emph{certified} verdict $\tilde\rho(s) =
@@ -406,7 +409,7 @@ diagonal kernels + monitor), which never executes an amplitude-estimation loop.
 \subsection{The three-arm race}
 \begin{table}[!t]
 \caption{Three-arm safety estimation (pre-registered structure; complexity at
-$p=10^{-5}$).}
+empirical $p=10^{-5}$; the Q-arm's estimand is $p_{\mathrm{cert}}$).}
 \label{tab:threearm}
 \centering
 \small
@@ -429,12 +432,15 @@ claim no end-to-end speedup a priori: the race measures it. The Grover depth
 $1/\sqrt{p}$ is real simulator cost at our budgets --- precisely why the race
 is pre-registered (R4) and the claim never assumes quantum hardware. The arms
 estimate complementary quantities: Q estimates the certified (conservative)
-violation probability on the cheap oracle above; C-strong estimates the
-empirical failure probability from true rollouts. They are compared at matched
-\emph{total} budget, including the printed oracle compilation cost, and the
-crossover point (oracle complexity at which the classical arm wins) is a
-reported output of N6. If Q loses, we print that (pre-registered R4); Layers
-1--2 stand independently. Adjacent QAE applications include structural
+violation probability $p_{\mathrm{cert}}$ on the cheap oracle above; C-strong
+estimates the empirical failure probability from true rollouts. R4 is defined
+on a common estimand: RESTART+GEV is also run on the \emph{certified}
+predicate itself, so ``Q loses'' means IQAE's credible interval on
+$p_{\mathrm{cert}}$ is wider than RESTART's on the same quantity at matched
+total budget (printed oracle cost included); the empirical tail from true
+rollouts is reported alongside as the companion number. The crossover point
+(oracle complexity at which the classical arm wins) is a reported output of
+N6. If Q loses, we print that; Layers 1--2 stand independently. Adjacent QAE applications include structural
 reliability~\cite{tabarraei}, flow-based failure sampling~\cite{quantfp}, and
 MPPI control~\cite{mppi}; Tabarraei and Das--Tanaka use lookup-table oracles
 over finite ensembles --- precisely the case the oracle dilemma flags --- and
@@ -605,7 +611,7 @@ Latency (ms, stated profile) & $\le$100 & measured & measured \\
 \toprule
 \textbf{Arm} & \textbf{Output} \\
 \midrule
-Q (IQAE) & credible interval on $p=\Pr[\rho<0]$ \\
+Q (IQAE) & credible interval on $p_{\mathrm{cert}}=\Pr[\mathrm{margin}_{\mathrm{cert}}<0]$ (conservative) \\
 C-strong (RESTART+GEV) & profile-likelihood CI on $p$ \\
 C-naive (MC) & cost shown; Clopper--Pearson CI \\
 Scenario-opt & $(N,\varepsilon,\beta)$ triple \\
@@ -704,8 +710,9 @@ from a fresh virtualenv, verified by N14.
 
 We submit objects the baselines structurally cannot produce: exact certificates
 that are functions of the compressed cores, an exact compilation identity with
-per-family provable pruning, quadratic query savings on the rarest scored
-quantity, and a package that reproduces every table from a clean environment.
+per-family provable pruning, quadratic query-complexity savings on the rarest
+scored quantity under a realized, priced oracle, and a package that reproduces
+every table from a clean environment.
 All claims are either theorems, structural properties, or pre-registered
 measurements with kill criteria --- the honesty contract of Sec.~5.5
 operationalized. The full argument, theory, and risk register are maintained in
