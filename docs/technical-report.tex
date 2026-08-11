@@ -86,10 +86,13 @@ quantization-based baseline can produce at any compression ratio.
 grouped into commuting Pauli families, simultaneously diagonalized by single
 Cliffords, and evaluated exactly; dropping a family costs an exact, printed
 error $\norm{\Sigma_{a\in F_j} c_a}_1$ (Sec.~\ref{sec:compiler}).
-\item \textbf{Quadratic query savings on the safety tail}: rare-event failure
-probability is estimated by iterative quantum amplitude estimation (IQAE) with
-Bayesian credible intervals, raced against RESTART+GEV and closed by
-Campi--Garatti scenario-optimization and conformal prediction (Sec.~\ref{sec:safety}).
+\item \textbf{Quadratic query-complexity savings on the safety tail (realized
+oracle)}: the certified failure probability is estimated by iterative quantum
+amplitude estimation (IQAE) with Bayesian credible intervals, over a
+structured scenario domain with a closed-form certificate-margin oracle
+(Sec.~\ref{sec:safety}), raced end-to-end against RESTART+GEV at matched total
+cost and closed by Campi--Garatti scenario-optimization and conformal
+prediction.
 \item \textbf{A runnable, self-reproducing artifact}: \texttt{qicert}
 (``certified quantum-inspired compression'') reproduces every table from a clean
 environment and emits its own hardware pathway (qubits, depth, shots).
@@ -360,18 +363,45 @@ printed certificate, and it emits no hardware table.
 The Sec.~5.2 seeded-scenario requirement makes the simulator a reversible
 deterministic function of the seed:
 \begin{equation}
-O: \mathrm{seed} \mapsto \mathrm{scenario} \mapsto \mathrm{rollout}(\pi)
-\mapsto \rho \mapsto [\rho < 0].
+O_{\mathrm{true}}: \mathrm{seed} \mapsto \mathrm{scenario} \mapsto
+\mathrm{rollout}(\pi) \mapsto \rho \mapsto [\rho < 0],
 \end{equation}
-The oracle is a \emph{rule-based} STL evaluator over the AD/robotics STL
-specification library --- a cheap polynomial program, not a neural rollout --- and the
-amplitude register holds only the verdict bit $[\rho<0]$ (or $\log_2 b$ bits
-for $b$-bin robustness histograms). The neural network is never placed inside
-the simulated quantum circuit; oracle queries count STL evaluations, and the
-full query budget is printed per benchmark. Layer 3 is \emph{offline
-evaluation-time}: the $\le 100$\,ms real-time budget governs the runtime path
-of Sec.~\ref{sec:arch} (compiled diagonal kernels + monitor), which never
-executes an amplitude-estimation loop.
+the object the classical arms evaluate. Amplitude estimation's end-to-end value
+turns entirely on the oracle it can realize, so we state that explicitly. A
+coherent oracle that evaluates a \emph{neural} rollout inside the circuit would
+carry policy and dynamics as reversible subcircuits --- prohibitive depth on
+hardware and exponential state-vector cost on simulators. A coherent oracle
+that merely \emph{loads} $N$ pre-computed outcomes faces the $\Omega(N)$
+state-preparation (QRAM) bottleneck. Our design avoids both horns:
+
+\begin{enumerate}
+\item \emph{Structured domain, free preparation.} The seeded scenario set is a
+product domain (perturbation ranges per STL predicate, per the Sec.~5.2
+sampling distribution), so the uniform superposition over $\log_2|S|$ seed
+qubits is $H^{\otimes\log_2|S|}$ --- no amplitude-encoding of a lookup table.
+The full AE circuit uses $\log_2|S| + O(1)$ qubits, keeping simulated
+state-vector cost at $O(|S|)$ scale, tractable at our scenario counts under
+the challenge's simulation mandate.
+\item \emph{Closed-form certificate-margin predicates.} The Q-arm oracle
+computes the \emph{certified} verdict $\tilde\rho(s) =
+[\mathrm{margin}_{\mathrm{cert}}(s) < 0]$ (fusion joint 3): Layer-1 margins
+are arithmetic over core norms and box geometry; Layer-2a margins are the
+exported per-box SOS constants. Both are small reversible
+arithmetic/comparison circuits of printed size --- never a neural rollout; the
+policy is deliberately outside the circuit.
+\item \emph{Conservative direction.} Sound certificates give
+$\Pr[\mathrm{true\ failure}] \le \Pr[\tilde\rho(s)<0]$, so the Q-arm
+estimates an upper bound on the scored quantity --- the correct ISO 26262
+object, and the direction is stated on every reported number.
+\end{enumerate}
+
+Oracle circuit size (qubits, depth, gates) and the query budget are printed per
+benchmark, so the claim is auditable: a \emph{query-complexity advantage under
+an explicitly priced, realized oracle}. If the certificate stack degrades
+(R2/R3), the cheap-predicate premise degrades with it and the classical arms
+carry the section. Layer 3 is \emph{offline evaluation-time}: the $\le 100$\,ms
+real-time budget governs the runtime path of Sec.~\ref{sec:arch} (compiled
+diagonal kernels + monitor), which never executes an amplitude-estimation loop.
 
 \subsection{The three-arm race}
 \begin{table}[!t]
@@ -392,18 +422,24 @@ C-naive & Monte-Carlo counting & $\sim 10^6{+}$ (cost shown, not run) \\
 \end{table}
 
 Amplitude estimation estimates $p$ to absolute error $\varepsilon$ with
-$O(1/\varepsilon)$ oracle queries versus Monte-Carlo's $O(1/\varepsilon^2)$ ---
-quadratic query savings on the rarest scored quantity. The claim is framed as
-query-complexity against a counting problem, with the oracle cost model printed
-per benchmark. \emph{Simulation honesty:} the Grover depth $1/\sqrt{p}$ is
-real simulator cost at our classical budgets --- that is precisely why the race
-against the strong classical arm at matched query budget is pre-registered
-(R4), and the claim never assumes quantum hardware. If Q loses to C-strong at
-our budgets, we print that; Layers 1--2 stand independently. Adjacent QAE
-applications include structural reliability \cite{tabarraei}, flow-based
-failure sampling \cite{quantfp}, and MPPI control \cite{mppi}; our in-domain
-delta is VLAM/AD safety certification fused with exact structural
-certificates.
+$O(1/\varepsilon)$ \emph{idealized-oracle} queries versus Monte-Carlo's
+$O(1/\varepsilon^2)$ --- quadratic query-complexity savings on the rarest
+scored quantity, standard in the QAE literature~\cite{iqae,tabarraei,mppi}. We
+claim no end-to-end speedup a priori: the race measures it. The Grover depth
+$1/\sqrt{p}$ is real simulator cost at our budgets --- precisely why the race
+is pre-registered (R4) and the claim never assumes quantum hardware. The arms
+estimate complementary quantities: Q estimates the certified (conservative)
+violation probability on the cheap oracle above; C-strong estimates the
+empirical failure probability from true rollouts. They are compared at matched
+\emph{total} budget, including the printed oracle compilation cost, and the
+crossover point (oracle complexity at which the classical arm wins) is a
+reported output of N6. If Q loses, we print that (pre-registered R4); Layers
+1--2 stand independently. Adjacent QAE applications include structural
+reliability~\cite{tabarraei}, flow-based failure sampling~\cite{quantfp}, and
+MPPI control~\cite{mppi}; Tabarraei and Das--Tanaka use lookup-table oracles
+over finite ensembles --- precisely the case the oracle dilemma flags --- and
+our in-domain delta is the realized cheap oracle over a structured domain fused
+with exact structural certificates.
 
 \subsection{Closure}
 \textbf{Scenario optimization} (Campi--Garatti): with $N$ scenarios and
@@ -502,7 +538,7 @@ N2$'$ & Bit-ordering sensitivity (3 orders, 1 layer, 1 seed) & A & 2 \\
 N3 & Layer-1 certificate table (Lipschitz products + tightness ratio $\kappa$) & A & 2 \\
 N4 & Layer-2a SOS boxes (3 points $\times$ 2 tracks $\times$ slices) & A & 3 \\
 N5 & Layer-2b Lyapunov curve + bond-spectrum predictor & A & 6 \\
-N6 & Layer-3 safety suite (IQAE vs RESTART+GEV vs MC) & C & 8 \\
+N6 & Layer-3 safety suite (IQAE vs RESTART+GEV vs MC; oracle cost + crossover) & C & 8 \\
 N7 & Compiler exactness + prune certificates + latency & B & 6 \\
 N8 & (optional) PQC RL toy head + noise sweep & tertiary & 4 \\
 N10 & Syndrome--shadow monitor demo & monitor & 3 \\
@@ -631,10 +667,12 @@ degraded until re-run.
 \textbf{Explicit framing disclaimers.} We claim no classical speedup from the
 Clifford step (Sec.~\ref{sec:compiler}) and place amplitude estimation strictly
 offline with printed oracle costs (Sec.~\ref{sec:safety}); both are stated
-in-body so no stronger claim can be imputed. Runtime parity with classical
-baselines is an acceptance target, not an assumption: E-comp-3 ($\le 100$\,ms
-at the full compiled table) and the N14 clean-env bench are the measured
-evidence.
+in-body so no stronger claim can be imputed. No end-to-end advantage over
+classical estimators is claimed for IQAE a priori --- the pre-registered race
+at matched total budget and its measured crossover decide (Sec.~\ref{sec:safety}).
+Runtime parity with classical baselines is an acceptance target, not an
+assumption: E-comp-3 ($\le 100$\,ms at the full compiled table) and the N14
+clean-env bench are the measured evidence.
 
 \textbf{Three things that cannot kill the core claim:} (1) the exact
 Lipschitz-product certificate --- a theorem, not a benchmark; (2)

@@ -113,19 +113,31 @@ Q_AE(ε) = O(1/ε)          vs.   Q_MC(ε) = O(1/ε²)
 ```
 
 At `p ≈ 10⁻⁵`, naive Monte-Carlo needs ~10⁶–10⁷ rollouts for a relative-accurate estimate;
-amplitude estimation needs ~10²–10³ oracle queries at depth ~1/√p — the difference between
-feasible and fantasy in a 120-GPU-hour budget.
+amplitude estimation needs ~10²–10³ oracle queries at depth ~1/√p — **on the idealized
+oracle**. Whether that idealized advantage survives end-to-end is measured by the race in
+guard 3 below, never assumed.
 
-**Why the claim survives skepticism.** Three guards, all pre-registered:
-1. We race the **strongest honest classical estimator** — RESTART importance splitting +
-   GEV tail fitting — at matched budget, and report whoever wins. If Q loses at our
-   classical-simulation depth budget, we print that; the claim then rests on Layers 1–2 of
-   the certificate stack, which stand independently.
-2. The IQAE claim is framed as *query-complexity against a counting problem*, with the
-   oracle-call cost model printed per benchmark (Sentence A in `01-thesis.md`).
-3. Bayesian IQAE (Grinko-style posterior updating on the amplitude angle) gives
-   **credible intervals**, not point estimates — the safety table carries posteriors, the
-   document structure an ISO 26262 assessor produces.
+**Why the claim survives skepticism.** Four guards, all pre-registered:
+1. **The oracle is realized, not assumed.** The QAE literature's standard oracle — a
+   lookup table over pre-computed outcomes (Tabarraei; Das–Tanaka) — is exactly the
+   Ω(N) QRAM/state-preparation case a critic flags, so we do not use one. The scenario
+   set is a *structured product domain* (uniform superposition is free: `H⊗log₂|S|`, no
+   QRAM), and the oracle computes the *certificate-margin predicate* — a closed-form
+   function of the compressed cores and the perturbation (Layer-1 arithmetic; Layer-2a
+   per-box SOS constants). A small reversible arithmetic/comparison circuit of printed
+   size — **never a neural rollout**; the policy is deliberately outside the circuit.
+2. **Conservative direction, stated.** Sound certificates give P(true failure) ≤
+   P(certified violation); IQAE estimates the upper bound — the correct ISO 26262
+   object — and every reported number carries its direction.
+3. **End-to-end race, not a priori speedup.** The claim is framed as *query-complexity
+   against a counting problem* with the oracle cost model printed per benchmark (Sentence
+   A in `01-thesis.md`) — and whether the idealized advantage survives end-to-end is
+   *measured*: IQAE (certified tail) races RESTART+GEV (empirical tail) at matched
+   **total** budget including the printed oracle cost, the crossover point is a reported
+   N6 output, and R4 pre-registers the demotion. Layers 1–2 stand independently.
+4. **Bayesian credible intervals**, not point estimates — Grinko-style posterior updating
+   on the amplitude angle; the safety table carries posteriors, the document structure an
+   ISO 26262 assessor produces.
 
 ### Asymmetry 3 — Compilation: forced mathematics instead of approximation
 
@@ -186,10 +198,11 @@ claim a skeptic must cite.
 ### Pillar C — the safety evaluation engine (Section 1, Asymmetry 2)
 
 Formal STL specifications (φ₁–φ₄ AD, ψ₁–ψ₃ robotics — Q21 closed), quantitative robustness
-ρ, three-arm estimator race (IQAE vs RESTART+GEV vs naive MC, which we show the cost of
-rather than run fully), Campi–Garatti scenario-optimization confidence, conformal
-calibration, and a falsification loop that feeds discovered failures back into training
-(the tail-shrinkage figure).
+ρ, a certified-vs-empirical estimator race (IQAE on the certificate-margin oracle vs
+RESTART+GEV on true rollouts vs naive MC, which we show the cost of rather than run
+fully), Campi–Garatti scenario-optimization confidence, conformal calibration, and a
+falsification loop that feeds discovered failures back into training (the tail-shrinkage
+figure).
 
 ### The certificate stack — three layers, three questions, never confused
 
@@ -198,7 +211,7 @@ calibration, and a falsification loop that feeds discovered failures back into t
 | L1 exact algebraic | What is provable from the cores alone? | Lipschitz-product safe set + pruning certificates | global-but-loose; exact per-layer factors, κ measured |
 | L2a SOS local boxes | What is true inside each long-tail box? | moment-SOS hierarchy certificates (arXiv:2604.17563) | local but tight; SDP cost |
 | L2b Lyapunov margin | How does the certificate *degrade* with compression? | survival curve + bond-spectrum predictor | regression, not proof |
-| L3 statistical tails | What is the certified failure probability? | STL ρ tails via IQAE/RESTART+GEV, scenario-opt, conformal | distributional |
+| L3 statistical tails | What is the certified failure probability? | certified tail via IQAE (cheap certificate-margin oracle) + empirical tail via RESTART+GEV, scenario-opt, conformal | distributional; IQAE advantage measured end-to-end |
 
 The layers cross-check: if an SOS box's margin disagrees with the global bound's
 prediction, that is a *bug report line*, not a number to hide. Each arrow in the stack is a
@@ -287,14 +300,31 @@ layers answer different questions (Sentence B of `01-thesis.md`); non-emptiness 
 certified safe set is a measured column gated by R2, never an assumption.
 
 **Q: "IQAE is asymptotically better, but your simulated oracle cost is high."**
-A: Two clarifications. First, the oracle is the *rule-based* STL evaluator over the spec
-library — a cheap polynomial program, never a neural rollout inside a quantum circuit;
-queries count STL evaluations with the budget printed per benchmark, and the amplitude
-register holds only the verdict bit. Second, Layer 3 is *offline evaluation-time* — the
-≤100 ms budget governs the runtime path (compiled diagonal kernels + monitor), which
-never executes IQAE. Pre-registered (R4): if at matched query budget our credible
-interval is wider than RESTART's, we print that and the safety suite still beats every
-naive competitor via Layers 1–2 + the strong classical arm.
+A: The oracle is the *certificate-margin* predicate — a closed-form function of the
+compressed cores and the perturbation (Layer-1 arithmetic; Layer-2a SOS box margins), a
+small reversible arithmetic/comparison circuit, never a neural rollout; circuit size and
+query budget are printed per benchmark. Layer 3 is *offline evaluation-time* — the ≤100
+ms budget governs the runtime path (compiled diagonal kernels + monitor), which never
+executes IQAE. Pre-registered (R4): if at matched total budget our credible interval is
+wider than RESTART's, we print that and the safety suite still beats every naive
+competitor via Layers 1–2 + the strong classical arm.
+
+**Q: "Your IQAE oracle is a trap: either a neural rollout inside the circuit (exponential
+simulation cost) or a lookup table of pre-computed rollouts (Ω(N) state preparation).
+Both negate the quadratic speedup."**
+A: Both horns are real — which is why the oracle is neither. (1) No neural rollout: the
+oracle computes the *certificate-margin predicate*, a closed-form function of the
+compressed cores and the perturbation — Layer-1 margins are arithmetic over core norms
+and box geometry; Layer-2a margins are the exported per-box SOS constants. A small
+reversible arithmetic/comparison circuit; the policy is deliberately outside the
+circuit. (2) No lookup table: the scenario set is a structured product domain, so the
+uniform superposition is free — `H⊗log₂|S|`, no QRAM, and the full AE circuit uses
+`log₂|S| + O(1)` qubits, keeping simulated state-vector cost at O(|S|) scale. (3)
+Conservative direction: sound certificates give P(true failure) ≤ P(certified
+violation), so the estimated quantity is an upper bound on the scored one, stated as
+such. And we claim no end-to-end speedup a priori: the race against RESTART+GEV at
+matched total budget (including the printed oracle cost) is pre-registered, the
+crossover is a reported N6 output, and R4 demotes IQAE if it loses.
 
 **Q: "Clifford circuits are classically simulable (Gottesman–Knill). You relabeled
 classical matrix algebra as quantum — quantum-washing."**
