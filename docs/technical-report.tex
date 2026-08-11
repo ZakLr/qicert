@@ -180,18 +180,27 @@ Three layers answer three questions and are never confused.
 
 \subsection{Layer 1: Exact algebraic bounds}
 
-For a TT/QTT layer with cores $G_1\dots G_d$, the induced map is multilinear
-with exact global Lipschitz constant
+For a TT/QTT layer with cores $G_1\dots G_d$ the reconstructed weight matrix
+is $W = \mathrm{contract}(G_1,\dots,G_d)$, and norm submultiplicativity gives
 \begin{equation}
-L(W) \;=\; \prod_{i=1}^{d} \norm{G_i}_2 ,
+\norm{W}_2 \;\le\; \prod_{i=1}^{d} \norm{G_i}_2 ,
 \label{eq:lipschitz}
 \end{equation}
-computed in $O(\sum_i r_i^2 n_i)$ per layer (each core's spectral norm by power
-iteration on the small core). Chaining through the network with 1-Lipschitz
-activations (ReLU et al.),
+each core norm computed by power iteration on the small core in
+$O(\sum_i r_i^2 n_i)$. The bound is deliberately conservative; the
+\emph{exact} per-layer operator norm is available at the same cost class:
+power iteration on the TT contraction performs matvecs $x \mapsto Wx$ in
+$O(\sum_i r_i^2 n_i)$ per step without ever forming $W$. Chaining through the
+network with 1-Lipschitz activations (ReLU et al.),
 \begin{equation}
-L(\F) \;=\; \prod_{\text{layers }l}\;\prod_{i} \norm{G_i^{(l)}}_2 .
+L(\F) \;=\; \prod_{\text{layers }l} \norm{W^{(l)}}_2 ,
 \end{equation}
+where each factor is the exact per-layer norm (power iteration), not the
+core-product bound. The residual gap between $L(\F)$ and
+$\sup_x \norm{\nabla \F(x)}_2$ --- activation interleaving and non-orthogonality
+across layers --- is \emph{measured}, not assumed: N3 registers the tightness
+ratio $\kappa = L(\F)\,/\,\sup_{x\in B}\norm{\nabla \F(x)}_2$ (denominator by
+power iteration on the full TT network) and prints it at every Pareto point.
 With the input box $B$ from the slice spec this yields the \emph{exact
 safe-set certificate}
 \begin{equation}
@@ -199,12 +208,19 @@ safe-set certificate}
 L(\F)\,\mathrm{diam}(B) < \mathrm{margin} \big\}.
 \label{eq:safeset}
 \end{equation}
+Non-emptiness is a \emph{measured} column (Table~\ref{tab:main}), never an
+assumption: a conservative $L$ shrinks the column but cannot falsify it, and
+the column still separates us from INT8, for which no certificate object
+exists at any ratio. Its usefulness is gated by R2; where the global bound is
+loose, Layer~2a supplies the tight local boxes.
 
 \begin{theorem}[Lipschitz product, layer 1]
-For a TT layer with cores $G_1\dots G_d$, Eq.~\eqref{eq:lipschitz} holds
-exactly, with no sampling and no input-distribution assumption. The property is
-preserved for QTT (log-mode) reshapes because it depends only on the
-contraction, not on mode sizes.
+For a TT layer with cores $G_1\dots G_d$, Eq.~\eqref{eq:lipschitz} holds with
+no sampling and no input-distribution assumption, and the tighter exact factor
+$\norm{W}_2$ is computable by power iteration on the TT contraction at cost
+$O(k_{\mathrm{it}}\sum_i r_i^2 n_i)$ with $k_{\mathrm{it}}$ iterations, the
+dense matrix never formed. Both properties are preserved for QTT (log-mode)
+reshapes because they depend only on the contraction, not on mode sizes.
 \end{theorem}
 
 The load-bearing comparison: INT8 quantization error is data-dependent
@@ -227,6 +243,12 @@ quantization baselines structurally cannot produce.}
 
 \textbf{(a) SOS-certified boxes.} Composition polynomials of TT-structured
 networks admit moment-SOS hierarchies with tractable SDPs~\cite{sos-tt}.
+SOS is deliberately \emph{local by construction}: each certificate covers one
+sampled long-tail box $B_k$ and a low-degree ($\le 4$) composition polynomial
+over a small slice (state dimension $\lesssim 16$), never a whole-network SDP
+--- formal verification of a 7B network in one SDP is out of scope for any
+method, and the hierarchy's state-lifting structure keeps each box small.
+R3 budgets each box at $<$2 h and demotes SOS to a report line if violated.
 For each sampled long-tail box $B_k$ we certify
 \begin{equation}
 \forall x \in B_k:\;\; \mathrm{margin}(x) \ge m_k \ge 0,
@@ -277,7 +299,7 @@ The compile pass:
 \textbf{Pass} & \textbf{Operation} & \textbf{Output} \\
 \midrule
 1 & Extract interaction table $\{(c_a, P_a)\}$ & raw table \\
-2 & Group into mutually commuting families $\{F_1,\dots,F_m\}$ (graph coloring) & family partition \\
+2 & Group into mutually commuting families $\{F_1,\dots,F_m\}$ (greedy coloring, polynomial; $m$ measured at N7) & family partition \\
 3 & Per family: single Clifford $C_j$ with $C_j^\dagger P C_j \in \{I,Z\}^{\otimes k}$ & Clifford table \\
 4 & Rewrite exactly $T = \sum_j C_j^\dagger D_j C_j$, $D_j$ diagonal & executable kernels \\
 5 & Emit hardware table: qubits $=\lceil\log_2(\text{register})\rceil$, depth $=m$, shots $\le f(\norm{c}_1,\varepsilon)$ & Sec.~4.2 pathway \\
@@ -303,6 +325,23 @@ submission can print.}
 \label{fig:prune}
 \end{figure}
 
+\textbf{Scope and complexity, stated honestly.} The Pauli table is not
+extracted from an arbitrary dense matrix (that would require up to $4^k$
+terms); it is extracted from the \emph{compressed interaction accumulators} of
+Sec.~\ref{sec:engine}, whose bounded rank bounds the term count, and families
+beyond a top-$k$ by $\norm{c}_1$ are pruned with a certificate-bound on the
+tail (R5). The grouping is greedy graph coloring --- polynomial, not optimal
+--- and the realized family count $m$ is a \emph{measured} output of N7,
+reported with its pruning certificate. We claim \emph{no classical
+computational speedup} from the Clifford step: on classical hardware the
+rewrite is an exact algebraic identity whose value is exactness, certifiable
+pruning, and the hardware pathway; on quantum hardware, simultaneous
+measurement in a common eigenbasis is the standard VQE shot-reduction device
+that motivates commuting grouping, and k-NoCliD's non-commuting
+relaxations~\cite{knoclid} mark the adjacent frontier. The quantum content is
+the object language --- Pauli observables, Clifford frame, measurement basis
+--- not a speed claim.
+
 \textbf{Why this survives the QASA objection.} QASA showed a capacity-matched
 classical low-rank bottleneck matches a PQC's error metrics~\cite{qasa}. Our
 claim is not ``the encoding is powerful'' but ``the compiler is exact,
@@ -322,6 +361,15 @@ deterministic function of the seed:
 O: \mathrm{seed} \mapsto \mathrm{scenario} \mapsto \mathrm{rollout}(\pi)
 \mapsto \rho \mapsto [\rho < 0].
 \end{equation}
+The oracle is a \emph{rule-based} STL evaluator over the spec library
+(Q21) --- a cheap polynomial program, not a neural rollout --- and the
+amplitude register holds only the verdict bit $[\rho<0]$ (or $\log_2 b$ bits
+for $b$-bin robustness histograms). The neural network is never placed inside
+the simulated quantum circuit; oracle queries count STL evaluations, and the
+full query budget is printed per benchmark. Layer 3 is \emph{offline
+evaluation-time}: the $\le 100$\,ms real-time budget governs the runtime path
+of Sec.~\ref{sec:arch} (compiled diagonal kernels + monitor), which never
+executes an amplitude-estimation loop.
 
 \subsection{The three-arm race}
 \begin{table}[!t]
@@ -345,11 +393,15 @@ Amplitude estimation estimates $p$ to absolute error $\varepsilon$ with
 $O(1/\varepsilon)$ oracle queries versus Monte-Carlo's $O(1/\varepsilon^2)$ ---
 quadratic query savings on the rarest scored quantity. The claim is framed as
 query-complexity against a counting problem, with the oracle cost model printed
-per benchmark. If Q loses to C-strong at our budgets, we print that
-(pre-registered R4); Layers 1--2 stand independently. Adjacent QAE applications
-include structural reliability \cite{tabarraei}, flow-based failure sampling
-\cite{quantfp}, and MPPI control \cite{mppi}; our in-domain delta is VLAM/AD
-safety certification fused with exact structural certificates.
+per benchmark. \emph{Simulation honesty:} the Grover depth $1/\sqrt{p}$ is
+real simulator cost at our classical budgets --- that is precisely why the race
+against the strong classical arm at matched query budget is pre-registered
+(R4), and the claim never assumes quantum hardware. If Q loses to C-strong at
+our budgets, we print that; Layers 1--2 stand independently. Adjacent QAE
+applications include structural reliability \cite{tabarraei}, flow-based
+failure sampling \cite{quantfp}, and MPPI control \cite{mppi}; our in-domain
+delta is VLAM/AD safety certification fused with exact structural
+certificates.
 
 \subsection{Closure}
 \textbf{Scenario optimization} (Campi--Garatti): with $N$ scenarios and
@@ -393,6 +445,13 @@ small-factor modes, bit-ordering per layer type; N2$'$ resolves the ordering).
 \textbf{TT-cross} \cite{tt,ttopt}: cores $G_1\dots G_d$ are built from
 $O(\sum m_i n_i r_i^2)$ maxvol queries of $W$'s entries, never forming $W$ ---
 SVD-free and VRAM-safe for 7B-scale layers.
+
+\textbf{Expressiveness, measured not assumed.} Long-range multimodal attention
+is known to be low-rank-friendly (softmax kernels compress well at moderate
+rank), but we do not assume it: N2 registers a per-layer rank-vs-accuracy curve
+at the target ratios with a pre-registered bound (R1: $>5\%$ drop at $2\times$
+demotes the compression claim), and the bond allocator then spends rank where
+the \emph{certified long-tail margin} is cheapest in certificate terms.
 
 \textbf{ALS/DMRG-native fine-tuning:} each core is optimized directly
 (regularized least squares with exact multilinear gradients; AMEn enrichment
@@ -438,7 +497,7 @@ criterion.
 N1 & AD backbone fine-tune + INT8 reference & A & 8 \\
 N2 & $\{$TT,QTT$\}\times$TT-cross sweep, 6 bond plans $\times$ 2 backbones & A & 24 \\
 N2$'$ & Bit-ordering sensitivity (3 orders, 1 layer, 1 seed) & A & 2 \\
-N3 & Layer-1 certificate table (Lipschitz products per Pareto point) & A & 2 \\
+N3 & Layer-1 certificate table (Lipschitz products + tightness ratio $\kappa$) & A & 2 \\
 N4 & Layer-2a SOS boxes (3 points $\times$ 2 tracks $\times$ slices) & A & 3 \\
 N5 & Layer-2b Lyapunov curve + bond-spectrum predictor & A & 6 \\
 N6 & Layer-3 safety suite (IQAE vs RESTART+GEV vs MC) & C & 8 \\
@@ -526,7 +585,9 @@ to be the strongest section of the report.
 
 \textbf{A1 (compression$\times$certificate):} at matched ratio, INT8 matches
 accuracy but cannot report the certificate column --- the ablation shows the
-asymmetry directly (the number that cannot be computed is the win).
+asymmetry directly (the number that cannot be computed is the win). The
+tightness ratio $\kappa$ is reported per point: the certificate column is
+conservative-but-quantified, and Layer~2a closes the gap locally.
 
 \textbf{A2 (compiler vs encoding):} per-family leave-one-out with \emph{predicted}
 error $\norm{\Sigma_{a\in F_j} c_a}_1$ vs measured $\Delta$; and compiler-vs-
@@ -564,6 +625,14 @@ honestly; R9 cross-track non-comparable $\rightarrow$ pipeline claim only;
 R10 quota overrun $\rightarrow$ N8 cut first, then N13 reduced; R11 clean-env
 failure $\rightarrow$ report held; R12 conformal leakage $\rightarrow$ claim
 degraded until re-run.
+
+\textbf{Explicit framing disclaimers.} We claim no classical speedup from the
+Clifford step (Sec.~\ref{sec:compiler}) and place amplitude estimation strictly
+offline with printed oracle costs (Sec.~\ref{sec:safety}); both are stated
+in-body so no stronger claim can be imputed. Runtime parity with classical
+baselines is an acceptance target, not an assumption: E-comp-3 ($\le 100$\,ms
+at the full compiled table) and the N14 clean-env bench are the measured
+evidence.
 
 \textbf{Three things that cannot kill the core claim:} (1) the exact
 Lipschitz-product certificate --- a theorem, not a benchmark; (2)
@@ -629,8 +698,9 @@ tensor products,'' arXiv:1007.1170, 2010.
 \bibitem{ttopt} M.~Boussé et al., ``TTOpt: A MATLAB package for Tensor-Train
 optimization,'' arXiv:2205.00293, 2022.
 
-\bibitem{sos-tt} (SOS hierarchies on TT-structured polynomials),
-arXiv:2604.17563, 2026.
+\bibitem{sos-tt} L.~Balada Gaggioli, D.~Henrion, and M.~Korda, ``Composition
+and tensor train structure in polynomial optimization,'' arXiv:2604.17563,
+2026.
 
 \bibitem{qasa} S.~Chen and Y.~Kuo, ``Quantum-inspired attention architectures,''
 Quantum Science and Technology 11:035051, 2026.
@@ -641,8 +711,10 @@ Performers,'' arXiv:2009.14794, 2020.
 \bibitem{reggio} A.~Reggio et al., ``Pauli grouping for measurement
 reduction,'' arXiv:2305.11847, 2023.
 
-\bibitem{knoclid} (k-NoCliD: grouped Clifford diagonalization), arXiv:2408.11898,
-2024.
+\bibitem{knoclid} N.~P.~D. Sawaya, D.~Camps, B.~DalFavero, N.~M.~Tubman,
+G.~M.~Rotskoff, and R.~LaRose, ``Non-Clifford diagonalization for measurement
+shot reduction in quantum expectation value estimation,'' arXiv:2408.11898,
+2024 (v3 2025).
 
 \bibitem{stl} G.~E. Fainekos and G.~J. Pappas, ``Robustness of temporal logic
 specifications,'' in Proc. Formal Methods and Models for Co-Design (MEMOCODE),
@@ -652,14 +724,16 @@ specifications,'' in Proc. Formal Methods and Models for Co-Design (MEMOCODE),
 Quantum Amplitude Estimation,'' npj Quantum Information 7:52, 2021;
 arXiv:1912.05546.
 
-\bibitem{tabarraei} (Bayesian quantum amplitude estimation for structural
-failure probabilities), arXiv:2607.18996, 2026.
+\bibitem{tabarraei} A.~Tabarraei, ``Bayesian sequential quantum amplitude
+estimation for rare-event structural failure probability,'' arXiv:2607.18996,
+2026.
 
-\bibitem{quantfp} (Quantum flow sampling for failure probability),
+\bibitem{quantfp} A.~I. Weinberg, ``QuantFPFlow: Quantum amplitude estimation
+for Fokker--Planck policy optimisation in continuous reinforcement learning,''
 arXiv:2605.16429, 2026.
 
-\bibitem{mppi} (Quantum amplitude estimation speedup for MPPI control),
-arXiv:2607.28851, 2026.
+\bibitem{mppi} G.~Das and T.~Tanaka, ``Model predictive path integral control
+as a quantum query problem,'' arXiv:2607.28851, 2026.
 
 \bibitem{restart} M.~Vill\'en-Altamirano and J.~Vill\'en-Altamirano,
 ``RESTART: A method for accelerating rare event simulations,'' in Proc. ITC-13,

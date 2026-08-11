@@ -53,6 +53,13 @@ L(W) = ∏ᵢ ‖Gᵢ‖₂          (exact; computed in O(Σ rᵢ²nᵢ) per la
 
 where `‖·‖₂` is the spectral norm of each core viewed as an operator. This is not an
 estimate and not a bound needing data: it is an exact function of the cores themselves.
+The product is deliberately conservative — and the **exact** per-layer operator norm
+‖W‖₂ is available at the same cost class: power iteration on the TT contraction runs
+matvecs `x ↦ Wx` in `O(Σ rᵢ²nᵢ)` per step, never forming the dense matrix. So every
+layer factor in `L(F̃)` is tight, and the residual gap — activation interleaving and
+non-orthogonality across layers — is *measured* as a tightness ratio `κ` at N3 and
+printed at every Pareto point. A conservative certificate shrinks the certified-safe-set
+column; it cannot falsify it, and that column still doesn't exist for INT8 at any ratio.
 Chaining through the network with 1-Lipschitz activations (ReLU et al.), the whole map
 `F̃` has exact Lipschitz constant
 
@@ -186,7 +193,7 @@ calibration, and a falsification loop that feeds discovered failures back into t
 
 | Layer | Question | Object | Weakness, honestly |
 |---|---|---|---|
-| L1 exact algebraic | What is provable from the cores alone? | Lipschitz-product safe set + pruning certificates | global but loose |
+| L1 exact algebraic | What is provable from the cores alone? | Lipschitz-product safe set + pruning certificates | global-but-loose; exact per-layer factors, κ measured |
 | L2a SOS local boxes | What is true inside each long-tail box? | moment-SOS hierarchy certificates (arXiv:2604.17563) | local but tight; SDP cost |
 | L2b Lyapunov margin | How does the certificate *degrade* with compression? | survival curve + bond-spectrum predictor | regression, not proof |
 | L3 statistical tails | What is the certified failure probability? | STL ρ tails via IQAE/RESTART+GEV, scenario-opt, conformal | distributional |
@@ -268,14 +275,34 @@ capacity-matched classical feature cross possesses. The objection attacks a clai
 demoted on 2026-08-07.
 
 **Q: "Your Lipschitz bound is loose."**
-A: Correct — that is Layer 1's honest limitation, and Layer 2a (SOS boxes) is tight where
-we run it. The layers answer different questions; we say so in Sentence B of `01-thesis.md`.
-When they disagree, that is a surfaced bug, and we report none remaining at submission.
+A: Correct — and quantified. The core-product bound is deliberately conservative; the
+exact per-layer norm ‖W‖₂ is computed by power iteration on the TT contraction (matvec
+cost O(Σrᵢ²nᵢ), dense matrix never formed), so every layer factor in L(F̃) is tight, and
+the residual gap to sup‖∇F̃‖₂ is measured as the tightness ratio κ at N3, printed on
+every Pareto point. Layer 2a (SOS boxes) is tight where the global bound is loose. The
+layers answer different questions (Sentence B of `01-thesis.md`); non-emptiness of the
+certified safe set is a measured column gated by R2, never an assumption.
 
 **Q: "IQAE is asymptotically better, but your simulated oracle cost is high."**
-A: Pre-registered (R4): if at matched query budget our credible interval is wider than
-RESTART's, we print that and the safety suite still beats every naive competitor via
-Layers 1–2 + the strong classical arm. The claim never hides behind a weak baseline.
+A: Two clarifications. First, the oracle is the *rule-based* STL evaluator over the spec
+library — a cheap polynomial program, never a neural rollout inside a quantum circuit;
+queries count STL evaluations with the budget printed per benchmark, and the amplitude
+register holds only the verdict bit. Second, Layer 3 is *offline evaluation-time* — the
+≤100 ms budget governs the runtime path (compiled diagonal kernels + monitor), which
+never executes IQAE. Pre-registered (R4): if at matched query budget our credible
+interval is wider than RESTART's, we print that and the safety suite still beats every
+naive competitor via Layers 1–2 + the strong classical arm.
+
+**Q: "Clifford circuits are classically simulable (Gottesman–Knill). You relabeled
+classical matrix algebra as quantum — quantum-washing."**
+A: We agree with the simulability fact, and we claim *no classical speedup* from the
+Clifford step — the report says so explicitly. The compilation's value is (1) exactness:
+`T = Σⱼ Cⱼ†DⱼCⱼ` is an identity, not an approximation; (2) certifiable pruning: dropping
+family Fⱼ costs exactly `‖Σcₐ‖₁`; (3) the hardware pathway: simultaneous measurement in
+a common eigenbasis is the standard VQE shot-reduction device, and qubits/depth/shots
+fall out of the same table. The quantum content is the object language — Pauli
+observables, Clifford frame, measurement basis — not a speed claim. The objection lands
+only on claims we explicitly do not make.
 
 **Q: "Why should a judge believe the numbers when nothing is measured yet?"**
 A: Every number will be mean ± std over ≥3 seeds with the experiment ledger row, env pins,
