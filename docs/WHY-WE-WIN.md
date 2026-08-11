@@ -55,7 +55,8 @@ where `‖·‖₂` is the spectral norm of each core viewed as an operator. Thi
 estimate and not a bound needing data: it is an exact function of the cores themselves.
 The product is deliberately conservative — and the **exact** per-layer operator norm
 ‖W‖₂ is available at the same cost class: power iteration on the TT contraction runs
-matvecs `x ↦ Wx` in `O(Σ rᵢ²nᵢ)` per step, never forming the dense matrix. So every
+matvecs `x ↦ Wx` in `O(Σ rᵢ₋₁ nᵢ² rᵢ)` per step (standard TT contraction order), never
+forming the dense matrix. So every
 layer factor in `L(F̃)` is tight, and the residual gap — activation interleaving and
 non-orthogonality across layers — is *measured* as a tightness ratio `κ` at N3 and
 printed at every Pareto point. A conservative certificate shrinks the certified-safe-set

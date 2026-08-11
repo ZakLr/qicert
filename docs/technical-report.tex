@@ -190,7 +190,8 @@ each core norm computed by power iteration on the small core in
 $O(\sum_i r_i^2 n_i)$. The bound is deliberately conservative; the
 \emph{exact} per-layer operator norm is available at the same cost class:
 power iteration on the TT contraction performs matvecs $x \mapsto Wx$ in
-$O(\sum_i r_i^2 n_i)$ per step without ever forming $W$. Chaining through the
+$O(\sum_i r_{i-1} n_i^2 r_i)$ per step (standard TT contraction order;
+$O(d n^2 r^2)$ at uniform mode size) without ever forming $W$. Chaining through the
 network with 1-Lipschitz activations (ReLU et al.),
 \begin{equation}
 L(\F) \;=\; \prod_{\text{layers }l} \norm{W^{(l)}}_2 ,
@@ -218,8 +219,8 @@ loose, Layer~2a supplies the tight local boxes.
 For a TT layer with cores $G_1\dots G_d$, Eq.~\eqref{eq:lipschitz} holds with
 no sampling and no input-distribution assumption, and the tighter exact factor
 $\norm{W}_2$ is computable by power iteration on the TT contraction at cost
-$O(k_{\mathrm{it}}\sum_i r_i^2 n_i)$ with $k_{\mathrm{it}}$ iterations, the
-dense matrix never formed. Both properties are preserved for QTT (log-mode)
+$O(k_{\mathrm{it}}\sum_i r_{i-1} n_i^2 r_i)$ with $k_{\mathrm{it}}$ iterations,
+the dense matrix never formed. Both properties are preserved for QTT (log-mode)
 reshapes because they depend only on the contraction, not on mode sizes.
 \end{theorem}
 
