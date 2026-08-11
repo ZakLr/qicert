@@ -1,4 +1,4 @@
-"""Robotics backbone adapter (N4/N13-RB mirror).
+"""Robotics backbone adapter (N13-RB mirror (robotics-first)).
 
 Reference: MiniVLA/OpenVLA-class (matches OpenVLA-7B on LIBERO-90 at 2.5x speed).
 """
