@@ -18,28 +18,36 @@ there are **no pybind11 bindings**, and the heavy Python paths raise
 
 ## Phase 0.5 — Make the skeleton real (0 GPU-h)
 
+**Status 2026-08-11: Python reference kernels DONE** — the four kernels now exist as a
+pure-Python (numpy/scipy) conformance spec in `python/qicert/kernels/` with 17/17 tests
+passing, including the parity harness every future backend must reproduce. `bench.all
+--backend python` runs the smoke set end-to-end with measured (not placeholder) values.
+What remains is the *ports* behind the same contracts + their parity gates.
+
 - [ ] **Q19: Pin CUDA-Q** — verify the CUDA-Q install path (local Windows: WSL2 or CPU
       mode; Kaggle: `!pip install cudaq`), freeze exact versions (CUDA-Q, PennyLane,
-      tntorch, PyTorch CUDA build) into `environment.yml`. Gates every C++ kernel that
-      links simulators/noise models. (owner: reproducibility-auditor)
-- [ ] **Implement the 4 C++ kernels for real** (pure C++ first; CUDA-Q hooks where the
-      simulator helps; all CPU-testable, 0 GPU-h):
-  - [ ] `tt_cross` — query-based TT-cross + maxvol, adaptive truncation-error estimates,
-        **exact core spectral norms** (power iteration on cores). Replaces the current
-        `L *= 1.0; // TODO(Q19)` in `src/tt_cross.cpp`.
-  - [ ] `pauli_family` — greedy commutation grouping (graph coloring), single-Clifford
-        simultaneous diagonalization, diagonal kernel application, pruning-certificate
-        emission (`‖Σ c_a‖₁` per family).
-  - [ ] `iqae` — iterative amplitude estimation with Bayesian posterior updating
-        (arXiv:2607.18996 formulation); configurable shot budget + noise model.
+      tntorch, PyTorch CUDA build) into `environment.yml`. Gates the C++ backend
+      that links simulators/noise models. (owner: reproducibility-auditor)
+- [ ] **Port the 4 kernels to C++/CUDA-Q** (pure C++ first; CUDA-Q hooks where the
+      simulator helps; all CPU-testable, 0 GPU-h) — **parity vs the Python reference is
+      the acceptance test** (tolerances in `tests/test_kernels.py::test_parity_harness`):
+  - [ ] `tt_cross` — query-based DMRG-cross + maxvol (reference: `python_backend._cross_als`);
+        adaptive truncation-error estimates; exact core spectral norms. Replaces the
+        current `L *= 1.0; // TODO(Q19)` in `src/tt_cross.cpp`.
+  - [ ] `pauli_family` — greedy commutation grouping + joint-eigenbasis diagonalization
+        (reference: `python_backend.pauli_grouping/pauli_diagonalize`); pruning-certificate
+        emission (`||sum c_a||_1` per family).
+  - [ ] `iqae` — Bayesian IQAE with interleaved depth-0 anchors (Grinko schedule,
+        reference: `python_backend.iqae`); configurable shot budget + noise model.
   - [ ] `shadow_monitor` — median-of-means over random projections + PDU syndrome gate
-        from the commuting-family table.
+        (reference: `python_backend.shadow_statistics/shadow_syndrome`).
 - [ ] **pybind11 bindings + CMake integration** — expose the four kernels to Python so
       `qicert.compress` / `qicert.certify` / `qicert.safety` / `qicert.monitor` actually
-      call C++. Today the static lib builds but nothing calls it.
-- [ ] **Per-kernel property tests** — TT-cross reconstruction error on known TT tensors;
-      compiler exactness identity (`‖T_exact − T_compiled‖`); IQAE vs MC on a known p;
-      shadow bound vs measured alarm rate. These are the unit floor under N14.
+      call C++ via `--backend cpp`. Today the static lib builds but nothing calls it.
+- [x] **Per-kernel property tests (Python reference)** — TT-cross reconstruction on known
+      TT tensors; compiler exactness identity; IQAE interval on a known p; shadow
+      false-alarm/anomaly gates; parity harness. **17/17 green 2026-08-11** — the
+      unit floor under N14 and the conformance spec for the C++/Julia ports.
 
 ## Phase 1 — Make the bench honest (Week 1 on GPU)
 

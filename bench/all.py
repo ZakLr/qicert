@@ -1,9 +1,11 @@
 """qicert.bench.all   reproduce every report table from a clean env.
 
 Usage:
-    python -m qicert.bench.all                 # every table (default)
-    python -m qicert.bench.all --rows=smoke    # CI smoke set (tiny, fast)
+    python -m qicert.bench.all                     # every table (default)
+    python -m qicert.bench.all --rows=smoke        # CI smoke set (tiny, fast)
     python -m qicert.bench.all --rows=compression-pareto   # one table
+    python -m qicert.bench.all --backend=cpp       # C++/CUDA-Q kernels (Q19)
+    python -m qicert.bench.all --sos-backend=julia # Layer-2a SOS (Q22 bridge)
 """
 from __future__ import annotations
 
@@ -38,10 +40,35 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--rows", default="all",
                     help="'all', 'smoke', or a specific table name")
     ap.add_argument("--module", default=None, help="run a single bench module")
+    ap.add_argument("--backend", default=None, choices=["python", "cpp"],
+                    help="kernel backend; defaults to the active registry backend")
+    ap.add_argument("--sos-backend", default=None, choices=["python", "julia"],
+                    help="Layer-2a SOS solver backend")
     args = ap.parse_args(argv)
 
+    # Apply the selected backends before any bench module imports kernels.
+    try:
+        if args.backend:
+            from qicert.kernels import set_active_backend
+            set_active_backend(args.backend)
+        if args.sos_backend:
+            from qicert.kernels import set_active_sos_backend
+            set_active_sos_backend(args.sos_backend)
+    except ImportError as exc:  # pragma: no cover - package not installed
+        print(f"error: qicert.kernels not importable: {exc}", file=sys.stderr)
+        return 2
+    except Exception as exc:
+        print(f"error: cannot select backend: {exc}", file=sys.stderr)
+        return 2
+
     modules = [args.module] if args.module else MODULES
-    out: list[str] = ["# qicert bench suite", ""]
+    out: list[str] = []
+    if args.backend or args.sos_backend:
+        out.append(f"# qicert bench suite (backend={args.backend or 'active'}, "
+                   f"sos_backend={args.sos_backend or 'active'})")
+    else:
+        out.append("# qicert bench suite")
+    out.append("")
     for name in modules:
         mod = importlib.import_module(f".{name}", package=__package__ or __name__)
         out.append(f"## bench.{name}")

@@ -7,7 +7,19 @@ dependencies:
   - pip:
       - -e .
       - numpy>=1.26
-      - torch>=2.2
+      - scipy>=1.11        # reference-kernel floor (TT-cross maxvol, IQAE)
+      # --- PyTorch: install cu13 wheels manually for sm_120 (RTX 5060) ---
+      #   pip install --index-url https://download.pytorch.org/whl/cu130 "torch>=2.9"
+      # torch is NOT pinned here so the conda env stays installable without GPU;
+      # the Dockerfile (Decision 2026-08-11) is the pinned CUDA 13 runtime.
+      - pytest>=8
+      # --- ML stack (robotics-first: MiniVLA-1B; deliberately NO bitsandbytes) ---
+      - transformers>=4.44
+      - peft>=0.13
+      - accelerate>=1.0
+      - safetensors>=0.4
+      - sentencepiece>=0.2
+      - huggingface_hub>=0.24
       # --- Phase-0 pins (freeze at Q19/Q22, then never drift) ---
       # - cuda-quantum==x.y.z      # Kaggle image vs local build — pin on first working install
       # - pennylane==a.b.c

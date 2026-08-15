@@ -13,6 +13,7 @@ license-files = ["LICENSE"]
 authors = [{ name = "ZakLr" }]
 dependencies = [
     "numpy>=1.26",
+    "scipy>=1.11",
 ]
 
 [project.optional-dependencies]
@@ -24,11 +25,11 @@ dev = [
 # experiments; the bench suite and CI smoke tests never import torch, so it
 # stays an optional extra to keep clean-env CI cheap.
 ml = [
-    "torch>=2.2",
+    "torch>=2.9",
 ]
 
 [tool.setuptools]
-packages = ["qicert", "qicert.backbones", "qicert.bench"]
+packages = ["qicert", "qicert.backbones", "qicert.bench", "qicert.kernels"]
 
 [tool.setuptools.package-dir]
 qicert = "python/qicert"
