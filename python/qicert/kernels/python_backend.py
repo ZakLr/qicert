@@ -82,15 +82,29 @@ class PythonKernelSet(KernelSet):
         fused = Wt.transpose(order).reshape(shape)
 
         cores: list[np.ndarray] = []
-        cur = fused
+        # Sequential TT-SVD: at each step the *fused* left modes (r_{k-1} s_k)
+        # must be a flat 2-D matrix for SVD — `fused` is d-dimensional for
+        # deeper splits, so reshape explicitly at every step.
+        cur = fused.reshape((shape[0], -1))
+        achieved = [1]  # r_0 = 1; tracks ranks actually used (SVD can cap)
         for k in range(d - 1):
-            rk = min(r[k + 1], cur.shape[0])
+            # rk is capped by BOTH current dimensions: when the requested rank
+            # exceeds cur.shape[1] (e.g. small GQA k/v projections at deep
+            # splits), U[:, :rk] silently returns fewer columns and the
+            # reshape below would mismatch. Achieved ranks propagate to the
+            # next core's left bond and to the final core.
+            rk = min(r[k + 1], cur.shape[0], cur.shape[1])
+            rk = max(int(rk), 1)
             U, S, Vt = linalg.svd(cur, full_matrices=False)
             U, S, Vt = U[:, :rk], S[:rk], Vt[:rk, :]
-            cores.append(U.reshape((r[k], m_dims[k], n_dims[k], rk)))
-            cur = S[:, None] * Vt
-            cur = cur.reshape((rk * shape[k + 1], -1))
-        cores.append(cur.reshape((r[d - 1], m_dims[d - 1], n_dims[d - 1], 1)))
+            # U rows are (achieved[-1] * s_k) with r outer, s inner, and
+            # s_k = m_k n_k with m outer / n inner (from the interleave), so
+            # the reshape to the 4-way core is exact.
+            cores.append(U.reshape((achieved[-1], m_dims[k], n_dims[k], rk)))
+            achieved.append(rk)
+            cur = (S[:, None] * Vt).reshape((rk * shape[k + 1], -1))
+        cores.append(cur.reshape((achieved[-1], m_dims[d - 1],
+                                  n_dims[d - 1], 1)))
         return Cores(cores, tuple(int(x) for x in m_dims),
                      tuple(int(x) for x in rr), source=self.name)
 

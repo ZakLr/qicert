@@ -30,7 +30,8 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 MODULES = [
-    "compress",          # N2, N2', N3
+    "compress",          # N1, N2', N3
+    "n2_sweep",          # N2 (compression Pareto sweep)
     "certify_layers12",  # N4, N5
     "safety",            # N6
     "compiler",          # N7
@@ -69,6 +70,13 @@ def main(argv: list[str] | None = None) -> int:
                     help="comma-separated seeds for GPU fine-tune tables (N1); default = ctx.seed")
     ap.add_argument("--steps-per-seed", type=int, default=None,
                     help="fine-tune steps per seed when --seeds given (N1); default = --steps")
+    ap.add_argument("--save-ckpt", default=None, metavar="DIR",
+                    help="save the fine-tuned (LoRA-merged) backbone per seed "
+                         "to DIR/seed{N}.pt (N1 -> N2 handoff)")
+    ap.add_argument("--skip-int8", action="store_true",
+                    help="skip the INT8 reference leg of N1 (use when the INT8 "
+                         "baseline is already recorded; N2's pipeline doesn't "
+                         "re-measure it)")
     args = ap.parse_args(argv)
 
     # Apply the selected backends before any bench module imports kernels.
@@ -95,6 +103,8 @@ def main(argv: list[str] | None = None) -> int:
     ctx.seeds = ([int(s) for s in args.seeds.split(",") if s.strip()]
                  if args.seeds else None)
     ctx.steps_per_seed = args.steps_per_seed
+    ctx.save_ckpt = args.save_ckpt
+    ctx.skip_int8 = args.skip_int8
     out: list[str] = []
     if args.backend or args.sos_backend:
         out.append(f"# qicert bench suite (backend={args.backend or 'active'}, "

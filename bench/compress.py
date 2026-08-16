@@ -71,6 +71,8 @@ def run(rows: str, out: list[str], ctx=None) -> None:
 
     # --- N2: {TT, QTT} x TT-cross sweep ---
     if wants(rows, "compression-pareto", SMOKE):
+        # N2 lives in bench/n2_sweep.py (real sweep); this row documents the
+        # pre-registered contract so --rows=all still shows the full plan.
         out += table_header("N2 - compression Pareto curve (ratio vs accuracy vs certified-safe-set)",
                             ["ID", "Experiment", "Seeds", "GPU-h", "Status"])
         out.append(pending_row("N2", "{TT, QTT} x TT-cross sweep, 6 bond plans x 2 backbones",
@@ -141,9 +143,11 @@ def _run_n1(out: list[str], ctx=None) -> None:
         ["Seed", "Train loss (last)", "Action acc (train, last)",
          "Eval acc (fine-tuned)", "Eval acc (INT8)", "Delta (INT8 - FT)", "Status"])
 
+    save_dir = (Path(ctx.save_ckpt) if ctx and ctx.save_ckpt else None)
     all_rows = []
     for seed in seeds:
-        row = _run_n1_seed(out, ctx, seed, steps_per_seed, batch, lora_r)
+        row = _run_n1_seed(out, ctx, seed, steps_per_seed, batch, lora_r,
+                           save_dir=save_dir)
         if row:
             all_rows.append(row)
 
@@ -159,8 +163,9 @@ def _run_n1(out: list[str], ctx=None) -> None:
 
 
 def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
-                 lora_r: int) -> dict | None:
+                 lora_r: int, save_dir: Path | None = None) -> dict | None:
     """One seed of N1. Returns the results dict; None on environment failure."""
+    import json
     import os
     import sys
     import time
@@ -197,10 +202,12 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                         "lora": {"r": lora_r, "alpha": min(lora_r, 16),
                                  "target_modules": "all-linear"},
                         "int8": "torch.ao.quantization.quantize_dynamic, "
-                                "weight-only qint8 (bnb unavailable on sm_120; "
+                                "weight-only qint8 of the FINE-TUNED model on the "
+                                "same eval batch (bnb unavailable on sm_120; "
                                 "documented substitution, AGENTS.md)",
                         "dtype": "fp16", "device": "cuda",
                         "note": "scored baseline — R1 comparator",
+                        "save_ckpt": str(save_dir) if save_dir else None,
                     })
 
     try:
@@ -311,7 +318,9 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                       f"acc={acc:.3f} peak={peak/1024:.2f} GiB", flush=True)
         train_sec = time.perf_counter() - t_train
 
-        # ---- eval leg: held-out batch from the same slice (fine-tuned) ----
+        # ---- eval leg: ONE held-out batch from the same slice, shared by
+        # both the fine-tuned and the INT8-of-fine-tuned legs so the delta is
+        # pure quantization cost (matched inputs, only weights differ). ----
         vla.llm_backbone.eval()
         with torch.inference_mode():
             b = next(it)
@@ -325,36 +334,92 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             eval_acc_ft = _action_acc(out_, labels)
         print(f"  eval acc (fine-tuned): {eval_acc_ft:.4f}", flush=True)
 
-        # ---- INT8 reference: BASE model (no LoRA), weight-only int8, CPU ----
-        # torch.ao dynamic quant is CPU-only, so the reference eval runs on
-        # CPU (small held-out batch; this is the reference, not the train
-        # loop). Fresh load so the reference is the UNTRAINED backbone — the
-        # honest INT8 point of the same architecture (R1 comparator).
-        try:
-            from torch.ao.quantization import quantize_dynamic
-            t_i8 = time.perf_counter()
-            vla_i8 = load_vla(str(CKPT), hf_token=None, load_for_training=False)
-            # quantize_dynamic (CPU) needs fp32 input tensors; the quantized
-            # linears reject fp16 ("Input type (float) and bias type (c10::Half)").
-            vla_i8 = vla_i8.to(dtype=torch.float32).cpu()
-            vla_i8 = quantize_dynamic(vla_i8, dtype=torch.qint8)
-            with torch.inference_mode():
-                b = next(it)
-                input_ids = b["input_ids"]
-                attention_mask = b["attention_mask"]
-                pixel_values = b["pixel_values"]
-                labels = b["labels"]
-                out_ = vla_i8(input_ids=input_ids, attention_mask=attention_mask,
-                              pixel_values=pixel_values, labels=labels)
-            eval_acc_i8 = _action_acc(out_, labels)
-            i8_sec = time.perf_counter() - t_i8
-            print(f"  eval acc (INT8 reference, CPU): {eval_acc_i8:.4f} ({i8_sec:.1f}s)",
+        # ---- persist the fine-tuned backbone (LoRA merged into dense) so
+        # N2 can compress the SAME weights the baseline was measured on. ----
+        if save_dir is not None:
+            save_dir.mkdir(parents=True, exist_ok=True)
+            merged = vla.llm_backbone.merge_and_unload()
+            sd = merged.state_dict()
+            out_path = save_dir / f"seed{seed}.pt"
+            torch.save({"llm_backbone": sd, "seed": seed, "steps": steps,
+                        "config": "minivla-libero90-prismatic",
+                        "note": "LoRA-merged fine-tuned LLM backbone (N1 -> N2)"},
+                       out_path)
+            print(f"  saved fine-tuned backbone: {out_path}", flush=True)
+            rec.metric(event="save_ckpt", path=str(out_path),
+                       llm_params=int(sum(p.numel() for p in sd.values())))
+
+            # Matched-budget handoff for N2: the EXACT eval batch this seed
+            # was measured on (so N2's compressed model sees the same inputs)
+            # plus this seed's fine-tuned accuracy (the delta reference). N2
+            # loads these instead of drawing a fresh batch from the dataset.
+            def _cpu(x):
+                if isinstance(x, dict):
+                    return {k: v.detach().cpu() for k, v in x.items()}
+                return x.detach().cpu()
+
+            torch.save({"input_ids": _cpu(input_ids),
+                        "attention_mask": _cpu(attention_mask),
+                        "pixel_values": _cpu(pixel_values),
+                        "labels": _cpu(labels)},
+                       save_dir / f"eval_batch_seed{seed}.pt")
+            baseline_path = save_dir / f"baseline_seed{seed}.json"
+            run_tag = (ctx.run_tag if ctx and getattr(ctx, "run_tag", None)
+                       else "")
+            baseline_path.write_text(
+                json.dumps({"seed": seed, "steps": steps,
+                            "eval_acc_finetuned": float(eval_acc_ft),
+                            "eval_acc_int8": None, "run_tag": run_tag})
+            )
+            print(f"  saved eval batch + baseline: {baseline_path}", flush=True)
+            rec.metric(event="save_eval_batch", path=str(baseline_path),
+                       eval_acc_finetuned=float(eval_acc_ft))
+
+        # ---- INT8 reference: the FINE-TUNED model, weight-only int8, CPU ----
+        # torch.ao dynamic quant is CPU-only, so this leg runs on CPU with the
+        # SAME eval batch as the fine-tuned leg — the delta is pure
+        # quantization cost at matched inputs, not fine-tuning vs not.
+        # --skip-int8 (N2 pipeline): the INT8 baseline is already recorded in
+        # the scored N1 run; don't re-burn ~9 CPU-minutes per seed.
+        if ctx is not None and getattr(ctx, "skip_int8", False):
+            print("  INT8 reference SKIPPED (--skip-int8; recorded in scored N1)",
                   flush=True)
-        except Exception as exc:  # INT8 must never kill the baseline row
-            print(f"  INT8 reference failed: {exc}", flush=True)
-            rec.metric(event="int8_reference", error=str(exc))
+            rec.metric(event="int8_reference", skipped=True)
             eval_acc_i8 = float("nan")
             i8_sec = 0.0
+            _int8_note = "skipped (recorded in scored N1 run)"
+        else:
+            try:
+                from torch.ao.quantization import quantize_dynamic
+                t_i8 = time.perf_counter()
+                # clone the fine-tuned weights (fresh module tree, same state)
+                vla_i8 = load_vla(str(CKPT), hf_token=None, load_for_training=False)
+                merged_i8 = merged if save_dir is not None else \
+                    vla.llm_backbone.merge_and_unload()
+                vla_i8.llm_backbone.load_state_dict(merged_i8.state_dict())
+                # quantize_dynamic (CPU) needs fp32 input tensors; the quantized
+                # linears reject fp16 ("Input type (float) and bias type (c10::Half)").
+                vla_i8 = vla_i8.to(dtype=torch.float32).cpu()
+                vla_i8 = quantize_dynamic(vla_i8, dtype=torch.qint8)
+                with torch.inference_mode():
+                    input_ids_c = input_ids.cpu()
+                    attention_mask_c = attention_mask.cpu()
+                    pixel_values_c = b["pixel_values"]
+                    labels_c = labels.cpu()
+                    out_ = vla_i8(input_ids=input_ids_c,
+                                  attention_mask=attention_mask_c,
+                                  pixel_values=pixel_values_c, labels=labels_c)
+                eval_acc_i8 = _action_acc(out_, labels_c)
+                i8_sec = time.perf_counter() - t_i8
+                print(f"  eval acc (INT8 of fine-tuned, CPU): {eval_acc_i8:.4f} "
+                      f"({i8_sec:.1f}s)", flush=True)
+                _int8_note = f"torch.ao quantize_dynamic, qint8, {i8_sec:.0f}s"
+            except Exception as exc:  # INT8 must never kill the baseline row
+                print(f"  INT8 reference failed: {exc}", flush=True)
+                rec.metric(event="int8_reference", error=str(exc))
+                eval_acc_i8 = float("nan")
+                i8_sec = 0.0
+                _int8_note = f"failed: {exc}"
 
         delta = (eval_acc_i8 - eval_acc_ft) if not np.isnan(eval_acc_i8) else float("nan")
         verdict = "OK" if not np.isnan(eval_acc_ft) else "FAIL"
@@ -372,8 +437,11 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             "eval_acc_finetuned": float(eval_acc_ft),
             "eval_acc_int8": float(eval_acc_i8),
             "delta_int8_minus_ft": round(float(delta), 4) if delta == delta else None,
+            "int8_note": _int8_note,
             "verdict": verdict,
         }
+        rec.metric(event="n1_results", int8_note=_int8_note,
+                   eval_acc_finetuned=float(eval_acc_ft))
         finish_run(rec, status=status, results=results,
                    tolerance_note="smoke steps unless --steps given; eval is one "
                                   "held-out batch (same slice); INT8 on CPU")

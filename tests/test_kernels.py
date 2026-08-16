@@ -45,6 +45,40 @@ def test_tt_svd_exact_reconstruction():
     assert err < 1e-10, f"TT-SVD reconstruction err {err:.2e}"
 
 
+def test_tt_svd_small_kv_proj_deep_split():
+    """Regression: GQA k/v projections (128 x 896) at d=4 deep splits.
+
+    The requested rank (e.g. 36 at 50% params) exceeds the SVD's available
+    right dimension at the last split, so the achieved rank is smaller.
+    tt_svd must track achieved ranks instead of assuming the requested rank
+    fits; previously this raised "cannot reshape array of size X into shape
+    (r,4,4,16)" (ValueError).
+    """
+    rng = np.random.default_rng(7)
+    W = rng.standard_normal((128, 896))
+    m_dims = (4, 4, 4, 2)
+    n_dims = (8, 7, 4, 4)
+    for frac_rank in (20, 36):  # 16% and 50%-plan rank for this shape
+        cs = K.tt_svd(W, m_dims, n_dims, ranks=(frac_rank,) * 3)
+        rec = K.contract_cores(cs.arrays, m_dims, n_dims)
+        assert rec.shape == W.shape
+        # achieved ranks: bond dims must telescope (r_{k-1}, m_k, n_k, r_k)
+        for k in range(1, len(cs.arrays)):
+            assert cs.arrays[k].shape[0] == cs.arrays[k - 1].shape[-1]
+        err = np.linalg.norm(rec - W) / np.linalg.norm(W)
+        assert 0.0 <= err <= 1.1, f"reconstruction err {err:.3f}"
+
+
+def test_tt_svd_exact_reconstruction_deep_split():
+    """TT-SVD must reconstruct an exact-TT matrix for d=4 (QTT deep split)."""
+    cores, W = _random_cores((4, 2, 2, 2), (4, 2, 2, 2), (3, 4, 2), seed=7)
+    cs = K.tt_svd(W, (4, 2, 2, 2), (4, 2, 2, 2), ranks=(3, 4, 2))
+    rec = K.contract_cores(cs.arrays, (4, 2, 2, 2), (4, 2, 2, 2))
+    err = np.linalg.norm(rec - W) / np.linalg.norm(W)
+    assert err < 1e-8, f"TT-SVD d=4 reconstruction err {err:.2e}"
+    assert cs.ranks == (3, 4, 2)
+
+
 def test_tt_cross_exact_reconstruction():
     """TT-cross must reconstruct an exact-TT matrix (rank-2, 16x16)."""
     cores, W = _random_cores((4, 4), (4, 4), (2,), seed=2)

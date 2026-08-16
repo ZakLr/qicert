@@ -32,6 +32,7 @@ class BenchContext:
     batch: int | None = None       # N1: batch size
     seeds: list[int] | None = None  # N1: explicit seed list
     steps_per_seed: int | None = None  # N1: steps per seed when seeds given
+    save_ckpt: str | None = None       # N1: dir to save fine-tuned backbone (N1 -> N2)
 
     @property
     def active(self) -> bool:
