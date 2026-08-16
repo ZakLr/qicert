@@ -41,7 +41,7 @@ BUNDLE = [
 
 METADATA = {
     "id": "zakilr/qicert-n1-baseline",
-    "title": "qicert N1 MiniVLA baseline (LoRA + INT8)",
+    "title": "qicert N1 baseline",
     "code_file": "n1_baseline.py",
     "language": "python",
     "kernel_type": "script",
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     ap.add_argument("--batch", type=int, default=4)
     ap.add_argument("--seeds", default="0,1,2")
     ap.add_argument("--slug", default="zakilr/qicert-n1-baseline")
-    ap.add_argument("--title", default="qicert N1 MiniVLA baseline (LoRA + INT8)")
+    ap.add_argument("--title", default="qicert N1 baseline")
     args = ap.parse_args()
     seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
     build(Path(args.out), args.steps, args.batch, seeds, args.slug, args.title)
