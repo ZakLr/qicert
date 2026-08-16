@@ -165,6 +165,10 @@ def _run_n2(out: list[str], ctx=None) -> None:
          "Delta vs N1 FT", "Cert sound", "Status"])
 
     for seed in seeds:
+        # The recorder reads ctx.seed; the worker is launched with --seeds N,
+        # so make ctx.seed follow the seed being run (ledger provenance).
+        if ctx is not None:
+            ctx.seed = seed
         # Load the fine-tuned backbone for this seed (N1 handoff).
         ft_path = ft_dir / f"seed{seed}.pt"
         if not ft_path.exists():

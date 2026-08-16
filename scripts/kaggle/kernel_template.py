@@ -1,5 +1,5 @@
 """
-N1 scored baseline on Kaggle: MiniVLA-1B LoRA fine-tune + INT8 reference.
+N1 baseline + N2 compression sweep on Kaggle (MiniVLA-1B).
 
 Self-contained kernel (Kaggle has no shell access; the qicert package is
 embedded at build time by scripts/build_kaggle_kernel.py as QICERT_BUNDLE).
@@ -19,11 +19,15 @@ Runtime flow (all inside /kaggle/working):
   5. download from HF: final MiniVLA ckpt (5.2G) + LIBERO spatial slice (1.8G)
      + base Qwen2.5-0.5B / DINOv2 / SigLIP (pulled by the load path)
   6. warm the RLDS dataset-statistics cache (single pass, avoids races)
-  7. run qicert.bench.compress N1 with full recorder capture, ONE SEED PER
-     PROCESS, GPUs round-robin (Kaggle free tier = 2x Tesla T4; both GPUs
-     get work — no single-GPU bottleneck). Falls back to sequential on a
-     1-GPU session.
-  8. write results to /kaggle/working/results (Kaggle syncs this back)
+  7. run N1 (fine-tune + save-ckpt, INT8 SKIPPED — recorded in the scored
+     N1 run): ONE SEED PER PROCESS, GPUs round-robin (2x Tesla T4 both get
+     work). Each seed saves its fine-tuned backbone + the EXACT eval batch
+     + per-seed baseline accuracy into FT_DIR as the N2 handoff.
+  8. run N2 (6 bond plans x {TT, QTT} sweep): same process-per-seed GPU
+     round-robin; each worker loads the VLA ONCE per seed and scores every
+     compressed point on the matched N1 eval batch, with per-layer exact
+     Lipschitz certificates.
+  9. write results to /kaggle/working/results (Kaggle syncs this back)
 
 Kernel metadata (kernel-metadata.json): enable_gpu, enable_internet,
 machine_shape=NvidiaTeslaT4, kernel_type=script.
@@ -48,6 +52,8 @@ SRC = WORK / "qicert-src"
 CODE = WORK / "code"
 WEIGHTS = WORK / "weights"
 RESULTS = WORK / "results"
+# N1 -> N2 handoff: fine-tuned backbones + matched eval batches sidecars.
+FT_DIR = WORK / "ft"
 FORK_GIT = "https://github.com/Stanford-ILIAD/openvla-mini.git"
 
 # Filled by build_kaggle_kernel.py (base64 of a tar.gz of python/ + bench/ +
@@ -219,6 +225,7 @@ def _run_n1_multi_gpu() -> None:
     _log(f"running N1 scored: steps/seed={steps} batch={batch} seeds={seeds} "
          f"gpus={n_gpu} (process-per-seed, round-robin)")
     RESULTS.mkdir(parents=True, exist_ok=True)
+    FT_DIR.mkdir(parents=True, exist_ok=True)
 
     env = dict(os.environ)
     # subprocesses do NOT inherit sys.path — hand them the qicert package +
@@ -236,6 +243,7 @@ def _run_n1_multi_gpu() -> None:
                "--out", str(RESULTS), "--exp-id", "N1",
                "--steps", str(steps), "--batch", str(batch),
                "--seeds", str(seed),
+               "--save-ckpt", str(FT_DIR), "--skip-int8",
                "--run-tag", f"kaggle-t4-gpu{gpu}-seed{seed}"]
         _log("spawn: " + " ".join(str(c) for c in cmd))
         workers.append(subprocess.Popen(cmd, env=env))
@@ -255,6 +263,57 @@ def _run_n1_multi_gpu() -> None:
     _log("all N1 workers done")
 
 
+def _run_n2_multi_gpu() -> None:
+    """N2 compression Pareto sweep: one subprocess per seed, GPUs round-robin.
+
+    Consumes the fine-tuned backbones + matched eval batches N1 saved into
+    FT_DIR (--save-ckpt sidecars). Each worker runs the full 6-plan x
+    {TT, QTT} sweep for its seed, loading the VLA ONCE (36 model loads in
+    the original design -> 3, one per seed). Falls back to sequential on a
+    1-GPU session.
+    """
+    seeds = SCORED_SEEDS
+    n_gpu = _n_gpus()
+    _log(f"running N2 scored: plans=6 backbones=2 seeds={seeds} "
+         f"gpus={n_gpu} (process-per-seed, round-robin)")
+    RESULTS.mkdir(parents=True, exist_ok=True)
+
+    missing = [s for s in seeds
+               if not (FT_DIR / f"seed{s}.pt").exists()]
+    if missing:
+        raise SystemExit(f"N2: missing N1 fine-tuned ckpts for seeds {missing}")
+
+    env = dict(os.environ)
+    env["QICERT_FT_CKPT"] = str(FT_DIR)
+    pythonpath = os.pathsep.join([str(SRC / "python"), str(CODE)])
+    env["PYTHONPATH"] = (pythonpath + os.pathsep + env["PYTHONPATH"]
+                          if env.get("PYTHONPATH") else pythonpath)
+    workers: list[subprocess.Popen] = []
+    for i, seed in enumerate(seeds):
+        gpu = i % n_gpu if n_gpu > 1 else 0
+        env["CUDA_VISIBLE_DEVICES"] = str(gpu)
+        cmd = [sys.executable, "-m", "qicert.bench.all",
+               "--module", "n2_sweep", "--rows", "compression-pareto",
+               "--out", str(RESULTS), "--exp-id", "N2",
+               "--seeds", str(seed),
+               "--run-tag", f"kaggle-t4-gpu{gpu}-seed{seed}"]
+        _log("spawn: " + " ".join(str(c) for c in cmd))
+        workers.append(subprocess.Popen(cmd, env=env))
+        if (i + 1) % n_gpu == 0 and i + 1 < len(seeds):
+            for w in workers:
+                rc = w.wait(timeout=11 * 3600)
+                if rc != 0:
+                    _log(f"N2 worker exited {rc}")
+            workers = []
+
+    rc = 0
+    for w in workers:
+        rc |= w.wait(timeout=11 * 3600)
+    if rc:
+        raise SystemExit(f"one or more N2 workers failed (rc={rc})")
+    _log("all N2 workers done")
+
+
 def main() -> None:
     _log(f"python {sys.version.split()[0]}; workdir {WORK}")
     t0 = time.time()
@@ -265,6 +324,7 @@ def main() -> None:
     _download_weights()
     _warm_dataset_stats()
     _run_n1_multi_gpu()
+    _run_n2_multi_gpu()
     _log(f"done in {(time.time()-t0)/60:.1f} min; results in {RESULTS}")
     _log("files in /kaggle/working are synced back to the kernel output")
 
