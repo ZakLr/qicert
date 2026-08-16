@@ -1,0 +1,15 @@
+{
+  "id": "zakilr/qicert-n1-baseline",
+  "title": "qicert N1 MiniVLA baseline (LoRA + INT8)",
+  "code_file": "n1_baseline.py",
+  "language": "python",
+  "kernel_type": "script",
+  "is_private": "true",
+  "enable_gpu": "true",
+  "enable_internet": "true",
+  "machine_shape": "NvidiaTeslaT4",
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": [],
+  "model_sources": []
+}

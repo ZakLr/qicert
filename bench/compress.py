@@ -7,9 +7,14 @@ from ._base import finish_run, pending_row, start_run, table_header, wants
 
 # Real MiniVLA checkpoint (same source as N2'); layers come from the LLM
 # backbone state dict (flat dotted keys, see bench/step0.py + n2prime.py).
-CKPT = Path(__file__).resolve().parents[1] / "weights" / "ckpt" / "checkpoints" / \
+# Env overrides (QICERT_CKPT / QICERT_DATA_ROOT) let the Kaggle kernel point
+# at its own /kaggle/working layout instead of the repo-relative default.
+import os as _os
+CKPT = Path(_os.environ.get("QICERT_CKPT", "")) if _os.environ.get("QICERT_CKPT") else \
+    Path(__file__).resolve().parents[1] / "weights" / "ckpt" / "checkpoints" / \
     "step-122500-epoch-55-loss=0.0743.pt"
-DATA_ROOT = Path(__file__).resolve().parents[1] / "weights" / "libero_spatial_no_noops"
+DATA_ROOT = Path(_os.environ.get("QICERT_DATA_ROOT", "")) if _os.environ.get("QICERT_DATA_ROOT") else \
+    Path(__file__).resolve().parents[1] / "weights" / "libero_spatial_no_noops"
 
 # Layer inventory for N3 (real MiniVLA layer-0, from the checkpoint):
 #   layer_type -> state-dict key suffix
@@ -162,8 +167,10 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
 
     # The fork must be importable (container image bakes it; host needs
     # weights/code on sys.path + the transformers-5.x patch applied).
+    # QICERT_FORK lets the Kaggle kernel point at its own clone location.
     repo = Path(__file__).resolve().parents[1]
-    fork = repo / "weights" / "code"
+    fork = Path(os.environ.get("QICERT_FORK", "")) if os.environ.get("QICERT_FORK") \
+        else repo / "weights" / "code"
     if str(fork) not in sys.path:
         sys.path.insert(0, str(fork))
     os.environ.setdefault("PRISMATIC_DATA_ROOT", str(repo / "weights" / "data"))

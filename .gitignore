@@ -30,3 +30,9 @@ results/
 weights/
 .hf_cache/
 *.safetensors
+
+# Kaggle: the self-contained kernel bundle is GENERATED at push time from
+# scripts/kaggle/kernel_template.py + scripts/build_kaggle_kernel.py
+# (it embeds the whole qicert package as base64, so it must not be committed
+# — it would go stale and bloat the repo).
+kaggle/n1_baseline.py
