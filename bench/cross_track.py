@@ -6,7 +6,7 @@ from ._base import pending_row, table_header, wants
 SMOKE = frozenset({"cross-track"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "cross-track", SMOKE):
         out += table_header("N13 - cross-track generalization (AD -> robotics mirror of N2/N3/N5)",
                             ["ID", "Experiment", "Seeds", "GPU-h", "Status"])

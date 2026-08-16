@@ -6,7 +6,7 @@ from ._base import pending_row, table_header, wants
 SMOKE = frozenset({"monitor-alarms"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "monitor-alarms", SMOKE):
         out += table_header("N10 - monitor metrics (pre-registered)",
                             ["Metric", "Budget", "Status"])

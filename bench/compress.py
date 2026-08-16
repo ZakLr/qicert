@@ -1,15 +1,20 @@
 """Compression + Layer-1 certificates: N1 (baseline), N2, N2', N3 (submission/08)."""
 from __future__ import annotations
 
-from ._base import pending_row, table_header, wants
+from ._base import finish_run, pending_row, start_run, table_header, wants
 
 SMOKE = frozenset({"compression-pareto", "kernel-smoke"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     # --- Phase 0.5: the Python reference kernels measured for real ---
     if wants(rows, "kernel-smoke", SMOKE):
         from qicert.kernels import parity_check, active_backend_name
+        rec = start_run(ctx, exp_id=(ctx.exp_id if ctx and ctx.exp_id else "kernel-smoke"),
+                        label="kernel-smoke",
+                        config={"check": "kernel-smoke",
+                                "backend": active_backend_name(),
+                                "parity": "tests/test_kernels.py::test_parity_harness"})
         fp = parity_check()
         out += table_header(
             f"Phase-0.5 - kernel smoke (backend={active_backend_name()})",
@@ -20,10 +25,20 @@ def run(rows: str, out: list[str]) -> None:
             ("Pauli diagonalization identity err", fp["pauli_identity_err"], 1e-9, "lower"),
             ("IQAE interval covers known p", fp["iqae_interval_contains_p"], 1.0, "exact"),
         ]
+        all_ok = True
         for name, val, tol, mode in checks:
             ok = (val == tol) if mode == "exact" else val <= tol
+            all_ok = all_ok and ok
             bar = "= 1" if mode == "exact" else f"< {tol:.0e}"
             out.append(f"| {name} | {val:.3e} | {bar} | {'PASS' if ok else 'FAIL'} |")
+            if rec:
+                rec.metric(check=name, value=float(val), tol=tol, pass_ok=bool(ok))
+        if rec:
+            rec.sample_power()
+            finish_run(rec, status="completed" if all_ok else "failed",
+                       results={"checks": {k: float(v) for k, v in fp.items()}},
+                       tolerance_note="parity harness tolerances per tests/test_kernels.py")
+            out.append(f"\nrecorded: {rec.run_dir}")
 
     # --- N1: the load-bearing baseline (QLoRA + INT8 reference) ---
     if wants(rows, "baseline-int8", SMOKE):

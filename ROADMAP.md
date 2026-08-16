@@ -48,6 +48,12 @@ What remains is the *ports* behind the same contracts + their parity gates.
       TT tensors; compiler exactness identity; IQAE interval on a known p; shadow
       false-alarm/anomaly gates; parity harness. **17/17 green 2026-08-11** — the
       unit floor under N14 and the conformance spec for the C++/Julia ports.
+- [x] **Run recorder (Decision 2026-08-16)** — `qicert.record.RunRecorder` writes
+      run.json/config.json/system.json/env.json/metrics.jsonl + ledger.csv for every
+      real run; `bench.all --out DIR --exp-id ... --seed ... --run-tag ...` enables it;
+      pilot wired into `bench.compress` kernel-smoke. Field inventory:
+      `docs/run-data-register.md`. Tests: 25/25 green. **Never re-run a benchmark
+      for missing data.**
 
 ## Phase 1 — Make the bench honest (Week 1 on GPU)
 
@@ -104,6 +110,23 @@ fresh environment **and** every table in `docs/technical-report.pdf` is regenera
 `qicert.bench` from measured values (no pre-registered placeholders remain).
 
 ---
+
+## Decisions (2026-08-16) — chair + user
+
+4. **Dev runtime derived FROM the CUDA-Q image.** `Dockerfile` now builds from
+   `nvcr.io/nvidia/nightly/cuda-quantum:cu13-latest` (the user's existing container) +
+   torch cu130 wheels + transformers/peft/accelerate + pynvml. ONE container carries
+   CUDA-Q AND the ML stack; `ENTRYPOINT []` clears the base banner; invoke
+   `/usr/bin/python3` explicitly (WORKDIR has a `python/` dir). Verified on the RTX
+   5060: torch 2.13.0+cu130 `cuda=True`, CUDA-Q `nvidia` target initializes, bench
+   smoke green inside the container.
+
+5. **Run capture is mandatory, not optional (user).** Every benchmark/fine-tune
+   records complete artifacts via `qicert.record` (`--out`); no re-runs for missing
+   data. Bench modules that run real experiments MUST open+close a recorder
+   (`bench._base.start_run`/`finish_run`) — no recorder, no table. INT8 baseline path:
+   **torch.quantization** (no bitsandbytes in v1, confirmed). Warm-up ladder order:
+   Step-0 CPU smoke → Step-1 MiniVLA smoke on the 5060 → full N1 (3 seeds).
 
 ## Decisions (2026-08-11) — chair
 

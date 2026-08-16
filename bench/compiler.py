@@ -6,7 +6,7 @@ from ._base import pending_row, table_header, wants
 SMOKE = frozenset({"compiler-acceptance"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "compiler-acceptance", SMOKE):
         out += table_header("N7 - compiler acceptance (E-comp-1..4)",
                             ["Check", "Criterion", "Status"])

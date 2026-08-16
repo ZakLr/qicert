@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "qicert:run-record",
+  "title": "qicert run record",
+  "description": "Artifacts written by qicert.record.RunRecorder for every benchmark run: run.json (identity/provenance/results), config.json (resolved config), system.json (hardware), env.json (software pins), metrics.jsonl (append-only trajectory). Full field inventory: docs/run-data-register.md.",
+  "type": "object",
+  "required": ["experiment_id", "run_id", "seed", "config_hash", "status", "start_utc"],
+  "properties": {
+    "experiment_id": { "type": "string", "examples": ["N1", "N2prime"] },
+    "run_id": { "type": "string", "pattern": "^[0-9a-f]{12}$" },
+    "run_tag": { "type": "string" },
+    "seed": { "type": "integer" },
+    "seed_spec": { "type": "object", "additionalProperties": { "type": "integer" } },
+    "capture": { "enum": ["default", "extra", "heavy"] },
+    "config_hash": { "type": "string", "pattern": "^[0-9a-f]{16}$" },
+    "status": { "enum": ["running", "completed", "failed", "killed", "demoted"] },
+    "start_utc": { "type": "string", "format": "date-time" },
+    "end_utc": { "type": "string", "format": "date-time" },
+    "wall_sec": { "type": "number", "minimum": 0 },
+    "energy_kwh": { "type": "number", "minimum": 0 },
+    "gpu_name": { "type": ["string", "null"] },
+    "command_line": { "type": "string" },
+    "qicert_version": { "type": ["string", "null"] },
+    "kill_criterion": { "type": ["string", "null"], "examples": ["R1"] },
+    "kill_verdict": { "type": ["string", "null"] },
+    "tolerance_note": { "type": ["string", "null"] },
+    "results": { "type": "object", "additionalProperties": true }
+  },
+  "additionalProperties": true
+}

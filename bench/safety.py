@@ -6,7 +6,7 @@ from ._base import pending_row, table_header, wants
 SMOKE = frozenset({"safety-three-arm"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "stl-specs", SMOKE):
         out += table_header("STL spec library (per track)",
                             ["Spec", "Track", "Formula"])

@@ -13,6 +13,7 @@ dependencies:
       # torch is NOT pinned here so the conda env stays installable without GPU;
       # the Dockerfile (Decision 2026-08-11) is the pinned CUDA 13 runtime.
       - pytest>=8
+      - pynvml>=11.0       # optional GPU power/util capture (recorder; degrades to None)
       # --- ML stack (robotics-first: MiniVLA-1B; deliberately NO bitsandbytes) ---
       - transformers>=4.44
       - peft>=0.13

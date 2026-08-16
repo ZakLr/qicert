@@ -6,7 +6,7 @@ from ._base import pending_row, table_header, wants
 SMOKE = frozenset({"lyapunov-survival"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "sos-boxes", SMOKE):
         out += table_header("N4 - Layer-2a SOS-certified local boxes (3 Pareto points x 2 tracks)",
                             ["ID", "Box", "Margin m_k", "Certificate", "Status"])

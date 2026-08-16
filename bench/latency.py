@@ -6,7 +6,7 @@ from ._base import table_header, wants
 SMOKE = frozenset({"latency-profile"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "latency-profile", SMOKE):
         out += table_header("Latency on stated profile (<=100 ms)",
                             ["Method", "ms", "Status"])

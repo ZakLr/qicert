@@ -6,7 +6,7 @@ from ._base import pending_row, table_header, wants
 SMOKE = frozenset({"training-curves"})
 
 
-def run(rows: str, out: list[str]) -> None:
+def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "training-curves", SMOKE):
         out += table_header("N11 - ALS/DMRG-native fine-tune (both backbones)",
                             ["ID", "Experiment", "Seeds", "GPU-h", "Status"])
