@@ -66,6 +66,24 @@ What remains is the *ports* behind the same contracts + their parity gates.
 - [ ] **Backbone download + license record** (0 GPU-h, parallel) — LLaVA-1.5-7B /
       MiniVLA-1B checkpoints, license terms recorded at download (Q11 evidence, §6).
       Unblocks N1/N13.
+      - [x] MiniVLA-1B downloaded (weights/, gitignored) + exact license strings in
+        `docs/licenses.md`; **Q11 decided 2026-08-16: MiniVLA for scored tables,
+        documented** (DINOv2 CC-BY-NC caveat stated; qicert code MIT/Apache; derived
+        checkpoints not redistributed). See council-log.md.
+- [x] **Step 0 — single-layer CPU smoke** (2026-08-16) — `bench.step0` runs TT-SVD +
+      TT-cross + L1 Lipschitz cert + INT8/SVD baselines + compiler identity on the real
+      MiniVLA q_proj 896x896. Toolchain validation only. Results: cert soundness PASS
+      (product 24.8 >= tight 19.0), TT-SVD within 1.56x of matched SVD, INT8 4.1%,
+      compiler identity 0.0; rank-8 TT is 1.8% params at ~94% err (real layer is
+      high-rank — bond plans matter for N2).
+- [x] **Step 1 — MiniVLA-1B robotics smoke on the 5060** (2026-08-16) — native
+      Prismatic `load_vla` (only supported MiniVLA format), fp16: **1.25B params at
+      2.35 GiB VRAM**; one LIBERO-style prompt→action decode **19.0 s @ 2.64 GiB
+      peak**; one peft LoRA r=8 step **3.15 s @ 2.54 GiB**. Kill criterion (fp16 at
+      batch 1 < 8 GB): **fit**. Requires `scripts/patches/prismatic-transformers5.patch`
+      (transformers 5.15 compat: sdpa, lazy dlimp, dropped generation kwargs) —
+      applied to weights/code, validated against clean tree. Docker/WSL2 memory raised
+      to 12 GB (.wslconfig) for the 5.5 GB checkpoint load.
 
 ## Phase 2 — Heavy pieces (GPU or toolchain)
 

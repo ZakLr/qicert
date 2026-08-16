@@ -63,6 +63,14 @@ RUN pip install -e ".[dev]" \
                    "safetensors>=0.4" "sentencepiece>=0.2" "huggingface_hub>=0.24" \
                    "pynvml>=11.0"   # recorder: GPU power/util capture (optional)
 
+# MiniVLA native (Prismatic) runtime deps — the MiniVLA fork pins torch 2.2.0/
+# transformers 4.40.1, which is incompatible with this image's cu13 stack; we
+# install ONLY the fork's pure-python deps and keep our torch/transformers.
+# The fork itself (weights/code) is mounted at runtime, not baked in.
+RUN pip install "timm==0.9.10" "draccus>=0.8" "wandb>=0.16" "jsonlines>=3.1" \
+                   "json-numpy>=0.2" "einops>=0.7" "matplotlib>=3.8" \
+                   "rich>=13.0" "protobuf>=4.25"
+
 # Fast CI check: the smoke suite must pass inside the container, and both the
 # ML runtime and CUDA-Q must be importable. NOTE: the CUDA-Q 'nvidia' target is
 # NOT exercised here — libnvidia-ml is only mounted at `docker run --gpus all`
