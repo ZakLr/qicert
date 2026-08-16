@@ -36,10 +36,10 @@ checkpoint weights incorporate DINOv2 under **CC-BY-NC 4.0**, which restricts
 commercial use. Anyone redistributing fine-tuned weights derived from this
 checkpoint inherits that restriction.
 
-## 3. Decision (Q11 — logged in council-log.md)
+## 3. Decision (Q11 — logged in council-log.md 2026-08-16)
 
-- **DINOv2 CC-BY-NC vs competition terms:** [DECISION PENDING — see council-log]
-- If non-commercial weights are unacceptable, the fallback (per
-  `docs/backbones.md` §1): keep MiniVLA for toolchain/HP validation; land the
-  *scored* robotics tables on a cleanly-licensed backbone (SigLIP-only OpenVLA
-  variant or π0-family).
+- **DECIDED: MiniVLA for scored tables, documented.** qicert's own code ships
+  MIT/Apache-2.0; **MiniVLA-derived fine-tuned checkpoints are NOT
+  redistributed**; the exact strings above go in the report §6 compliance table
+  verbatim, with the DINOv2 NC caveat stated. Fallback (SigLIP-only/π0) stays
+  available only if a future audit makes it necessary.
