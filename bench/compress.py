@@ -148,8 +148,8 @@ def _run_n1(out: list[str], ctx=None) -> None:
             all_rows.append(row)
 
     if all_rows:
-        acc_ft = np.array([r["eval_acc_ft"] for r in all_rows])
-        acc_i8 = np.array([r["eval_acc_i8"] for r in all_rows])
+        acc_ft = np.array([r["eval_acc_finetuned"] for r in all_rows])
+        acc_i8 = np.array([r["eval_acc_int8"] for r in all_rows])
         out.append("")
         out.append(f"* Baseline (median over seeds): fine-tuned {np.median(acc_ft):.4f} "
                    f"(min {acc_ft.min():.4f}); INT8 {np.median(acc_i8):.4f} "
