@@ -57,8 +57,10 @@ What remains is the *ports* behind the same contracts + their parity gates.
 
 ## Phase 1 — Make the bench honest (Week 1 on GPU)
 
-- [ ] **N2′ bit-ordering sweep** (2 GPU-h, Q20) — 3 orderings × 1 layer × 1 seed; picks
-      the ordering N2's 24-GPU-h sweep uses.
+- [x] **N2′ bit-ordering sweep** (2 GPU-h, Q20) — 3 orderings x 1 layer x 1 seed;
+      picks the ordering N2's 24-GPU-h sweep uses. **Winner: bit-reversed**
+      (recon 0.919 vs 0.936 interleaved / 0.939 natural, +2% margin) — recorded
+      in results/ledger.csv (178c849b6525).
 - [x] **N1 baseline fine-tune + INT8 reference** (8 GPU-h) — SCORED run complete
       2026-08-16 on Kaggle (2x T4, 3 seeds x 2000 steps, batch 4): median eval
       acc 0.469 (LoRA FT) vs 0.121 (INT8 ref), delta -0.348; loss 8.9 -> 2.4-2.8,
