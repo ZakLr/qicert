@@ -59,8 +59,11 @@ What remains is the *ports* behind the same contracts + their parity gates.
 
 - [ ] **N2′ bit-ordering sweep** (2 GPU-h, Q20) — 3 orderings × 1 layer × 1 seed; picks
       the ordering N2's 24-GPU-h sweep uses.
-- [ ] **N1 baseline fine-tune + INT8 reference** (8 GPU-h) — backbone behaves on our
-      slice (kill criterion R1).
+- [x] **N1 baseline fine-tune + INT8 reference** (8 GPU-h) — SCORED run complete
+      2026-08-16 on Kaggle (2x T4, 3 seeds x 2000 steps, batch 4): median eval
+      acc 0.469 (LoRA FT) vs 0.121 (INT8 ref), delta -0.348; loss 8.9 -> 2.4-2.8,
+      train acc 0.50-0.53. R1 comparator established; backbone behaves on our
+      slice, kill criterion R1 not tripped. See `results/N1-report.md`.
 - [ ] **N3 Layer-1 certificate table** (2 GPU-h) — exact Lipschitz products per layer per
       Pareto point; first real numbers for the report's certificate column.
 - [ ] **Backbone download + license record** (0 GPU-h, parallel) — LLaVA-1.5-7B /

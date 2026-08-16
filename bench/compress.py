@@ -165,6 +165,11 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
     import sys
     import time
 
+    # The recorder reads ctx.seed; the worker is launched with --seeds N, so
+    # make ctx.seed follow the seed being run (ledger provenance accuracy).
+    if ctx is not None:
+        ctx.seed = seed
+
     # The fork must be importable (container image bakes it; host needs
     # weights/code on sys.path + the transformers-5.x patch applied).
     # QICERT_FORK lets the Kaggle kernel point at its own clone location.
