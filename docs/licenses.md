@@ -36,7 +36,17 @@ checkpoint weights incorporate DINOv2 under **CC-BY-NC 4.0**, which restricts
 commercial use. Anyone redistributing fine-tuned weights derived from this
 checkpoint inherits that restriction.
 
-## 3. Decision (Q11 — logged in council-log.md 2026-08-16)
+## 3. LIBERO dataset (N1 fine-tuning slice)
+
+| Repo | Suite | License (exact HF string) | Downloaded |
+|---|---|---|---|
+| `openvla/modified_libero_rlds` | `libero_spatial_no_noops` (N1 slice) | `mit` | ✅ |
+
+Source: `weights/_libero_licenses.json` (captured 2026-08-16). Same four
+suites MiniVLA-1B itself was fine-tuned on; the spatial suite is N1's
+pre-registered slice (submission/08-experiments.md).
+
+## 4. Decision (Q11 — logged in council-log.md 2026-08-16)
 
 - **DECIDED: MiniVLA for scored tables, documented.** qicert's own code ships
   MIT/Apache-2.0; **MiniVLA-derived fine-tuned checkpoints are NOT

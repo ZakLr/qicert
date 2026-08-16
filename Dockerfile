@@ -71,6 +71,16 @@ RUN pip install "timm==0.9.10" "draccus>=0.8" "wandb>=0.16" "jsonlines>=3.1" \
                    "json-numpy>=0.2" "einops>=0.7" "matplotlib>=3.8" \
                    "rich>=13.0" "protobuf>=4.25"
 
+# LIBERO RLDS data pipeline for N1: the Prismatic fork pins tensorflow==2.15
+# (py3.11-only) and dlimp; we run py3.12, so use TF 2.18-cpu (data loading is
+# CPU-bound) and install dlimp with --no-deps to dodge the TF pin. protobuf is
+# pinned >=5.27 because TFDS's tensorflow_metadata needs runtime_version.
+# (Verified combo 2026-08-16: TF 2.18.0 + protobuf 5.27 + TFDS 4.9.10 + dlimp.)
+RUN pip install "tensorflow-cpu==2.18.0" "protobuf>=5.27,<6" \
+    && pip install "tensorflow_datasets>=4.9,<5" \
+    && pip install --no-deps "git+https://github.com/moojink/dlimp_openvla" \
+    && python -c "import tensorflow, tensorflow_datasets, dlimp; print('RLDS stack OK', tensorflow.__version__)"
+
 # Fast CI check: the smoke suite must pass inside the container, and both the
 # ML runtime and CUDA-Q must be importable. NOTE: the CUDA-Q 'nvidia' target is
 # NOT exercised here — libnvidia-ml is only mounted at `docker run --gpus all`

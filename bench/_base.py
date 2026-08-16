@@ -28,6 +28,10 @@ class BenchContext:
     capture: str = "default"
     seed_spec: dict | None = None
     extra_identity: dict = field(default_factory=dict)
+    steps: int | None = None       # N1: fine-tune steps (smoke vs scored)
+    batch: int | None = None       # N1: batch size
+    seeds: list[int] | None = None  # N1: explicit seed list
+    steps_per_seed: int | None = None  # N1: steps per seed when seeds given
 
     @property
     def active(self) -> bool:

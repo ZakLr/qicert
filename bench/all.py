@@ -61,6 +61,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--capture", default="default",
                     choices=["default", "extra", "heavy"],
                     help="capture depth (see docs/run-data-register.md)")
+    ap.add_argument("--steps", type=int, default=None,
+                    help="train steps for GPU fine-tune tables (N1); default = module default")
+    ap.add_argument("--batch", type=int, default=None,
+                    help="batch size for GPU fine-tune tables (N1); default = module default")
+    ap.add_argument("--seeds", default=None,
+                    help="comma-separated seeds for GPU fine-tune tables (N1); default = ctx.seed")
+    ap.add_argument("--steps-per-seed", type=int, default=None,
+                    help="fine-tune steps per seed when --seeds given (N1); default = --steps")
     args = ap.parse_args(argv)
 
     # Apply the selected backends before any bench module imports kernels.
@@ -82,6 +90,11 @@ def main(argv: list[str] | None = None) -> int:
     from qicert.bench._base import BenchContext
     ctx = BenchContext(out=args.out, exp_id=args.exp_id, seed=args.seed,
                        run_tag=args.run_tag, capture=args.capture)
+    ctx.steps = args.steps
+    ctx.batch = args.batch
+    ctx.seeds = ([int(s) for s in args.seeds.split(",") if s.strip()]
+                 if args.seeds else None)
+    ctx.steps_per_seed = args.steps_per_seed
     out: list[str] = []
     if args.backend or args.sos_backend:
         out.append(f"# qicert bench suite (backend={args.backend or 'active'}, "

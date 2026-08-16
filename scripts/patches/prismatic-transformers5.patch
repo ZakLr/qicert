@@ -83,6 +83,45 @@ index f865277..2964ca1 100644
  
  from prismatic.models.backbones.llm.prompting import PromptBuilder
  from prismatic.models.backbones.vision import ImageTransform
+diff --git a/prismatic/vla/datasets/rlds/oxe/utils/droid_utils.py b/prismatic/vla/datasets/rlds/oxe/utils/droid_utils.py
+index 44175a2..2124e5f 100644
+--- a/prismatic/vla/datasets/rlds/oxe/utils/droid_utils.py
++++ b/prismatic/vla/datasets/rlds/oxe/utils/droid_utils.py
+@@ -3,19 +3,30 @@
+ from typing import Any, Dict
+ 
+ import tensorflow as tf
+-import tensorflow_graphics.geometry.transformation as tfg
++
++# qicert patch: tensorflow_graphics is only needed for DROID rotation
++# transforms; importing it at module level breaks LIBERO/other OXE data
++# on TF>=2.16 (no py3.12 wheel). Lazy-import inside the DROID helpers.
++tfg = None
++
++def _tfg():
++    global tfg
++    if tfg is None:
++        import tensorflow_graphics.geometry.transformation as t
++        tfg = t
++    return tfg
+ 
+ 
+ def rmat_to_euler(rot_mat):
+-    return tfg.euler.from_rotation_matrix(rot_mat)
++    return _tfg().euler.from_rotation_matrix(rot_mat)
+ 
+ 
+ def euler_to_rmat(euler):
+-    return tfg.rotation_matrix_3d.from_euler(euler)
++    return _tfg().rotation_matrix_3d.from_euler(euler)
+ 
+ 
+ def invert_rmat(rot_mat):
+-    return tfg.rotation_matrix_3d.inverse(rot_mat)
++    return _tfg().rotation_matrix_3d.inverse(rot_mat)
+ 
+ 
+ def rotmat_to_rot6d(mat):
 diff --git a/prismatic/vla/materialize.py b/prismatic/vla/materialize.py
 index 91bc2e0..4f7fb60 100644
 --- a/prismatic/vla/materialize.py
