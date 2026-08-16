@@ -70,21 +70,46 @@ def make_tarball_bytes() -> bytes:
     return buf.getvalue()
 
 
-def build(out: Path) -> None:
+def build(out: Path, steps: int, batch: int, seeds: list[int],
+          slug: str, title: str) -> None:
+    if "/" not in slug:
+        raise SystemExit(
+            f"slug must be 'owner/slug' (got {slug!r}); the Kaggle API "
+            "rejects bare slugs with a server-side 'Invalid slug' error")
     tmpl = (Path(__file__).parent / "kaggle" / "kernel_template.py").read_text(
         encoding="utf-8")
     blob = base64.b64encode(make_tarball_bytes()).decode("ascii")
     assert "__QICERT_BUNDLE_B64__" in tmpl, "template marker missing"
+    # Bake the run config into the script (kaggle push has no env-var
+    # support; the kernel reads QICERT_* at import with these as defaults,
+    # so overriding the constants here is the CLI-side knob).
+    tmpl = (tmpl.replace('SCORED_STEPS = int(os.environ.get("QICERT_STEPS", "2000"))',
+                         f'SCORED_STEPS = int(os.environ.get("QICERT_STEPS", "{steps}"))')
+                .replace('SCORED_BATCH = int(os.environ.get("QICERT_BATCH", "4"))',
+                         f'SCORED_BATCH = int(os.environ.get("QICERT_BATCH", "{batch}"))')
+                .replace('SCORED_SEEDS = [int(s) for s in os.environ.get("QICERT_SEEDS", "0,1,2").split(",") if s.strip()]',
+                         'SCORED_SEEDS = [int(s) for s in '
+                         f'os.environ.get("QICERT_SEEDS", "{','.join(map(str, seeds))}").split(",") if s.strip()]'))
     script = tmpl.replace("__QICERT_BUNDLE_B64__", blob)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(script, encoding="utf-8")
+    meta = dict(METADATA)
+    meta["id"] = slug
+    meta["title"] = title
     (out.parent / "kernel-metadata.json").write_text(
-        json.dumps(METADATA, indent=2) + "\n", encoding="utf-8")
-    print(f"wrote {out} ({len(script)/1024:.0f} KiB) + kernel-metadata.json")
+        json.dumps(meta, indent=2) + "\n", encoding="utf-8")
+    print(f"wrote {out} ({len(script)/1024:.0f} KiB) + kernel-metadata.json "
+          f"[steps={steps} batch={batch} seeds={seeds}]")
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--out", default="kaggle/n1_baseline.py")
+    ap.add_argument("--steps", type=int, default=2000)
+    ap.add_argument("--batch", type=int, default=4)
+    ap.add_argument("--seeds", default="0,1,2")
+    ap.add_argument("--slug", default="zakilr/qicert-n1-baseline")
+    ap.add_argument("--title", default="qicert N1 MiniVLA baseline (LoRA + INT8)")
     args = ap.parse_args()
-    build(Path(args.out))
+    seeds = [int(s) for s in args.seeds.split(",") if s.strip()]
+    build(Path(args.out), args.steps, args.batch, seeds, args.slug, args.title)

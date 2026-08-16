@@ -9,7 +9,13 @@ Runtime flow (all inside /kaggle/working):
   2. clone the MiniVLA fork (Stanford-ILIAD/openvla-mini, public) -> ./code
   3. apply the bundled prismatic-transformers5.patch (Kaggle image ships
      transformers>=5, same as our container)
-  4. install fork deps (peft, timm==0.9.10, draccus, dlimp via pip --no-deps)
+  4. install fork deps (peft, timm==0.9.10, draccus, dlimp via pip --no-deps).
+     Kaggle's image already ships tensorflow 2.20 + tfds + jax + protobuf
+     as a self-consistent stack; we do NOT touch it (installing an older
+     tensorflow-cpu downgrades ml-dtypes and breaks the image's jax;
+     pinning protobuf <6 breaks TF 2.20's tensorflow_metadata). We also
+     uninstall the image's stale torchao 0.10.0 (peft >= 0.19 raises at
+     LoRA-wrap time if torchao is present but < 0.16; we never use it).
   5. download from HF: final MiniVLA ckpt (5.2G) + LIBERO spatial slice (1.8G)
      + base Qwen2.5-0.5B / DINOv2 / SigLIP (pulled by the load path)
   6. warm the RLDS dataset-statistics cache (single pass, avoids races)
@@ -102,15 +108,26 @@ def _setup_paths() -> None:
 
 
 def _install_deps() -> None:
-    # Kaggle image: torch+transformers>=5 already present; we add the fork's
-    # pure-python deps + the RLDS stack (TF 2.18-cpu for py3.12, dlimp).
+    # Kaggle image: torch + transformers>=5 + tensorflow 2.20 + tfds +
+    # jax 0.7.2 + ml-dtypes + protobuf all preinstalled and self-consistent
+    # (py3.12 OK). We add only the fork's pure-python deps + dlimp.
+    #
+    # CRITICAL: do NOT pip-install tensorflow-cpu, protobuf, or ml-dtypes
+    # here. Installing tensorflow-cpu==2.18 downgrades ml-dtypes to <0.5,
+    # breaking the image's jax 0.7.2 (TFLite util.py imports jax at module
+    # load; jax raises ValueError on the version check, escaping the
+    # try/except ImportError -> `import tensorflow` dies). And pinning
+    # protobuf <6 breaks TF 2.20's tensorflow_metadata (needs >=6.31).
+    # The image's stack is already consistent — leave it alone.
     _pip("peft", "timm==0.9.10", "draccus", "json-numpy", "wandb",
          extra=["--index-url", "https://pypi.org/simple"])
-    _pip("tensorflow-cpu==2.18.0", "protobuf>=5.27,<6",
-         extra=["--index-url", "https://pypi.org/simple"])
-    _pip("tensorflow_datasets>=4.9,<5",
-         extra=["--index-url", "https://pypi.org/simple"])
-    # dlimp pins TF 2.15 (py3.11-only): install --no-deps against our TF
+    # The image ships torchao 0.10.0 (old). peft >= 0.19 raises ImportError
+    # at LoRA-wrap time when torchao is present but < 0.16. We never use
+    # torchao (INT8 is torch native quantize_dynamic), so remove it — peft
+    # then treats it as unavailable and skips cleanly.
+    _sh([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchao"])
+    # dlimp pins TF 2.15 (py3.11-only): install --no-deps against the
+    # image's TF 2.20.
     _sh([sys.executable, "-m", "pip", "install", "-q", "--no-deps",
          "git+https://github.com/moojink/dlimp_openvla"])
     _log("deps installed")
