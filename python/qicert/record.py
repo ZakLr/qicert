@@ -76,9 +76,31 @@ def _try_import(name: str):
 # ---------------------------------------------------------------------------
 
 
+def _repo_root(start: str | os.PathLike | None = None) -> str | None:
+    """Nearest ancestor (of the package root) that contains a .git dir.
+
+    Handles editable installs where ``__file__`` resolves through a symlink/
+    .pth to a checkout (host) or to a baked-in copy (container) — walk up
+    until we find real git metadata, not a stray directory.
+    """
+    cur = Path(start or Path(__file__).resolve()).resolve()
+    for p in (cur, *cur.parents):
+        if (p / ".git").exists():
+            return str(p)
+    return None
+
+
 def git_info(repo: str | None = None) -> dict:
-    """qicert repo commit + dirty flag; repo defaults to this package's root."""
-    base = repo or str(Path(__file__).resolve().parents[2])
+    """qicert repo commit + dirty flag; repo defaults to the nearest .git ancestor.
+
+    Resolution order: explicit ``repo`` → walk up from ``__file__`` (host
+    checkouts) → walk up from the cwd (container runs, where the editable
+    install points at the baked image copy but the live repo is mounted at
+    the working directory).
+    """
+    base = repo or _repo_root() or _repo_root(os.getcwd())
+    if base is None:
+        return {"git_commit": None, "git_dirty": None, "git_repo": None}
     try:
         out = subprocess.run(
             ["git", "-C", base, "rev-parse", "--short", "HEAD"],
