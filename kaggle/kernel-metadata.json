@@ -1,6 +1,6 @@
 {
-  "id": "zakilr/qicert-n1-baseline",
-  "title": "qicert N1 MiniVLA baseline (LoRA + INT8)",
+  "id": "zakilr/qicert-n2-pareto",
+  "title": "qicert N2 Pareto sweep",
   "code_file": "n1_baseline.py",
   "language": "python",
   "kernel_type": "script",
