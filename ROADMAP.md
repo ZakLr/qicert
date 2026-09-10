@@ -1,5 +1,84 @@
 # qicert — Refinement Roadmap
 
+## Findings (2026-08-25) — RTX 5060 local campaign
+
+**E3: `tt_cross` deep-split crash root-caused and fixed.** Reproduction
+(`scripts/tt_cross_repro.py`): real layer-0 q_proj (896x896), d=2 completes,
+d>=4 raised `LinAlgError` from `_maxvol`'s exact pivot solve. Mechanism: deep
+splits shrink fused mode sizes (e.g. d=8 -> modes of 4-49 entries), so the
+random initial skeletons collide; the frame matrix restricted to repeated
+columns is rank-deficient, and `linalg.solve(B.T, A.T)` on a singular pivot
+block raised. Not a reshape/index bug — the entry oracle was verified exact
+(max abs err 0.0 vs dense). Fix (`python_backend._maxvol`): singular-safe
+fallback to a least-squares interpolation via `pinv`; the cross loses a
+little accuracy instead of crashing. Regression test:
+`test_tt_cross_deep_split_survives_rank_deficient_pivots`. Separately noted:
+on real weights with near-flat spectra (q_proj participation ratio ~452 of
+896; decay slope -0.010 per `results/layer_spectra.csv`) any rank-8 TT has
+optimal rel err ~0.99, so cross rel err ~1.05-1.09 at d in {2,4,8} is
+close to the truncation bound, not "garbage" as previously assumed.
+
+**E1: uniform scalar bond gauges provably cannot tighten the Layer-1 product.**
+Scaling one bond by alpha multiplies both adjacent flattened core norms by
+exactly alpha and 1/alpha (both flattenings scale uniformly), so the raw
+product is invariant under the scalar gauge subgroup; the reduction capacity
+lives in non-uniform per-channel diagonal gauges.
+`PythonKernelSet.min_gauge_product` therefore descends over per-channel
+diagonal bond scalings (monotone pairwise-product minimization, warm-bracket
+golden section); reconstruction invariance <= 3e-16 across shapes, soundness
+vs tight norm holds on all tested cases (xfail-with-report guard in place).
+
+**RTX 5060 Laptop local campaign — measured results (all ledger-recorded,
+`results/ledger.csv`; native Windows venv, torch 2.10.0+cu130, noiseless
+fp16 GPU + numpy CPU kernels; NOT hardware evidence).**
+
+- **E1/N3 gauge certificates**: `min_gauge_product` tightened L on 14/14
+  N3 cells (e.g. q_proj r=16 kappa 1.39 -> 1.13), sound (L_min >= tight)
+  on 14/14; kappa_min <= kappa_raw everywhere. Descent is monotone by
+  construction; reconstruction invariance <= 3e-16.
+- **E2 spectra**: `results/layer_spectra.csv` (168 rows). Headline: the
+  backbone's singular spectra are NEAR-FLAT (q_proj participation ratio
+  ~452/896, decay slope -0.010) — the root cause of everything below.
+- **E4/N2pre recon sweep**: 112/112 cells (`results/N2pre/`). TT-SVD rel
+  err at param fractions {0.005..0.04} is 0.96-1.00 across layer types —
+  uniform-ratio TT truncation at these ratios does not preserve real
+  weights with flat spectra.
+- **E5 residual pilot**: INT4-per-channel base + matched-budget residual:
+  TT correction within 1.00-1.12x of dense-SVD correction (weighted by E7
+  activation Grams) => "INT4 base + certified TT residual" is
+  budget-competitive IF small corrections are wanted at all.
+- **E6 latency**: dense fp16 matmul 36-179 GFLOP/s-equivalent at these
+  shapes; TT einsum contraction 5.4-12.7x SLOWER. The 19 s decode is a
+  pipeline artifact, not a matmul limit; compressed weights are not a
+  local latency lever.
+- **E7 INT8 subset ablation**: per-channel weight-only int8 =>
+  END-TO-END action drift 0.0000 at every subset scope; per-tensor =>
+  1.0897 (actions destroyed). Scope (llm/+projector/all) is irrelevant;
+  scale granularity is everything. N1's scored INT8 delta was an artifact
+  of quantization granularity, not of quantizing "too much".
+- **E9/E10a N1local**: 1000-step LoRA fine-tune at batch 4 fits 8 GB
+  (peak 6.92 GiB); enlarged holdout (24 batches, Wilson 95% CI):
+  eval action acc 0.4588 [0.4256, 0.4924]. INT8 CPU reference leg failed
+  on Windows page-file exhaustion (documented in-run; superseded by E7).
+- **E10b N2local** (first LOCAL accuracy-vs-compression points):
+  FT baseline 0.4788 [0.4453, 0.5124] over 96 samples; TT-SVD arms at
+  fractions {0.01, 0.02, 0.04} ALL collapse to 0.0000 — consistent with
+  E2/E4 flat-spectrum rel errs. Verdict: **no advantage found** for
+  naive uniform-ratio TT compression on this backbone locally; the only
+  lossless local compression arm measured is per-channel INT8 (E7).
+  Four earlier no-op arm rows (empty compression inventory from a key-
+  prefix bug) were quarantined under `results/_invalid_N2local_prefix/`
+  and pruned from the ledger.
+- Toolchain deviations, all documented in-code: MiniVLA fork code comes
+  from github.com/Stanford-ILIAD/openvla-mini (vanilla openvla does not
+  carry the patchable tree); RLDS slice layout flattened to the legacy
+  tfds format; training/eval feed via `qicert/data/vla_local.py`
+  (fork-equivalent transform/collator) because dlimp->tensorflow cannot
+  install on py3.14; TF used ONCE in a py3.12 side venv for the NPZ
+  materialization (bridge check: max |mean diff| 0.0, |std diff| 8.9e-14).
+
+---
+
 **Purpose:** the single living document for "what's next" on the qicert package.
 Status of every item is tracked here; check boxes off as work lands. The research-side
 plan (experiments N1–N14, kill criteria, budget) lives in the submission folder of the

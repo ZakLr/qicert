@@ -17,6 +17,7 @@ All kernels are numpy/scipy only (CI and bench smoke never import torch).
 """
 from __future__ import annotations
 
+import math
 import numpy as np
 from scipy import linalg
 from scipy import stats
@@ -245,7 +246,15 @@ class PythonKernelSet(KernelSet):
         rows = list(piv[:p])
         B = A[rows]
         for _ in range(80):
-            C = linalg.solve(B.T, A.T).T              # A @ B^{-1}, (n, p)
+            try:
+                C = linalg.solve(B.T, A.T).T          # A @ B^{-1}, (n, p)
+            except linalg.LinAlgError:
+                # Rank-deficient pivot block (deep splits: small fused
+                # modes make random-skeleton collisions likely — E3
+                # triage). Degrade to least squares instead of crashing;
+                # the cross interpolation loses accuracy, not validity.
+                C = (A @ np.linalg.pinv(B)).reshape(n, p)
+                break
             mag = np.abs(C)
             k = int(np.argmax(mag))
             if mag.flat[k] <= 1.0 + tol:
@@ -336,6 +345,116 @@ class PythonKernelSet(KernelSet):
                 break
             v = w / nrm
         return float(np.sqrt(max(lam, 0.0)))
+
+    def min_gauge_product(self, cores, sweeps: int = 50) -> tuple[float, dict]:
+        """Minimize prod of flattened-core spectral norms over the TT gauge group.
+
+        The Layer-1 certificate ``L = prod_k ||G_k||_2`` (lipschitz_product
+        flattening) depends on the gauge of the TT representation: inserting
+        invertible bond matrices X, X^{-1} between cores leaves the operator
+        invariant but moves L (similarity scaling moved it >10 orders of
+        magnitude at fixed tensor; ROADMAP gauge finding). The minimum over
+        the gauge group is a strictly tighter — still sound — certificate.
+
+        Gauge family: per-channel diagonal bond scalings D = diag(u), u > 0,
+        absorbed as G_k <- G_k . D on the outgoing bond and
+        G_{k+1} <- D^{-1} . G_{k+1} on the incoming bond. (A UNIFORM scalar
+        alpha on a bond scales both adjacent flat norms by exactly alpha and
+        1/alpha — provably product-invariant, hence useless; the reduction
+        capacity lives in the non-uniform channel balances.)
+
+        Algorithm: alternating bond descent. Per internal bond, coordinate
+        descent over log-channel-scales minimizing the pairwise product
+        ||flat(G_k D)|| * ||flat(D^{-1} G_{k+1})|| via bracketed
+        golden-section search; every accepted step leaves other factors
+        untouched, so the total product decreases monotonically. Sweeps
+        repeat until the relative change drops below 1e-12. Norms reuse the
+        lipschitz_product flattening (_core_norm) — no second convention.
+
+        Returns (L_min, stats); stats carries per-core norms before/after,
+        the gauge-transformed cores (same operator, contract_cores-equal),
+        sweeps used, and convergence.
+        """
+        gs = [np.array(g, dtype=float, copy=True) for g in cores]
+        d = len(gs)
+        before = [self._core_norm(g) for g in gs]
+        stats: dict = {"before": before, "converged": False, "sweeps": 0}
+        if d < 2:
+            stats["after"] = list(before)
+            stats["cores"] = gs
+            return float(np.prod(before)) if before else 0.0, stats
+
+        phi = (math.sqrt(5.0) - 1.0) / 2.0
+
+        def pair_at(k: int, u: np.ndarray) -> float:
+            """Pairwise product when bond k carries channel scales u."""
+            left = gs[k] * u[np.newaxis, np.newaxis, np.newaxis, :]
+            inv = 1.0 / u
+            right = gs[k + 1] * inv[:, np.newaxis, np.newaxis, np.newaxis]
+            return self._core_norm(left) * self._core_norm(right)
+
+        def best_channel_scale(k: int, ch: int,
+                               warm: float | None) -> float | None:
+            """Golden-section optimum of the pairwise product over one
+            channel's scale (log-space), applied in place to gs[k]/gs[k+1].
+
+            First visit scans a coarse log-grid (no prior knowledge);
+            revisits golden-section a narrow bracket around the previous
+            t* — scales drift little between sweeps, so this keeps the
+            per-sweep cost at ~80 evals instead of ~240.
+            """
+            r = gs[k].shape[-1]
+            if r < 2:
+                return
+
+            def f(t: float) -> float:
+                u = np.ones(r)
+                u[ch] = math.exp(t)
+                return pair_at(k, u)
+
+            if warm is None:
+                grid = [-40.0 + 0.5 * i for i in range(161)]
+                vals = [f(t) for t in grid]
+                b = min(range(len(grid)), key=lambda i: vals[i])
+                lo, hi = grid[max(b - 1, 0)], grid[min(b + 1, len(grid) - 1)]
+            else:
+                lo, hi = warm - 3.0, warm + 3.0
+            c, e = hi - phi * (hi - lo), lo + phi * (hi - lo)
+            fc, fe = f(c), f(e)
+            for _ in range(60):
+                if fc < fe:
+                    hi, e, fe = e, c, fc
+                    c = hi - phi * (hi - lo)
+                    fc = f(c)
+                else:
+                    lo, c, fc = c, e, fe
+                    e = lo + phi * (hi - lo)
+                    fe = f(e)
+            t_star = 0.5 * (lo + hi)
+            s = math.exp(t_star)
+            gs[k][..., ch] *= s
+            gs[k + 1][ch, ...] *= (1.0 / s)
+            return t_star
+
+        prev = float(np.prod([self._core_norm(g) for g in gs]))
+        used = 0
+        warm: dict[tuple[int, int], float] = {}
+        for sweep in range(sweeps):
+            used = sweep + 1
+            for k in range(d - 1):
+                r = gs[k].shape[-1]
+                for ch in range(r):
+                    t = best_channel_scale(k, ch, warm.get((k, ch)))
+                    if t is not None:
+                        warm[(k, ch)] = t
+            cur = float(np.prod([self._core_norm(g) for g in gs]))
+            if abs(prev - cur) <= 1e-12 * max(abs(prev), 1e-300):
+                stats["converged"] = True
+                break
+            prev = cur
+        after = [self._core_norm(g) for g in gs]
+        stats.update({"after": after, "sweeps": used, "cores": gs})
+        return float(math.prod(after)), stats
 
     # ------------------------------------------------------------------
     # Pillar B — commuting-Pauli compiler

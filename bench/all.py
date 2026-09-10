@@ -77,6 +77,10 @@ def main(argv: list[str] | None = None) -> int:
                     help="skip the INT8 reference leg of N1 (use when the INT8 "
                          "baseline is already recorded; N2's pipeline doesn't "
                          "re-measure it)")
+    ap.add_argument("--eval-episodes", type=int, default=None,
+                    help="E9: enlarged held-out eval for N1 - score this many "
+                         "held-out batches and report Wilson 95-pct CI; "
+                         "0 = legacy single-batch mode")
     args = ap.parse_args(argv)
 
     # Apply the selected backends before any bench module imports kernels.
@@ -100,10 +104,10 @@ def main(argv: list[str] | None = None) -> int:
                        run_tag=args.run_tag, capture=args.capture)
     ctx.steps = args.steps
     ctx.batch = args.batch
-    ctx.seeds = ([int(s) for s in args.seeds.split(",") if s.strip()]
-                 if args.seeds else None)
-    ctx.steps_per_seed = args.steps_per_seed
     ctx.save_ckpt = args.save_ckpt
+    ctx.skip_int8 = args.skip_int8
+    ctx.eval_episodes = args.eval_episodes
+    ctx.steps_per_seed = args.steps_per_seed
     ctx.skip_int8 = args.skip_int8
     out: list[str] = []
     if args.backend or args.sos_backend:

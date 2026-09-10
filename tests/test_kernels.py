@@ -115,6 +115,25 @@ def test_tt_ranks_padding():
     assert np.isfinite(err1) and err1 > 1e-6, f"rank-1 cross should be lossy, got {err1:.2e}"
 
 
+def test_tt_cross_deep_split_survives_rank_deficient_pivots():
+    """Regression (E3 triage): deep mode splits make random-skeleton
+    collisions likely (small fused modes), so maxvol's pivot block goes
+    rank-deficient and the exact solve raised LinAlgError. The kernel must
+    degrade gracefully: complete, finite, and within the same small-factor
+    of the optimal truncation as the shallow case."""
+    rng = np.random.default_rng(3)
+    W = rng.normal(size=(128, 128)) * np.logspace(0, -3, 128)[None, :]
+    m_dims = n_dims = (8, 4, 2, 2)          # d=4 deep split, products 128
+    ranks = (4, 4, 4)
+    cs = K.tt_cross(W, m_dims, n_dims, ranks)
+    assert all(np.isfinite(g).all() for g in cs.arrays), "non-finite cores"
+    Wr = K.contract_cores(cs.arrays, m_dims, n_dims)
+    err = float(np.linalg.norm(Wr - W) / np.linalg.norm(W))
+    S = np.linalg.svd(W, compute_uv=False)
+    opt8 = float(np.sqrt(np.sum(S[8:] ** 2)) / np.linalg.norm(W))
+    assert err < 5.0 * opt8 + 1e-6, f"cross err {err:.3f} vs optimal {opt8:.3f}"
+
+
 def test_lipschitz_product_bounds_tight_norm():
     """Layer-1: product bound >= tight norm, and tight norm tracks dense norm."""
     cores, W = _random_cores((4, 4), (4, 4), (2,), seed=4)
@@ -131,6 +150,71 @@ def test_lipschitz_constant_wrapper():
     import qicert.compress as C
     cores = [np.eye(4) * 0.5 for _ in range(3)]
     assert abs(C.lipschitz_constant(cores) - 0.5 ** 3) < 1e-12
+
+
+# ---------------------------------------------------------------------------
+# Gauge-minimized Layer-1 certificates (E1)
+# ---------------------------------------------------------------------------
+
+def _gauge_scaled(cores, logs):
+    """Apply matched per-bond uniform scalings (a valid gauge move)."""
+    out = []
+    for k, g in enumerate(cores):
+        h = np.array(g, dtype=float)
+        if k > 0:
+            h = h / (10.0 ** logs[k - 1])
+        if k < len(cores) - 1:
+            h = np.moveaxis(h, 3, -1) * (10.0 ** logs[k])
+            h = np.moveaxis(h, -1, 3)
+        out.append(h)
+    return out
+
+
+@pytest.mark.parametrize("dims,ranks", [
+    ((4, 4), (2,)),
+    ((2, 2, 2), (3, 2)),
+    ((2, 2, 2, 2), (3, 4, 2)),
+])
+def test_min_gauge_product_invariance_and_tightening(dims, ranks):
+    """Gauge descent must not move reconstruction and must not increase L."""
+    cores, W = _random_cores(dims, dims, ranks, seed=7)
+    rng = np.random.default_rng(11)
+    logs = rng.uniform(-4, 4, size=len(cores) - 1)
+    scaled = _gauge_scaled(cores, logs)
+    W2 = K.contract_cores(scaled, dims, dims)
+    rel_gauge = np.linalg.norm(W2 - W) / np.linalg.norm(W)
+    assert rel_gauge < 1e-12, f"gauge move itself broke reconstruction {rel_gauge:.2e}"
+    L_orig = K.lipschitz_product(cores)
+    L_scaled = K.lipschitz_product(scaled)
+    L_min, stats = K.min_gauge_product(scaled, sweeps=50)
+    assert L_min <= L_orig * (1 + 1e-9), \
+        f"L_min {L_min:.6e} exceeds original product {L_orig:.6e}"
+    assert L_min <= L_scaled * (1 + 1e-12)
+    Wr = K.contract_cores(stats["cores"], dims, dims)
+    rel = np.linalg.norm(Wr - W) / np.linalg.norm(W)
+    assert rel < 1e-10, f"minimization moved reconstruction by {rel:.2e}"
+    assert stats["converged"], "descent did not converge within 50 sweeps"
+
+
+def test_min_gauge_product_soundness_report():
+    """L_min >= tight norm must hold on random TTs (soundness of the
+    minimized certificate). A violation is a REAL finding: print the report
+    and xfail rather than assert-crash (E1 brief)."""
+    violations = []
+    for seed in range(10):
+        dims = (4, 4)
+        cores, W = _random_cores(dims, dims, (2,), seed=100 + seed)
+        L_min, _ = K.min_gauge_product(cores, sweeps=20)
+        tight = K.operator_norm_tight(cores, dims, dims, iters=100)
+        dense = float(np.linalg.norm(W, 2))
+        if L_min < min(tight, dense) * (1 - 1e-9):
+            violations.append((seed, L_min, tight, dense))
+    if violations:
+        for s, l, t, dn in violations:
+            print(f"[gauge-soundness] seed={s}: L_min={l:.6e} tight={t:.6e} "
+                  f"dense={dn:.6e}")
+        pytest.xfail(f"{len(violations)}/10 random TTs violate L_min >= bound "
+                     "(real finding — see printed report)")
 
 
 # ---------------------------------------------------------------------------

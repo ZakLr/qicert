@@ -1,0 +1,290 @@
+{
+ "lane": "L4",
+ "name": "Formal safety: STL repair, conformal risk control, runtime assurance",
+ "queries": [
+  "all:\"signal temporal logic\" AND all:repair",
+  "all:\"conformal prediction\" AND all:robotics AND all:safety",
+  "all:\"runtime assurance\" AND all:learning",
+  "all:Lyapunov AND all:\"neural network\" AND all:certificate",
+  "all:\"conformal risk control\""
+ ],
+ "query_counts": [
+  10,
+  15,
+  15,
+  15,
+  15
+ ],
+ "unique_found": 69,
+ "shortlist": [
+  {
+   "title": "Safe and Stable Neural Network Dynamical Systems for Robot Motion Planning",
+   "abstract": "Learning safe and stable robot motions from demonstrations remains a challenge, especially in complex, nonlinear tasks involving dynamic, obstacle-rich environments. In this paper, we propose Safe and Stable Neural Network Dynamical Systems S$^2$-NNDS, a learning-from-demonstration framework that simultaneously learns expressive neural dynamical systems alongside neural Lyapunov stability and barrier safety certificates. Unlike traditional approaches with restrictive polynomial parameterizations, S$^2$-NNDS leverages neural networks to capture complex robot motions, providing probabilistic guarantees through split conformal prediction in learned certificates. Experimental results in various 2D and 3D datasets -- including LASA handwriting and demonstrations recorded kinesthetically from the Franka Emika Panda robot -- validate the effectiveness of S$^2$-NNDS in learning robust, safe, and stable motions from potentially unsafe demonstrations. The source code, supplementary material and experiment videos can be accessed via https://github.com/allemmbinn/S2NNDS",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2511.20593v2"
+   },
+   "url": "https://arxiv.org/abs/2511.20593v2",
+   "authors": [
+    "Allen Emmanuel Binny",
+    "Mahathi Anand",
+    "Hugo T. M. Kussaba",
+    "Lingyun Chen"
+   ],
+   "venue": "arXiv",
+   "query_hits": 2,
+   "lane": "L4",
+   "score": 9.2
+  },
+  {
+   "title": "Silent Failures in Physical AI: A Literature Review of Runtime Action Authorization for Autonomous Systems",
+   "abstract": "Physical AI systems increasingly map multimodal observations, language instructions, and learned world representations into physically consequential actions. Robotics foundation models, vision-language-action models, and world-model-based autonomous systems can condition decisions that move vehicles, robots, drones, and industrial machines. This transition exposes a safety problem that is not fully captured by conventional AI content moderation or by classical robot safety alone: a black-box model may issue a physically consequential action while appearing confident, plausible, and semantically aligned. The resulting failure can be silent, arising from sensor drift, occlusion, state-estimation error, distribution shift, hallucinated affordances, or invalid physical assumptions before downstream hardware controllers detect a violation. Across embodied foundation models, world models, robotics simulation, embodied safety benchmarks, safe control, runtime assurance, uncertainty estimation, verification, and guardrail evaluation, model capability and safety mechanisms have advanced along largely separate technical tracks. A recurring gap synthesized here is that no single stream surveyed in this review supplies a complete runtime authorization boundary between black-box Physical AI models and physical execution. The resulting analysis develops a bounded problem formulation, a definition of silent physical-action failure, a taxonomy of runtime guardrail functions, and evaluation requirements for comparing guardrails as Physical AI assurance mechanisms.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2606.00090v1"
+   },
+   "url": "https://arxiv.org/abs/2606.00090v1",
+   "authors": [
+    "Barak Or"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 8.8
+  },
+  {
+   "title": "Learning Stability Certificate for Robotics in Real-World Environments",
+   "abstract": "Stability certificates play a critical role in ensuring the safety and reliability of robotic systems. However, deriving these certificates for complex, unknown systems has traditionally required explicit knowledge of system dynamics, often making it a daunting task. This work introduces a novel framework that learns a Lyapunov function directly from trajectory data, enabling the certification of stability for autonomous systems without needing detailed system models. By parameterizing the Lyapunov candidate using a neural network and ensuring positive definiteness through Cholesky factorization, our approach automatically identifies whether the system is stable under the given trajectory. To address the challenges posed by noisy, real-world data, we allow for controlled violations of the stability condition, focusing on maintaining high confidence in the stability certification process. Our results demonstrate that this framework can provide data-driven stability guarantees, offering a robust method for certifying the safety of robotic systems in dynamic, real-world environments. This approach works without access to the internal control algorithms, making it applicable even in situations where system behavior is opaque or proprietary. The tool for learning the stability proof is open-sourced by this research: https://github.com/HansOersted/stability.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2510.03123v1"
+   },
+   "url": "https://arxiv.org/abs/2510.03123v1",
+   "authors": [
+    "Zhe Shen"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 7.6
+  },
+  {
+   "title": "Learned Lyapunov Shielding for Adaptive Control",
+   "abstract": "We augment the Slotine--Li adaptive controller for Euler--Lagrange systems with three learned components: a structured-quadratic Lyapunov function \\(V_\u03c8\\) whose positive-definiteness follows from a Cholesky parameterization, a residual Soft Actor--Critic policy that adds bounded torque corrections to the analytic baseline, and a physics-informed neural network that estimates unmodeled dynamics. A closed-form safety filter, derived from the single affine constraint \\(\\dot V_\u03c8+ \u03b1V_\u03c8\\le 0\\), projects every policy output onto the safe set without requiring an online QP solver. We prove: global feasibility of the filter under a drift-decay condition on the control-degeneracy set; exponential stability under exact shielding, with a robust extension whose margin depends on the PINN approximation error; almost-sure convergence of the three-timescale policy--certificate--multiplier updates to a KKT point; and a PAC generalization bound for the certificate over compacts. On a 2-DOF manipulator with nonlinear friction and variable payload, the learned certificate accounts for most of the empirical gain: tracking error drops by 41\\% on nominal friction and 24\\% on aggressive friction at the centroid of the training distribution. A 7-DOF scalability study on a Franka Emika Panda confirms clean convergence of the full pipeline at industrial scale, identifies the conditions under which gains over exact model-based baselines should and should not be expected, and documents a warm-start pathology of the learned certificate that has practical implications for deployment.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2605.06934v1"
+   },
+   "url": "https://arxiv.org/abs/2605.06934v1",
+   "authors": [
+    "Giansalvo Cirrincione",
+    "Adriano Fagiolini"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 7.6
+  },
+  {
+   "title": "Interaction-aware Conformal Prediction for Crowd Navigation",
+   "abstract": "During crowd navigation, robot motion plan needs to consider human motion uncertainty, and the human motion uncertainty is dependent on the robot motion plan. We introduce Interaction-aware Conformal Prediction (ICP) to alternate uncertainty-aware robot motion planning and decision-dependent human motion uncertainty quantification. ICP is composed of a trajectory predictor to predict human trajectories, a model predictive controller to plan robot motion with confidence interval radii added for probabilistic safety, a human simulator to collect human trajectory calibration dataset conditioned on the planned robot motion, and a conformal prediction module to quantify trajectory prediction error on the decision-dependent calibration dataset. Crowd navigation simulation experiments show that ICP strikes a good balance of performance among navigation efficiency, social awareness, and uncertainty quantification compared to previous works. ICP generalizes well to navigation tasks under various crowd densities. The fast runtime and efficient memory usage make ICP practical for real-world applications. Code is available at https://github.com/tedhuang96/icp.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2502.06221v1"
+   },
+   "url": "https://arxiv.org/abs/2502.06221v1",
+   "authors": [
+    "Zhe Huang",
+    "Tianchen Ji",
+    "Heling Zhang",
+    "Fatemeh Cheraghi Pouria"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 7.2
+  },
+  {
+   "title": "Permissive Safety Through Trusted Inference: Verifiable Belief-Space Neural Safety Filters for Assured Interactive Robotics",
+   "abstract": "Autonomous robots that interact with people must make safe and efficient decisions under human-induced uncertainty, such as their preferences, goals, competency, and willingness to cooperate. Safety filters are a popular approach for ensuring safety in interactive robotics, since their modular design separates safety from performance, allowing robots to operate safely around people with minimal impact on task efficiency. While traditional safety filters typically operate only in the physical space, neglecting the robot's ability to learn and adapt online, the recently proposed belief-space safety filter (BeliefSF) reasons about robot safety in closed-loop with runtime inference that actively reduces the robot's uncertainty online, thereby reducing conservativeness in filtering. However, providing formal safety guarantees for robots deploying BeliefSF remains a significant challenge due to errors in runtime inference and neural approximation of safety filters required to handle the high dimensionality of belief spaces. In this paper, we propose an algorithmic approach to certify high-probability safety of BeliefSF using conformal prediction, while explicitly accounting for the reliability of the robot's runtime inference module. Our method leverages the structure of belief-space safety filtering by focusing verification on a region where inference is expected to be reliable. It preserves the simplicity and sample complexity of standard conformal prediction, yet can certify a substantially less conservative safety filter. Through a simulated human-vehicle interaction benchmark, we show that our approach verifies a significantly more permissive belief-space safety filter than a standard conformal prediction baseline.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2606.02562v1"
+   },
+   "url": "https://arxiv.org/abs/2606.02562v1",
+   "authors": [
+    "Haimin Hu"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "Learnable Conformal Prediction with Context-Aware Nonconformity Functions for Robotic Planning and Perception",
+   "abstract": "Deep learning models in robotics often output point estimates with poorly calibrated confidences, offering no native mechanism to quantify predictive reliability under novel, noisy, or out-of-distribution inputs. Conformal prediction (CP) addresses this gap by providing distribution-free coverage guarantees, yet its reliance on fixed nonconformity scores ignores context and can yield intervals that are overly conservative or unsafe. We address this with Learnable Conformal Prediction (LCP), which replaces fixed scores with a lightweight neural function that leverages geometric, semantic, and task-specific features to produce context-aware uncertainty sets. LCP maintains CP's theoretical guarantees while reducing prediction set sizes by 18% in classification, tightening detection intervals by 52%, and improving path planning safety from 72% to 91% success with minimal overhead. Across three robotic tasks on seven benchmarks, LCP consistently outperforms Standard CP and ensemble baselines. In classification on CIFAR-100 and ImageNet, it achieves smaller set sizes (4.7-9.9% reduction) at target coverage. For object detection on COCO, BDD100K, and Cityscapes, it produces 46-54% tighter bounding boxes. In path planning through cluttered environments, it improves success to 91.5% with only 4.5% path inflation, compared to 12.2% for Standard CP. The method is lightweight (approximately 4.8% runtime overhead, 42 KB memory) and supports online adaptation, making it well suited to resource-constrained autonomous systems. Hardware evaluation shows LCP adds less than 1% memory and 15.9% inference overhead, yet sustains 39 FPS on detection tasks while being 7.4 times more energy-efficient than ensembles.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2509.21955v1"
+   },
+   "url": "https://arxiv.org/abs/2509.21955v1",
+   "authors": [
+    "Divake Kumar",
+    "Sina Tayebati",
+    "Francesco Migliarba",
+    "Ranganath Krishnan"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "Egocentric Conformal Prediction for Safe and Efficient Navigation in Dynamic Cluttered Environments",
+   "abstract": "Conformal prediction (CP) has emerged as a powerful tool in robotics and control, thanks to its ability to calibrate complex, data-driven models with formal guarantees. However, in robot navigation tasks, existing CP-based methods often decouple prediction from control, evaluating models without considering whether prediction errors actually compromise safety. Consequently, ego-vehicles may become overly conservative or even immobilized when all potential trajectories appear infeasible. To address this issue, we propose a novel CP-based navigation framework that responds exclusively to safety-critical prediction errors. Our approach introduces egocentric score functions that quantify how much closer obstacles are to a candidate vehicle position than anticipated. These score functions are then integrated into a model predictive control scheme, wherein each candidate state is individually evaluated for safety. Combined with an adaptive CP mechanism, our framework dynamically adjusts to changes in obstacle motion without resorting to unnecessary conservatism. Theoretical analyses indicate that our method outperforms existing CP-based approaches in terms of cost-efficiency while maintaining the desired safety levels, as further validated through experiments on real-world datasets featuring densely populated pedestrian environments.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2504.00447v1"
+   },
+   "url": "https://arxiv.org/abs/2504.00447v1",
+   "authors": [
+    "Jaeuk Shin",
+    "Jungjin Lee",
+    "Insoon Yang"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "Formal Verification and Control with Conformal Prediction",
+   "abstract": "We present recent advances in formal verification and control for autonomous systems with practical safety guarantees enabled by conformal prediction (CP), a statistical tool for uncertainty quantification. This survey is particularly motivated by learning-enabled autonomous systems (LEASs), where the complexity of learning-enabled components (LECs) poses a major bottleneck for applying traditional model-based verification and control techniques. To address this challenge, we advocate for CP as a lightweight alternative and demonstrate its use in formal verification, systems and control, and robotics. CP is appealing due to its simplicity (easy to understand, implement, and adapt), generality (requires no assumptions on learned models and underlying data distributions), and efficiency (real-time capable and accurate). This survey provides an accessible introduction to CP for non-experts interested in applying CP to autonomy problems. We particularly show how CP can be used for formal verification of LECs and the design of safe control as well as offline and online verification algorithms for LEASs. We present these techniques within a unifying framework that addresses the complexity of LEASs. Our exposition spans simple specifications, such as robot navigation tasks, to complex mission requirements expressed in temporal logic. Throughout the survey, we contrast CP with other statistical techniques, including scenario optimization and PAC-Bayes theory, highlighting advantages and limitations for verification and control. Finally, we outline open problems and promising directions for future research.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2409.00536v3"
+   },
+   "url": "https://arxiv.org/abs/2409.00536v3",
+   "authors": [
+    "Lars Lindemann",
+    "Yiqi Zhao",
+    "Xinyi Yu",
+    "George J. Pappas"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "The Lyapunov Neural Network: Adaptive Stability Certification for Safe Learning of Dynamical Systems",
+   "abstract": "Learning algorithms have shown considerable prowess in simulation by allowing robots to adapt to uncertain environments and improve their performance. However, such algorithms are rarely used in practice on safety-critical systems, since the learned policy typically does not yield any safety guarantees. That is, the required exploration may cause physical harm to the robot or its environment. In this paper, we present a method to learn accurate safety certificates for nonlinear, closed-loop dynamical systems. Specifically, we construct a neural network Lyapunov function and a training algorithm that adapts it to the shape of the largest safe region in the state space. The algorithm relies only on knowledge of inputs and outputs of the dynamics, rather than on any specific model structure. We demonstrate our method by learning the safe region of attraction for a simulated inverted pendulum. Furthermore, we discuss how our method can be used in safe learning algorithms together with statistical models of dynamical systems.",
+   "year": 2018,
+   "ids": {
+    "ArXiv": "1808.00924v2"
+   },
+   "url": "https://arxiv.org/abs/1808.00924v2",
+   "authors": [
+    "Spencer M. Richards",
+    "Felix Berkenkamp",
+    "Andreas Krause"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "Lyapunov Neural Network with Region of Attraction Search",
+   "abstract": "Deep learning methods have been widely used in robotic applications, making learning-enabled control design for complex nonlinear systems a promising direction. Although deep reinforcement learning methods have demonstrated impressive empirical performance, they lack the stability guarantees that are important in safety-critical situations. One way to provide these guarantees is to learn Lyapunov certificates alongside control policies. There are three related problems: 1) verify that a given Lyapunov function candidate satisfies the conditions for a given controller on a region, 2) find a valid Lyapunov function and controller on a given region, and 3) find a valid Lyapunov function and a controller such that the region of attraction is as large as possible. Previous work has shown that if the dynamics are piecewise linear, it is possible to solve problems 1) and 2) by solving a Mixed-Integer Linear Program (MILP). In this work, we build upon this method by proposing a Lyapunov neural network that considers monotonicity over half spaces in different directions. We 1) propose a specific choice of Lyapunov function architecture that ensures non-negativity and a unique global minimum by construction, and 2) show that this can be leveraged to find the controller and Lyapunov certificates faster and with a larger valid region by maximizing the size of a square inscribed in a given level set. We apply our method to a 2D inverted pendulum, unicycle path following, a 3-D feedback system, and a 4-D cart pole system, and demonstrate it can shorten the training time by half compared to the baseline, as well as find a larger ROA.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2403.10621v1"
+   },
+   "url": "https://arxiv.org/abs/2403.10621v1",
+   "authors": [
+    "Zili Wang",
+    "Sean B. Andersson",
+    "Roberto Tron"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "Certifying Stability of Reinforcement Learning Policies using Generalized Lyapunov Functions",
+   "abstract": "Establishing stability certificates for closed-loop systems under reinforcement learning (RL) policies is essential to move beyond empirical performance and offer guarantees of system behavior. Classical Lyapunov methods require a strict stepwise decrease in the Lyapunov function but such certificates are difficult to construct for learned policies. The RL value function is a natural candidate but it is not well understood how it can be adapted for this purpose. To gain intuition, we first study the linear quadratic regulator (LQR) problem and make two key observations. First, a Lyapunov function can be obtained from the value function of an LQR policy by augmenting it with a residual term related to the system dynamics and stage cost. Second, the classical Lyapunov decrease requirement can be relaxed to a generalized Lyapunov condition requiring only decrease on average over multiple time steps. Using this intuition, we consider the nonlinear setting and formulate an approach to learn generalized Lyapunov functions by augmenting RL value functions with neural network residual terms. Our approach successfully certifies the stability of RL policies trained on Gymnasium and DeepMind Control benchmarks. We also extend our method to jointly train neural controllers and stability certificates using a multi-step Lyapunov loss, resulting in larger certified inner approximations of the region of attraction compared to the classical Lyapunov approach. Overall, our formulation enables stability certification for a broad class of systems with learned policies by making certificates easier to construct, thereby bridging classical control theory and modern learning-based methods.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2505.10947v4"
+   },
+   "url": "https://arxiv.org/abs/2505.10947v4",
+   "authors": [
+    "Kehan Long",
+    "Jorge Cort\u00e9s",
+    "Nikolay Atanasov"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.6
+  },
+  {
+   "title": "Learning Robot Safety from Sparse Human Feedback using Conformal Prediction",
+   "abstract": "Ensuring robot safety can be challenging; user-defined constraints can miss edge cases, policies can become unsafe even when trained from safe data, and safety can be subjective. Thus, we learn about robot safety by showing policy trajectories to a human who flags unsafe behavior. From this binary feedback, we use the statistical method of conformal prediction to identify a region of states, potentially in learned latent space, guaranteed to contain a user-specified fraction of future policy errors. Our method is sample-efficient, as it builds on nearest neighbor classification and avoids withholding data as is common with conformal prediction. By alerting if the robot reaches the suspected unsafe region, we obtain a warning system that mimics the human's safety preferences with guaranteed miss rate. From video labeling, our system can detect when a quadcopter visuomotor policy will fail to steer through a designated gate. We present an approach for policy improvement by avoiding the suspected unsafe region. With it we improve a model predictive controller's safety, as shown in experimental testing with 30 quadcopter flights across 6 navigation tasks. Code and videos are provided.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2501.04823v2"
+   },
+   "url": "https://arxiv.org/abs/2501.04823v2",
+   "authors": [
+    "Aaron O. Feldman",
+    "Joseph A. Vincent",
+    "Maximilian Adang",
+    "JunEn Low"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.2
+  },
+  {
+   "title": "Differentiable Optimization Layered Safety-Critical Control for Risk-Aware Navigation via Conformal Prediction",
+   "abstract": "Risk-aware navigation in unknown environments is a fundamental challenge for autonomous vehicles operating in complex urban systems. To address this issue, this paper presents a differentiable optimization layered safety-critical control method based on conformal prediction. First, to handle uncertainties arising from sensor noise, the conformal prediction method is employed to generate risk-aware obstacle ellipsoids around an elliptical-shaped robot. Second, two nested differentiable optimization layers are introduced to build the control barrier functions for obstacle avoidance and feasibility guarantee, respectively. Then, a quadratic program based safety-critical control law is proposed to integrate the above control barrier function constraints as well as input constraints. In the end, the effectiveness of the proposed framework is demonstrated through numerical simulations.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2605.16327v1"
+   },
+   "url": "https://arxiv.org/abs/2605.16327v1",
+   "authors": [
+    "Jinyang Dong",
+    "Shizhen Wu",
+    "Yongchun Fang"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.2
+  },
+  {
+   "title": "Vision-Based Safe Human-Robot Collaboration with Uncertainty Guarantees",
+   "abstract": "We propose a framework for vision-based human pose estimation and motion prediction that gives conformal prediction guarantees for certifiably safe human-robot collaboration. Our framework combines aleatoric uncertainty estimation with OOD detection for high probabilistic confidence. To integrate our pipeline in certifiable safety frameworks, we propose conformal prediction sets for human motion predictions with high, valid confidence. We evaluate our pipeline on recorded human motion data and a real-world human-robot collaboration setting.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2604.15221v2"
+   },
+   "url": "https://arxiv.org/abs/2604.15221v2",
+   "authors": [
+    "Jakob Thumm",
+    "Marian Frei",
+    "Tianle Ni",
+    "Matthias Althoff"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L4",
+   "score": 6.2
+  }
+ ]
+}

@@ -15,6 +15,7 @@ Writes:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -22,8 +23,13 @@ from huggingface_hub import HfApi, snapshot_download
 
 SUITE = "libero_spatial_no_noops"
 REPO = f"openvla/modified_libero_rlds"
-WEIGHTS = Path("/workspace/weights")
-DOCS = Path("/workspace/qicert/docs")
+# Native-first paths: env override > legacy /workspace (containers) > repo-relative.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+_LEGACY_WS = Path("/workspace")
+WEIGHTS = Path(os.environ.get("QICERT_WEIGHTS") or (
+    "/workspace/weights" if _LEGACY_WS.exists() else str(_REPO_ROOT / "weights")))
+DOCS = Path(os.environ.get("QICERT_DOCS") or (
+    "/workspace/qicert/docs" if _LEGACY_WS.exists() else str(_REPO_ROOT / "docs")))
 
 
 def main() -> int:
@@ -31,8 +37,11 @@ def main() -> int:
     info = api.dataset_info(REPO)
     lic = (info.cardData or {}).get("license", "UNKNOWN")
     print(f"license card: {lic}")
+    # Download into WEIGHTS root so files land canonically at
+    # WEIGHTS/<SUITE>/1.0.0/ (RLDS layout RLDSDataset(data_dir=WEIGHTS) expects);
+    # a local_dir of WEIGHTS/<SUITE> would nest the suite one level deeper.
     snapshot_download(REPO, repo_type="dataset", allow_patterns=f"{SUITE}/*",
-                      local_dir=str(WEIGHTS / SUITE))
+                      local_dir=str(WEIGHTS))
     # record
     lic_file = WEIGHTS / "_libero_licenses.json"
     rec = {REPO: {"suite": SUITE, "license": lic, "note": "N1 slice"}}

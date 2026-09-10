@@ -1,0 +1,294 @@
+{
+ "lane": "L5",
+ "name": "Calibration/activation-aware compression + repair training",
+ "queries": [
+  "all:\"activation\" AND all:aware AND all:compression",
+  "all:\"post-training\" AND all:quantization AND all:recovery",
+  "all:\"low rank\" AND all:calibration AND all:svd",
+  "all:LoRA AND all:quantized AND all:model",
+  "all:\"weight compression\" AND all:\"fine-tuning\" AND all:llm"
+ ],
+ "query_counts": [
+  15,
+  9,
+  15,
+  15,
+  4
+ ],
+ "unique_found": 57,
+ "shortlist": [
+  {
+   "title": "Activation- and Influence-Aware Ranks (AIR): Function-Preserving SVD Compression for LLMs",
+   "abstract": "We present Activation- and Influence-Aware Ranks (AIR), an SVD-based LLM compression framework that guides each weight matrix's low-rank approximation with a backward-signal influence metric. Starting from the activation-aware optimum of SVD-LLM(W), AIR runs a single closed-form alternating least squares (ALS) sweep that integrates influence element-wise under a monotone-descent guarantee. AIR is layer-local and composes orthogonally with end-to-end methods: alone it exceeds ACIP, and AIR+LoRA outperforms it further. AIR improves perplexity over SVD-LLM(W) by >18% at <=60% parameter retention, matches its quality with ~90% less calibration data, and turns parameter savings into FLOP, peak-memory, and per-token latency gains.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2606.19993v2"
+   },
+   "url": "https://arxiv.org/abs/2606.19993v2",
+   "authors": [
+    "Nico Harder",
+    "Daniel Becking",
+    "Karsten Mueller",
+    "Wojciech Samek"
+   ],
+   "venue": "arXiv",
+   "query_hits": 2,
+   "lane": "L5",
+   "score": 8.2
+  },
+  {
+   "title": "GPTQ-intrinsic LoRA: A Near-optimal Algorithm for Low-precision Quantization with Low-rank Adaptation",
+   "abstract": "Post-training quantization is widely used for compressing large neural networks, but aggressive low-bit quantization can significantly degrade model quality. A common remedy is to augment the quantized weights with a low-rank correction, leading to approximations of the form $W\\approx Q+LR$. In this paper, we study this low-precision plus low-rank representation through the layer-wise reconstruction objective $\\|XW-X(Q+LR)\\|_F^2$, where $X$ is a calibration matrix. We establish, to our knowledge, the first information-theoretic lower bounds for this problem under finite-alphabet and bounded low-rank compensation constraints. We then propose GPTQ-intrinsic LoRA, a training-free algorithm that incorporates the low-rank correction directly into a GPTQ-style quantization pass by appropriately augmenting the calibration Hessian. For the choice $L=V_r$, where $V_r$ contains the top right singular vectors of $X$, we prove layer-wise reconstruction error bounds in which the usual GPTQ dependence on $\\|X\\|_F^2$ is replaced by the rank-$r$ residual $\\|X-X_r\\|_F^2$, up to regularization terms. Under natural structural assumptions, these bounds match the information-theoretic lower bounds in their dominant scaling, up to constants and mild factors. We also introduce Bid-Up, a fixed-grid quantization refinement step that can be alternated with optimal low-rank compensation with guaranteed non-increasing layer-wise reconstruction error. Experiments on Qwen3 language models and DeiT vision transformers show that GPTQ-intrinsic LoRA improves over GPTQ and GPTQ followed by low-rank compensation, with additional gains from refinement loops.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2606.01412v1"
+   },
+   "url": "https://arxiv.org/abs/2606.01412v1",
+   "authors": [
+    "Shihao Zhang",
+    "Rayan Saab"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 10.2
+  },
+  {
+   "title": "On-the-Fly Adaptation to Quantization: Configuration-Aware LoRA for Efficient Fine-Tuning of Quantized LLMs",
+   "abstract": "As increasingly large pre-trained models are released, deploying them on edge devices for privacy-preserving applications requires effective compression. Recent works combine quantization with the fine-tuning of high-precision LoRA adapters, which can substantially reduce model size while mitigating the accuracy loss from quantization. However, edge devices have inherently heterogeneous capabilities, while performing configuration-wise fine-tuning for every quantization setting is computationally prohibitive. In this paper, we propose CoA-LoRA, a method that dynamically adjusts the LoRA adapter to arbitrary quantization configurations (i.e., the per-layer bit-width choices of a pre-trained model) without requiring repeated fine-tuning. This is accomplished via a configuration-aware model that maps each configuration to its low-rank adjustments. The effectiveness of this model critically depends on the training configuration set, a collection of configurations chosen to cover different total bit-width budgets. However, constructing a high-quality configuration set is non-trivial. We therefore design a Pareto-based configuration search that iteratively optimizes the training configuration set, yielding more precise low-rank adjustments. Our experiments demonstrate that, unlike the state-of-the-art methods that require fine-tuning a separate LoRA adapter for each configuration, CoA-LoRA incurs no additional time cost while achieving comparable or even superior performance to those methods.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2509.25214v4"
+   },
+   "url": "https://arxiv.org/abs/2509.25214v4",
+   "authors": [
+    "Rongguang Ye",
+    "Ming Tang",
+    "Edith C. H. Ngai"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 8.2
+  },
+  {
+   "title": "Linear Algebra Foundations of Efficient Attention: A Phase Reversal in Rank Collapse Under SVD Compression",
+   "abstract": "Linear algebra provides the framework of concepts (matrix rank, singular value decomposition (SVD), and eigendecomposition) that modern artificial intelligence employs to encode, compress, and propagate information through neural networks. This paper unifies fourteen separate peer-reviewed works analyzing the usage of these techniques in the context of transformer-based foundation model research, focusing on three areas of the topic: derivations and properties of self-attention matrices' output rank, compression methods that purposefully utilize this phenomenon, and the low-rank key-value (KV) cache projection and its semiseparable-matrix duality to linear attention and state-space structured models. We were motivated to conduct this work after observing an open problem in this literature: the interplay of the mentioned compression methods with natural rank collapse of the network. With this paper, we report an original finding that using SVD compression of attention projections actually has the opposite effect on the rank collapse of the network: while it strongly suppresses it at initialization, it accelerates on pretrained models (for GPT-2 124M, GPT-2 Medium 355M, and Pythia-160M) with minimal risk of object aliasing artifacts appearing (verified on all compression ratios) and is consistent across four rank estimation methods. A controlled causal decomposition of the effect in both settings showed that the reason for this behavior can be explained by the choice of the subspace SVD makes when compressing the matrix better than the reduction of the operator norm it achieves, explaining roughly 76% of the effect at initialization and 83% on the pretrained weights, providing a refinement to the calibration-aware compression viewpoint and an explanation of why it outperformed naive SVD truncation.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2609.06341v1"
+   },
+   "url": "https://arxiv.org/abs/2609.06341v1",
+   "authors": [
+    "Anjaneya Teja Sarma Kalvakolanu"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.8
+  },
+  {
+   "title": "SAKI: Score-Aware Low-Rank Key Indexing with Random-Matrix Noise Correction for KV Retrieval",
+   "abstract": "Existing low rank KV cache methods preserve either model weights or key variance, neither of which directly reflects the attention scores used during inference. We derive the expected attention score distortion caused by rank r key compression and show that it yields a covariance weighted low rank objective. Under a margin condition, controlling this distortion also improves top k recall. The optimal rank r solution has a closed form asymmetric factorization obtained from the SVD of the covariance weighted query key operator. This motivates SAKI, a training free KV cache index that directly preserves attention scores rather than key reconstruction quality. Across LLaMA 3.1 8B, Qwen 2.5 7B, Mistral 7B v0.1, and Llama 3.2 3B, SAKI outperforms key PCA at every tested rank. At rank 32, it removes 13 to 30 percent of PCA's remaining top 64 recall error, including improvements from 0.748 to 0.799 on LLaMA 3.1 8B and from 0.786 to 0.850 on Qwen 2.5 7B. It improves 68 to 89 percent of attention heads per model, with the largest gains in deeper layers. Predicted score MSE reductions closely match empirical measurements, with a Pearson correlation of 0.997, while ablation studies confirm that the gains arise from optimizing the attention score objective rather than covariance weighting alone. Analysis of the scoring operator further explains why weight only, invariant subspace, and key reconstruction methods can be suboptimal. SAKI uses random-matrix theory to separate genuine covariance signal from autocorrelated sampling noise, matching PCA with only 512 calibration tokens and adding value exactly where PCA sees no reliable signal.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2608.03228v2"
+   },
+   "url": "https://arxiv.org/abs/2608.03228v2",
+   "authors": [
+    "Lin Zhang"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.8
+  },
+  {
+   "title": "PuzzleKV: Page-Wise Low-Rank Decomposition for KV Cache Compression",
+   "abstract": "Long-context inference in large language models (LLMs) is increasingly limited by the memory required for the key-value (KV) cache. KV cache compression addresses this problem by reducing the storage cost of previous tokens. Among existing approaches, low-rank compression is particularly attractive because it represents every token in reduced dimensions. Previous low-rank methods typically derive fixed projection spaces from model weights, construct fixed spaces from calibration activations, or construct a shared basis over a broad cache region. Such representations may not capture detailed but important information. We partition each per-head KV cache into fixed-length logical pages and observe substantial low-rank structure within individual pages. Based on this observation, we propose PuzzleKV, a training- and calibration-free method that treats each completed page as an independent compression unit. PuzzleKV decomposes pages within each layer and KV head, computes attention directly over dense and factorized pages, and incrementally compresses newly eligible pages during autoregressive decoding. Experiments across models, context lengths, and benchmarks demonstrate the effectiveness of PuzzleKV under matched storage budgets. At approximately 60% of the original KV cache storage, PuzzleKV achieves more than 96% of Full KV performance across both evaluated models and all benchmark settings, with substantial gains over Global SVD on RULER and competitive performance on LongBench. To achieve a more aggressive compression ratio, PuzzleKV can be further combined with quantization while retaining more than 93% of Full KV performance using only 18.7% of the original storage.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2608.23843v1"
+   },
+   "url": "https://arxiv.org/abs/2608.23843v1",
+   "authors": [
+    "Zizhong Wang",
+    "Jieying Wang",
+    "Zhao Zhang",
+    "Jiajia Li"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.8
+  },
+  {
+   "title": "COMPOT: Calibration-Optimized Matrix Procrustes Orthogonalization for Transformers Compression",
+   "abstract": "Post-training compression of Transformer models commonly relies on truncated singular value decomposition (SVD). However, enforcing a single shared subspace can degrade accuracy even at moderate compression. Sparse dictionary learning provides a more flexible union-of-subspaces representation, but existing approaches often suffer from iterative dictionary and coefficient updates. We propose COMPOT (Calibration-Optimized Matrix Procrustes Orthogonalization for Transformers), a training-free compression framework that uses a small calibration dataset to estimate a sparse weight factorization. COMPOT employs orthogonal dictionaries that enable closed-form Procrustes updates for the dictionary and analytical single-step sparse coding for the coefficients, eliminating iterative optimization. To handle heterogeneous layer sensitivity under a global compression budget, COMPOT further introduces a one-shot dynamic allocation strategy that adaptively redistributes layer-wise compression rates. Extensive experiments across diverse architectures and tasks show that COMPOT consistently delivers a superior quality-compression trade-off over strong low-rank and sparse baselines, while remaining fully compatible with post-training quantization for extreme compression. Code is available $\\href{https://github.com/mts-ai/COMPOT}{here}$.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2602.15200v1"
+   },
+   "url": "https://arxiv.org/abs/2602.15200v1",
+   "authors": [
+    "Denis Makhov",
+    "Dmitriy Shopkhoev",
+    "Magauiya Zhussip",
+    "Ammar Ali"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.8
+  },
+  {
+   "title": "CoSpaDi: Compressing LLMs via Calibration-Guided Sparse Dictionary Learning",
+   "abstract": "Post-training LLM compression often relies on low-rank approximations, which force all columns of a projection matrix to share a single low-dimensional subspace. We propose CoSpaDi, a training-free compression framework that replaces this single-subspace assumption with a union-of-subspaces model via sparse dictionary learning. CoSpaDi factorizes each weight matrix into a dense dictionary and column-sparse coefficients, allowing different columns to select different subsets of dictionary atoms at the same storage budget. To preserve model behavior, we use calibration activations to transform functional reconstruction into a standard dictionary learning problem. Across Llama and Qwen models, CoSpaDi improves accuracy--compression and perplexity--compression trade-offs over SVD-based and structured pruning baselines at 20--40\\% compression ratios, while naturally supporting sparse--dense computation and post-training quantization of sparse coefficients.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2509.22075v6"
+   },
+   "url": "https://arxiv.org/abs/2509.22075v6",
+   "authors": [
+    "Denis Makhov",
+    "Dmitriy Shopkhoev",
+    "Magauiya Zhussip",
+    "Ammar Ali"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.8
+  },
+  {
+   "title": "QuaSAR: Quantization Compensation via Stable Activation-Aware Rank Truncation",
+   "abstract": "Recent training-free post-training quantization methods restore model accuracy through closed-form residual compensation. To constrain additional model storage overhead, several existing methods gate layer selection by goodness-of-fit, retaining only those layers whose compensation yields a positive residual fit score and discarding the rest. In this paper, we show that, under the low-bit W4A4 setting, this gating mechanism fails to distinguish poorly predictable quantization error from numerical solver failure. Rank-deficient input activations yield severely ill-conditioned or numerically singular Gram matrices, causing the closed-form solver to become unstable and produce spuriously negative fit scores. Consequently, existing goodness-of-fit gates misclassify affected layers as uncompensable and discard them. Many of these discarded layers can nevertheless provide substantial error recovery when their compensation is computed using a numerically stable solver. To address this problem, we propose a parameter-free truncated pseudoinverse solver which removes collapsed directions prior to inversion. On ViT-B with the W4A4 setting, our training-free method achieves 81.42\\% top-1 accuracy, outperforming prior post-training methods and fine-tuning-based baselines. Combined with joint low-rank and quantization compression, the proposed method reaches a deployable operating point of 80.26\\% accuracy at 54.7 MB, providing a well-balanced trade-off between model size and accuracy.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2608.14149v1"
+   },
+   "url": "https://arxiv.org/abs/2608.14149v1",
+   "authors": [
+    "Lin-Fa Lee",
+    "Yi-Yu Chang",
+    "Kuo-Hei Yeh"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.6
+  },
+  {
+   "title": "Forgetting Only What Matters: Layer-Selective Unlearning toward Robust LLMs",
+   "abstract": "Large Language Models (LLMs) can memorize and reproduce sensitive, copyrighted, or otherwise undesirable training content, creating privacy, safety, and regulatory concerns. Machine unlearning offers a practical alternative to full retraining, but many existing methods apply broad or fixed parameter updates that can degrade utility and remain brittle under deployment changes such as post-training quantization, where forgotten knowledge may partially re-emerge. We propose Forgetting Only What Matters via Unlearning Layers (FOM-UL), a layer-level unlearning framework that selects transformer layers using a forget-to-retain significance score. This score identifies layers with high influence on the forget set and low sensitivity to the retain set, allowing FOM-UL to concentrate updates where they are most effective while leaving most of the model unchanged. This targeted update strategy improves the forgetting-utility trade-off and provides an empirical path toward quantization-resilient unlearning by reducing the chance that small, diffuse updates are erased by low-bit rounding. Across TOFU, KnowUnDo, and MUSE-style evaluations, FOM-UL reduces residual memorization compared with strong GA, NPO, KLD, SURE, ReLearn, and LUNAR-based baselines while preserving retain-set utility close to the vanilla model. Under 8-bit and 4-bit post-training quantization, FOM-UL maintains stronger memorization suppression and utility preservation than competing methods, and adversarial prompt evaluations show lower recovery of forgotten content. Overall, FOM-UL provides an efficient unlearning strategy that improves targeted forgetting, utility preservation, and deployment robustness without claiming formal guarantees of erasure.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2609.10439v1"
+   },
+   "url": "https://arxiv.org/abs/2609.10439v1",
+   "authors": [
+    "Ravi Ranjan",
+    "Olivera Kotevska",
+    "Agoritsa Polyzou"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.6
+  },
+  {
+   "title": "SLiM: One-shot Quantization and Sparsity with Low-rank Approximation for LLM Weight Compression",
+   "abstract": "Conventional model compression techniques for LLMs address high memory consumption and slow inference challenges but typically require computationally expensive retraining to preserve accuracy. In contrast, one-shot compression methods eliminate retraining cost, but struggle to achieve accuracy comparable to dense models. This paper presents SLIM, a new one-shot compression framework that holistically integrates hardware-friendly quantization, sparsity, and low-rank approximation into a unified process. First, we formulate the quantization process using a probabilistic approach (SLIM-Quant) that enables us to apply uniform quantization. Then, we use an existing one-shot pruning method to apply semi-structured sparsity on top of the quantized weights. Finally, to compensate for the introduced aggregated quantization and sparsity error, we use a novel saliency function with unique invertible and additive features that enables us to mathematically compute the value of low-rank adapters. SLIM improves model accuracy by up to 5.66% (LLaMA-2-7B) for 2:4 sparsity with 4-bit weight quantization, outperforming prior methods. Models compressed with SLIM achieve up to 4.3x and 3.8x on Nvidia RTX3060 and A100 GPUs, respectively. Additionally, they achieve up to 0.23x end-to-end memory reduction in comparison to their dense counterparts. We also propose an optional PEFT recipe that further improves accuracy by up to 1.66% (LLaMA-2-13B) compared to SLIM without fine-tuning.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2410.09615v4"
+   },
+   "url": "https://arxiv.org/abs/2410.09615v4",
+   "authors": [
+    "Mohammad Mozaffari",
+    "Amir Yazdanbakhsh",
+    "Maryam Mehri Dehnavi"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.6
+  },
+  {
+   "title": "FLAT-LLM: Fine-grained Low-rank Activation Space Transformation for Large Language Model Compression",
+   "abstract": "Large Language Models (LLMs) have enabled remarkable progress in natural language processing, yet their high computational and memory demands pose challenges for deployment in resource-constrained environments. Although recent low-rank decomposition methods offer a promising path for structural compression, they often suffer from accuracy degradation, expensive calibration procedures, and result in inefficient model architectures that hinder real-world inference speedups. In this paper, we propose FLAT-LLM, a fast and accurate, training-free structural compression method based on fine-grained low-rank transformations in the activation space. Specifically, we reduce the hidden dimension by transforming the weights using truncated eigenvectors computed via head-wise Principal Component Analysis, and employ a greedy budget redistribution strategy to adaptively allocate ranks across decoders. FLAT-LLM achieves efficient and effective weight compression without recovery fine-tuning, which could complete the calibration within a few minutes. Evaluated across 5 models and 11 datasets, FLAT-LLM outperforms structural pruning baselines in generalization and downstream performance, while delivering inference speedups over decomposition-based methods.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2505.23966v4"
+   },
+   "url": "https://arxiv.org/abs/2505.23966v4",
+   "authors": [
+    "Jiayi Tian",
+    "Ryan Solgi",
+    "Jinming Lu",
+    "Yifan Yang"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.6
+  },
+  {
+   "title": "DuoGPT: Training-free Dual Sparsity through Activation-aware Pruning in LLMs",
+   "abstract": "Large language models (LLMs) deliver strong performance but are difficult to deploy due to high memory and compute costs. While pruning reduces these demands, most methods ignore activation sparsity observed at runtime. We reinterpret activation sparsity as dynamic structured weight sparsity and propose DuoGPT, a unified framework that constructs dual-sparse (spMspV) workloads by combining unstructured weight pruning with activation sparsity. To preserve accuracy, we extend the Optimal Brain Compression (OBC) framework with activation-aware calibration and introduce output residuals from the dense model as correction terms. We further optimize the solution for efficient GPU execution, enabling scalability to billion-parameter LLMs. Evaluations on LLaMA-2 and LLaMA-3 show that DuoGPT outperforms state-of-the-art structured pruning methods by up to 9.17% accuracy at an iso-speedup of 1.39$\\times$ compared to the baseline dense model. Code is available at Github.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2506.20194v3"
+   },
+   "url": "https://arxiv.org/abs/2506.20194v3",
+   "authors": [
+    "Ruokai Yin",
+    "Yuhang Li",
+    "Donghyun Lee",
+    "Priyadarshini Panda"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.2
+  },
+  {
+   "title": "CLoQ: Enhancing Fine-Tuning of Quantized LLMs via Calibrated LoRA Initialization",
+   "abstract": "Fine-tuning large language models (LLMs) using low-rank adaptation (LoRA) has become a highly efficient approach for downstream tasks, particularly in scenarios with limited computational resources. However, applying LoRA techniques to quantized LLMs poses unique challenges due to the reduced representational precision of quantized weights. In this paper, we introduce CLoQ (Calibrated LoRA initialization for Quantized LLMs), a simplistic initialization strategy designed to overcome these challenges. Our approach focuses on minimizing the layer-wise discrepancy between the original LLM and its quantized counterpart with LoRA components during initialization. By leveraging a small calibration dataset, CLoQ quantizes a pre-trained LLM and determines the optimal LoRA components for each layer, ensuring a strong foundation for subsequent fine-tuning. A key contribution of this work is a novel theoretical result that enables the accurate and closed-form construction of these optimal LoRA components. We validate the efficacy of CLoQ across multiple tasks such as language generation, arithmetic reasoning, and commonsense reasoning, demonstrating that it consistently outperforms existing LoRA fine-tuning methods for quantized LLMs, especially at ultra low-bit widths.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2501.18475v2"
+   },
+   "url": "https://arxiv.org/abs/2501.18475v2",
+   "authors": [
+    "Yanxia Deng",
+    "Aozhong Zhang",
+    "Selcuk Gurses",
+    "Naigang Wang"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.2
+  },
+  {
+   "title": "LQ-LoRA: Low-rank Plus Quantized Matrix Decomposition for Efficient Language Model Finetuning",
+   "abstract": "We propose a simple approach for memory-efficient adaptation of pretrained language models. Our approach uses an iterative algorithm to decompose each pretrained matrix into a high-precision low-rank component and a memory-efficient quantized component. During finetuning, the quantized component remains fixed and only the low-rank component is updated. We present an integer linear programming formulation of the quantization component which enables dynamic configuration of quantization parameters (e.g., bit-width, block size) for each matrix given an overall target memory budget. We further explore a data-aware version of the algorithm which uses an approximation of the Fisher information matrix to weight the reconstruction objective during matrix decomposition. Experiments on finetuning RoBERTa and LLaMA-2 (7B and 70B) demonstrate that our low-rank plus quantized matrix decomposition approach (LQ-LoRA) outperforms strong QLoRA and GPTQ-LoRA baselines and enables aggressive quantization to sub-3 bits with only minor performance degradations. When finetuned on a language modeling calibration dataset, LQ-LoRA can also be used for model compression; in this setting our 2.75-bit LLaMA-2-70B model (which has 2.85 bits on average when including the low-rank components and requires 27GB of GPU memory) performs respectably compared to the 16-bit baseline.",
+   "year": 2023,
+   "ids": {
+    "ArXiv": "2311.12023v4"
+   },
+   "url": "https://arxiv.org/abs/2311.12023v4",
+   "authors": [
+    "Han Guo",
+    "Philip Greengard",
+    "Eric P. Xing",
+    "Yoon Kim"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L5",
+   "score": 7.2
+  }
+ ]
+}

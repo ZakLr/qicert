@@ -1,0 +1,299 @@
+{
+ "lane": "L1",
+ "name": "TT/QTT compression of transformers + residual/hybrid quantization",
+ "queries": [
+  "all:\"tensor train\" AND all:compression AND all:transformer",
+  "all:\"tensor network\" AND all:\"language model\"",
+  "all:\"low-rank\" AND all:residual AND all:quantization",
+  "all:\"tensor train\" AND all:\"large language model\"",
+  "all:tt AND all:svd AND all:llm"
+ ],
+ "query_counts": [
+  15,
+  15,
+  15,
+  9,
+  0
+ ],
+ "unique_found": 52,
+ "shortlist": [
+  {
+   "title": "Saten: Sparse Augmented Tensor Networks for Post-Training Compression of Large Language Models",
+   "abstract": "The efficient implementation of large language models (LLMs) is crucial for deployment on resource-constrained devices. Low-rank tensor compression techniques, such as tensor-train (TT) networks, have been widely studied for over-parameterized neural networks. However, their applications to compress pre-trained large language models (LLMs) for downstream tasks (post-training) remains challenging due to the high-rank nature of pre-trained LLMs and the lack of access to pretraining data. In this study, we investigate low-rank tensorized LLMs during fine-tuning and propose sparse augmented tensor networks (Saten) to enhance their performance. The proposed Saten framework enables full model compression. Experimental results demonstrate that Saten enhances both accuracy and compression efficiency in tensorized language models, achieving state-of-the-art performance.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2505.14871v2"
+   },
+   "url": "https://arxiv.org/abs/2505.14871v2",
+   "authors": [
+    "Ryan Solgi",
+    "Kai Zhen",
+    "Rupak Vignesh Swaminathan",
+    "Nathan Susanj"
+   ],
+   "venue": "arXiv",
+   "query_hits": 2,
+   "lane": "L1",
+   "score": 10.6
+  },
+  {
+   "title": "A Practical Tensor-Network Compression Pipeline for Production-Scale Large Language Models",
+   "abstract": "Large language models are limited in deployment by GPU memory and inference latency. We present Minima, a production compression pipeline that learns where and how to structurally compress a Transformer and turns that compression into real serving gains. Minima trains a lightweight convolutional predictor to estimate layer- and patch-level sensitivity, applies a mixture of Tucker, tensor-train, and tensor-ring decompositions to low-sensitivity regions, performs a short healing fine-tune, and executes the resulting operators with custom Triton and CUDA kernels. The reduced memory footprint enables speculative decoding with a small draft model and a larger verifier. On Qwen3-32B at an 8k-token context window, Minima reduces peak VRAM from 64 GiB to 40 GiB. For a single active request, throughput increases from 40 tokens per second (baseline) to 50 tokens per second (Minima) and 75 tokens per second (Minima with speculative decoding). Under 50 parallel requests, throughput is 34, 44, and 53 tokens per second respectively, showing that Minima remains effective under high concurrency even when speculative decoding gains compress. We position Minima relative to recent tensor-network, low-rank plus quantization, and cross-layer sharing methods, and argue that it is a practical step toward more aggressive structural compression via shared tensor backbones with tiny per-layer adapters.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2602.01613v1"
+   },
+   "url": "https://arxiv.org/abs/2602.01613v1",
+   "authors": [
+    "Sergii Kozyrev",
+    "Davyd Maiboroda"
+   ],
+   "venue": "arXiv",
+   "query_hits": 2,
+   "lane": "L1",
+   "score": 9.6
+  },
+  {
+   "title": "SeeMPS: A Python-based Matrix Product State and Tensor Train Library",
+   "abstract": "We introduce SeeMPS, a Python library dedicated to implementing tensor network algorithms based on the well-known Matrix Product States (MPS) and Quantized Tensor Train (QTT) formalisms. SeeMPS is implemented as a complete finite precision linear algebra package where exponentially large vector spaces are compressed using the MPS/TT formalism. It enables both low-level operations, such as vector addition, linear transformations, and Hadamard products, as well as high-level algorithms, including the approximation of linear equations, eigenvalue computations, and exponentially efficient Fourier transforms. This library can be used for traditional quantum many-body physics applications and also for quantum-inspired numerical analysis problems, such as solving PDEs, interpolating and integrating multidimensional functions, sampling multivariate probability distributions, etc.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2601.16734v2"
+   },
+   "url": "https://arxiv.org/abs/2601.16734v2",
+   "authors": [
+    "Paula Garc\u00eda-Molina",
+    "Juan Jos\u00e9 Rodr\u00edguez-Aldavero",
+    "Jorge Gidi",
+    "Juan Jos\u00e9 Garc\u00eda-Ripoll"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 17.8
+  },
+  {
+   "title": "KARIPAP: Quantum-Inspired Tensor Network Compression of Large Language Models Using Infinite Projected Entangled Pair States and Tensor Renormalization Group",
+   "abstract": "Large Language Models (LLMs) like ChatGPT and LLaMA drive rapid progress in generative AI, yet their huge parameter scales create severe computational and environmental burdens. High training costs, energy use, and limited device deployment hinder accessibility. Existing compression - pruning, distillation, low-rank, and quantization - reduces size but ignores complex inter-layer correlations. We propose KARIPAP, a quantum-inspired tensor network compression using Infinite Projected Entangled Pair States (iPEPS) and Tensor Renormalization Group (TRG) contraction. Unlike 1D Matrix Product States, iPEPS captures multi-directional entanglement in attention and deep transformer layers. TRG ensures polynomial-time contraction, making tensorization feasible while preserving key correlation geometry. Experiments on LLaMA-2 7B show up to 93% memory and 70% parameter reduction, with 50% faster training, 25% faster inference, and only 2-3% accuracy loss. Layer-wise entanglement profiling reveals redundancy in deeper layers, confirming their suitability for tensor factorization. KARIPAP demonstrates that modern LLMs occupy low-dimensional entanglement manifolds, enabling scalable, energy-efficient, and quantum-aware AI architectures.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2510.21844v1"
+   },
+   "url": "https://arxiv.org/abs/2510.21844v1",
+   "authors": [
+    "Azree Nazri"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 14.6
+  },
+  {
+   "title": "Direct interpolative construction of the discrete Fourier transform as a matrix product operator",
+   "abstract": "The quantum Fourier transform (QFT), which can be viewed as a reindexing of the discrete Fourier transform (DFT), has been shown to be compressible as a low-rank matrix product operator (MPO) or quantized tensor train (QTT) operator. However, the original proof of this fact does not furnish a construction of the MPO with a guaranteed error bound. Meanwhile, the existing practical construction of this MPO, based on the compression of a quantum circuit, is not as efficient as possible. We present a simple closed-form construction of the QFT MPO using the interpolative decomposition, with guaranteed near-optimal compression error for a given rank. This construction can speed up the application of the QFT and the DFT, respectively, in quantum circuit simulations and QTT applications. We also connect our interpolative construction to the approximate quantum Fourier transform (AQFT) by demonstrating that the AQFT can be viewed as an MPO constructed using a different interpolation scheme.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2404.03182v1"
+   },
+   "url": "https://arxiv.org/abs/2404.03182v1",
+   "authors": [
+    "Jielun Chen",
+    "Michael Lindsey"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 14.2
+  },
+  {
+   "title": "Approximation and learning with compositional tensor trains",
+   "abstract": "We introduce compositional tensor trains (CTTs) for the approximation of multivariate functions, a class of models obtained by composing low-rank functions in the tensor-train format. This format can encode standard approximation tools, such as (sparse) polynomials, deep neural networks (DNNs) with fixed width, or tensor networks with arbitrary permutation of the inputs, or more general affine coordinate transformations, with similar complexities. This format can be viewed as a DNN with width exponential in the input dimension and structured weights matrices. Compared to DNNs, this format enables controlled compression at the layer level using efficient tensor algebra. On the optimization side, we derive a layerwise algorithm inspired by natural gradient descent, allowing to exploit efficient low-rank tensor algebra. This relies on low-rank estimations of Gram matrices, and tensor structured random sketching. Viewing the format as a discrete dynamical system, we also derive an optimization algorithm inspired by numerical methods in optimal control. Numerical experiments on regression tasks demonstrate the expressivity of the new format and the relevance of the proposed optimization algorithms. Overall, CTTs combine the expressivity of compositional models with the algorithmic efficiency of tensor algebra, offering a scalable alternative to standard deep neural networks.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2512.18059v1"
+   },
+   "url": "https://arxiv.org/abs/2512.18059v1",
+   "authors": [
+    "Martin Eigel",
+    "Charles Miranda",
+    "Anthony Nouy",
+    "David Sommer"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 13.2
+  },
+  {
+   "title": "Tensor network compression using fluid dynamics as a testbed: Analytical foundations in one dimension",
+   "abstract": "High performance computers produce extreme-scale data sets that require sampling or compression if they are to be used to their full potential. Existing data compression techniques typically exploit features such as sparsity in the data, homogeneity in the data, or {\\it a priori} knowledge of what subsets of data are of most interest. Fluid dynamics data in general do not exhibit these features and so are attractive test beds for generic compression techniques that are objective, robust, and tuneable with respect to information lost due to compression. Presented here is a method based on tensor networks, specifically matrix product states or tensor trains, that meets these requirements. The method is demonstrated for compression in one-dimension and is extensible to higher dimensionality. Lossless compression is demonstrated for random Fourier series for sufficiently high bond dimension of the tensor network, with the memory required to store the tensor network scaling directly proportional to the bond dimension. The lossy compression exhibited at lower bond dimension can be well within the relative error of many fluid simulations. The compression algorithm is tested for the time evolution of Burger's equation with excellent results. We additionally demonstrate the capability to perform computations in the compressed form through a tensor network periodic convolution that can be orders of magnitude faster than using fast Fourier transforms and the convolution theorem. In addition to being an attractive method for working with data sets generated by existing computers, the tensor network methods utilised are directly translatable to the emerging paradigm of quantum computing.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2606.17064v1"
+   },
+   "url": "https://arxiv.org/abs/2606.17064v1",
+   "authors": [
+    "Matthew D. Horner",
+    "Callum W. Duncan",
+    "Oliver T. Brown",
+    "Stephen M. de Bruyn Kops"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 13.2
+  },
+  {
+   "title": "CompactifAI: Extreme Compression of Large Language Models using Quantum-Inspired Tensor Networks",
+   "abstract": "Large Language Models (LLMs) such as ChatGPT and LlaMA are advancing rapidly in generative Artificial Intelligence (AI), but their immense size poses significant challenges, such as huge training and inference costs, substantial energy demands, and limitations for on-site deployment. Traditional compression methods such as pruning, distillation, and low-rank approximation focus on reducing the effective number of neurons in the network, while quantization focuses on reducing the numerical precision of individual weights to reduce the model size while keeping the number of neurons fixed. While these compression methods have been relatively successful in practice, there is no compelling reason to believe that truncating the number of neurons is an optimal strategy. In this context, this paper introduces CompactifAI, an innovative LLM compression approach using quantum-inspired Tensor Networks that focuses on the model's correlation space instead, allowing for a more controlled, refined and interpretable model compression. Our method is versatile and can be implemented with - or on top of - other compression techniques. As a benchmark, we demonstrate that a combination of CompactifAI with quantization allows to reduce a 93% the memory size of LlaMA 7B, reducing also 70% the number of parameters, accelerating 50% the training and 25% the inference times of the model, and just with a small accuracy drop of 2% - 3%, going much beyond of what is achievable today by other compression techniques. Our methods also allow to perform a refined layer sensitivity profiling, showing that deeper layers tend to be more suitable for tensor network compression, which is compatible with recent observations on the ineffectiveness of those layers for LLM performance. Our results imply that standard LLMs are, in fact, heavily overparametrized, and do not need to be large at all.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2401.14109v2"
+   },
+   "url": "https://arxiv.org/abs/2401.14109v2",
+   "authors": [
+    "Andrei Tomut",
+    "Saeed S. Jahromi",
+    "Abhijoy Sarkar",
+    "Uygar Kurt"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 11.6
+  },
+  {
+   "title": "Multiscale space-time ansatz for correlation functions of quantum systems based on quantics tensor trains",
+   "abstract": "Correlation functions of quantum systems -- central objects in quantum field theories -- are defined in high-dimensional space-time domains. Their numerical treatment thus suffers from the curse of dimensionality, which hinders the application of sophisticated many-body theories to interesting problems. Here, we propose a multi-scale space-time ansatz for correlation functions of quantum systems based on quantics tensor trains (QTT), ``qubits'' describing exponentially different length scales. The ansatz then assumes a separation of length scales by decomposing the resulting high-dimensional tensors into tensor trains (known also as matrix product states). We numerically verify the ansatz for various equilibrium and nonequilibrium systems and demonstrate compression rates of several orders of magnitude for challenging cases. Essential building blocks of diagrammatic equations, such as convolutions or Fourier transforms are formulated in the compressed form. We numerically demonstrate the stability and efficiency of the proposed methods for the Dyson and Bethe-Salpeter equations. {The QTT representation} provides a unified framework for implementing efficient computations of quantum field theories.",
+   "year": 2022,
+   "ids": {
+    "ArXiv": "2210.12984v3"
+   },
+   "url": "https://arxiv.org/abs/2210.12984v3",
+   "authors": [
+    "Hiroshi Shinaoka",
+    "Markus Wallerberger",
+    "Yuta Murakami",
+    "Kosuke Nogaki"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 11.2
+  },
+  {
+   "title": "Tensor Train Low-rank Approximation (TT-LoRA): Democratizing AI with Accelerated LLMs",
+   "abstract": "In recent years, Large Language Models (LLMs) have demonstrated remarkable capabilities across a wide range of natural language processing (NLP) tasks, such as question-answering, sentiment analysis, text summarization, and machine translation. However, the ever-growing complexity of LLMs demands immense computational resources, hindering the broader research and application of these models. To address this, various parameter-efficient fine-tuning strategies, such as Low-Rank Approximation (LoRA) and Adapters, have been developed. Despite their potential, these methods often face limitations in compressibility. Specifically, LoRA struggles to scale effectively with the increasing number of trainable parameters in modern large scale LLMs. Additionally, Low-Rank Economic Tensor-Train Adaptation (LoRETTA), which utilizes tensor train decomposition, has not yet achieved the level of compression necessary for fine-tuning very large scale models with limited resources. This paper introduces Tensor Train Low-Rank Approximation (TT-LoRA), a novel parameter-efficient fine-tuning (PEFT) approach that extends LoRETTA with optimized tensor train (TT) decomposition integration. By eliminating Adapters and traditional LoRA-based structures, TT-LoRA achieves greater model compression without compromising downstream task performance, along with reduced inference latency and computational overhead. We conduct an exhaustive parameter search to establish benchmarks that highlight the trade-off between model compression and performance. Our results demonstrate significant compression of LLMs while maintaining comparable performance to larger models, facilitating their deployment on resource-constraint platforms.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2408.01008v1"
+   },
+   "url": "https://arxiv.org/abs/2408.01008v1",
+   "authors": [
+    "Afia Anjum",
+    "Maksim E. Eren",
+    "Ismael Boureima",
+    "Boian Alexandrov"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 11.0
+  },
+  {
+   "title": "Privacy Enhanced PEFT: Tensor Train Decomposition Improves Privacy Utility Tradeoffs under DP-SGD",
+   "abstract": "Fine-tuning large language models on sensitive data poses significant privacy risks, as membership inference attacks can reveal whether individual records were used during training. While Differential Privacy (DP) provides formal protection, applying DP to conventional Parameter-Efficient Fine-Tuning (PEFT) methods such as Low-Rank Adaptation (LoRA) often incurs substantial utility loss. In this work, we show that a more structurally constrained PEFT architecture, Tensor Train Low-Rank Adaptation (TTLoRA), can improve the privacy-utility tradeoff by shrinking the effective parameter space while preserving expressivity. To this end, we develop TTLoRA-DP, a differentially private training framework for TTLoRA. Specifically, we extend the ghost clipping algorithm to Tensor Train cores via cached contraction states, enabling efficient Differentially Private Stochastic Gradient Descent (DP-SGD) with exact per-example gradient norm computation without materializing full per-example gradients. Experiments on GPT-2 fine-tuning over the Enron and Penn Treebank datasets show that TTLoRA-DP consistently strengthens privacy protection relative to LoRA-DP while maintaining comparable or better downstream utility. Moreover, TTLoRA exhibits lower membership leakage even without DP training, using substantially smaller adapters and requiring on average 7.6X fewer parameters than LoRA. Overall, our results demonstrate that TTLoRA offers a practical path to improving the privacy-utility tradeoff in parameter-efficient language model adaptation.",
+   "year": 2026,
+   "ids": {
+    "ArXiv": "2601.10045v1"
+   },
+   "url": "https://arxiv.org/abs/2601.10045v1",
+   "authors": [
+    "Pradip Kunwar",
+    "Minh Vu",
+    "Maanak Gupta",
+    "Manish Bhattarai"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 11.0
+  },
+  {
+   "title": "Quantum Large Language Models via Tensor Network Disentanglers",
+   "abstract": "We introduce a framework for seamlessly integrating quantum computing into pretrained large language models (LLMs). The key idea is to construct a hybrid quantum-classical representation that exactly reproduces the original model, providing a principled starting point from which quantum resources can only improve performance. Our approach replaces the weight matrices in self-attention and multilayer perceptron layers with two variational quantum circuits coupled to a matrix product operator (MPO). Tensor network disentanglers transfer much of each layer's information into the quantum circuits, enabling the remaining tensor network to be compressed to a bond-dimension-one MPO with over three orders of magnitude fewer classical parameters (in our experiments, from 110,592 to approximately 36 for the replaced layer) and less than a 0.3\\% increase in perplexity. Training an added unitary adapter on top of this representation then surpasses the original model, reducing perplexity by up to 1.6\\%. Finally, we validate the hybrid architecture on a real quantum processor, demonstrating a practical route towards quantum-enhanced language models.",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2410.17397v2"
+   },
+   "url": "https://arxiv.org/abs/2410.17397v2",
+   "authors": [
+    "Borja Aizpurua",
+    "Fernando Loren",
+    "Saeed S. Jahromi",
+    "Sukhbinder Singh"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 10.6
+  },
+  {
+   "title": "TeRA: Vector-based Random Tensor Network for High-Rank Adaptation of Large Language Models",
+   "abstract": "Parameter-Efficient Fine-Tuning (PEFT) methods, such as Low-Rank Adaptation (LoRA), have significantly reduced the number of trainable parameters needed in fine-tuning large language models (LLMs). The developments of LoRA-style adapters have considered two main directions: (1) enhancing model expressivity with high-rank adapters, and (2) aiming for further parameter reduction, as exemplified by vector-based methods. However, these approaches come with a trade-off, as achieving the expressivity of high-rank weight updates typically comes at the cost of sacrificing the extreme parameter efficiency offered by vector-based techniques. To address this issue, we propose a vector-based random Tensor network for high-Rank Adaptation (TeRA), a novel PEFT method that achieves high-rank weight updates while retaining the parameter efficiency of vector-based PEFT adapters. This is achieved by parametrizing the tensorized weight update matrix as a Tucker-like tensor network (TN), whereby large randomly initialized factors are frozen and shared across layers, while only small layer-specific scaling vectors, corresponding to diagonal entries of factor matrices, are trained. Comprehensive experiments demonstrate that TeRA matches or even outperforms existing high-rank adapters, while requiring as few trainable parameters as vector-based methods. Theoretical analysis and ablation studies validate the effectiveness of the proposed TeRA method. The code is available at https://github.com/guyuxuan9/TeRA.",
+   "year": 2025,
+   "ids": {
+    "ArXiv": "2509.03234v2"
+   },
+   "url": "https://arxiv.org/abs/2509.03234v2",
+   "authors": [
+    "Yuxuan Gu",
+    "Wuyang Zhou",
+    "Giorgos Iacovides",
+    "Danilo Mandic"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 10.6
+  },
+  {
+   "title": "Language Modeling Using Tensor Trains",
+   "abstract": "We propose a novel tensor network language model based on the simplest tensor network (i.e., tensor trains), called `Tensor Train Language Model' (TTLM). TTLM represents sentences in an exponential space constructed by the tensor product of words, but computing the probabilities of sentences in a low-dimensional fashion. We demonstrate that the architectures of Second-order RNNs, Recurrent Arithmetic Circuits (RACs), and Multiplicative Integration RNNs are, essentially, special cases of TTLM. Experimental evaluations on real language modeling tasks show that the proposed variants of TTLM (i.e., TTLM-Large and TTLM-Tiny) outperform the vanilla Recurrent Neural Networks (RNNs) with low-scale of hidden units. (The code is available at https://github.com/shuishen112/tensortrainlm.)",
+   "year": 2024,
+   "ids": {
+    "ArXiv": "2405.04590v1"
+   },
+   "url": "https://arxiv.org/abs/2405.04590v1",
+   "authors": [
+    "Zhan Su",
+    "Yuqin Zhou",
+    "Fengran Mo",
+    "Jakob Grue Simonsen"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 10.6
+  },
+  {
+   "title": "Distributed Non-Negative Tensor Train Decomposition",
+   "abstract": "The era of exascale computing opens new venues for innovations and discoveries in many scientific, engineering, and commercial fields. However, with the exaflops also come the extra-large high-dimensional data generated by high-performance computing. High-dimensional data is presented as multidimensional arrays, aka tensors. The presence of latent (not directly observable) structures in the tensor allows a unique representation and compression of the data by classical tensor factorization techniques. However, the classical tensor methods are not always stable or they can be exponential in their memory requirements, which makes them not suitable for high-dimensional tensors. Tensor train (TT) is a state-of-the-art tensor network introduced for factorization of high-dimensional tensors. TT transforms the initial high-dimensional tensor in a network of three-dimensional tensors that requires only a linear storage. Many real-world data, such as, density, temperature, population, probability, etc., are non-negative and for an easy interpretation, the algorithms preserving non-negativity are preferred. Here, we introduce a distributed non-negative tensor-train and demonstrate its scalability and the compression on synthetic and real-world big datasets.",
+   "year": 2020,
+   "ids": {
+    "ArXiv": "2008.01340v1"
+   },
+   "url": "https://arxiv.org/abs/2008.01340v1",
+   "authors": [
+    "Manish Bhattarai",
+    "Gopinath Chennupati",
+    "Erik Skau",
+    "Raviteja Vangara"
+   ],
+   "venue": "arXiv",
+   "query_hits": 1,
+   "lane": "L1",
+   "score": 10.2
+  }
+ ]
+}

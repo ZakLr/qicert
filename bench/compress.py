@@ -161,6 +161,16 @@ def _run_n1(out: list[str], ctx=None) -> None:
         out.append("* N1 is the R1 comparator: N2's compressed accuracy is measured "
                    "against this fine-tuned baseline at matched budget.")
 
+def _wilson(k: int, n: int, z: float = 1.959963984540054) -> tuple[float, float]:
+    """Wilson score 95% interval for a binomial proportion (E9)."""
+    if n == 0:
+        return 0.0, 1.0
+    p = k / n
+    d = 1.0 + z * z / n
+    centre = (p + z * z / (2 * n)) / d
+    half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
+    return centre - half, centre + half
+
 
 def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                  lora_r: int, save_dir: Path | None = None) -> dict | None:
@@ -184,6 +194,12 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
     if str(fork) not in sys.path:
         sys.path.insert(0, str(fork))
     os.environ.setdefault("PRISMATIC_DATA_ROOT", str(repo / "weights" / "data"))
+
+    # transformers 5.x removed the private tokenizer module paths the fork
+    # imports; alias them before prismatic touches transformers (no-op on
+    # older transformers where the paths still exist).
+    from qicert.transformers5_compat import install as _tf5_install
+    _tf5_install()
 
     import numpy as np
     import torch
@@ -212,9 +228,10 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
 
     try:
         from prismatic.models.load import load_vla
-        from prismatic.vla.action_tokenizer import ActionTokenizer
-        from prismatic.vla.datasets import RLDSBatchTransform, RLDSDataset
-        from prismatic.util.data_utils import PaddedCollatorForActionPrediction
+        # NOTE: the fork's prismatic.vla.datasets imports its RLDS pipeline,
+        # which hard-requires dlimp -> tensorflow (unavailable on py3.14).
+        # N1 native runs feed from the E8 NPZ bridge via the fork-equivalent
+        # local builder instead (documented substitution, AGENTS.md).
         from peft import LoraConfig, get_peft_model
 
         torch.manual_seed(seed)
@@ -244,23 +261,35 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         vla.llm_backbone = get_peft_model(vla.llm_backbone, lora_cfg)
         vla.llm_backbone.print_trainable_parameters()
 
-        # Data: fork's native RLDS pipeline (verified: 432 trajectories,
-        # 110-frame episodes, 7-dim actions, language instructions)
-        action_tokenizer = ActionTokenizer(tokenizer)
-        batch_transform = RLDSBatchTransform(
-            action_tokenizer, tokenizer,
-            image_transform=vla.vision_backbone.get_image_transform(),
-            prompt_builder_fn=prompt_builder_fn,
-        )
-        ds = RLDSDataset(
-            DATA_ROOT, "libero_spatial_no_noops", batch_transform,
-            resize_resolution=vla.vision_backbone.default_image_resolution[1:],
-            shuffle_buffer_size=1000, image_aug=False,
-        )
-        collator = PaddedCollatorForActionPrediction(
-            tokenizer.model_max_length, tokenizer.pad_token_id, padding_side="right")
-        dl = DataLoader(ds, batch_size=batch, collate_fn=collator, num_workers=0)
-        it = iter(dl)
+        # Data: E8 NPZ-bridge episodes through the fork-equivalent local
+        # builder (same transform/collator semantics as RLDSBatchTransform +
+        # PaddedCollatorForActionPrediction; horizon-0 single actions).
+        from qicert.data.npz_loader import NpzEpisodeDataset
+        from qicert.data.vla_local import LocalEpisodeStream, LocalVLABatcher
+
+        lb = LocalVLABatcher(vla)
+        action_tokenizer = lb.action_tokenizer
+        npz_root = (_os.environ.get("QICERT_NPZ_ROOT")
+                    or str(DATA_ROOT.parent / "libero_spatial_no_noops_npz"))
+        ep_ds = NpzEpisodeDataset(npz_root)
+
+        # Eval split: a frozen, hashed episode list (results/eval_split.json)
+        # is the honest held-out protocol when present. --eval-episodes K
+        # draws K held-out batches EXCLUSIVELY from those episodes (so the
+        # number is deterministic, not sampler luck). Without the split file
+        # we fall back to the legacy shuffled-buffer behavior and SAY SO in
+        # the recorded config.
+        split_path = (_os.environ.get("QICERT_EVAL_SPLIT")
+                      or str(Path(__file__).resolve().parents[1] / "results"
+                             / "eval_split.json"))
+        eval_stream = None
+        if Path(split_path).exists():
+            import json as _json
+            _split = _json.loads(Path(split_path).read_text())
+            from qicert.data.vla_local import LocalEvalSplitStream
+            eval_stream = LocalEvalSplitStream(ep_ds, lb, _split["eval"],
+                                               batch_size=batch)
+        it = iter(LocalEpisodeStream(ep_ds, lb, batch_size=batch, seed=seed))
 
         opt = AdamW([p for p in vla.llm_backbone.parameters() if p.requires_grad],
                     lr=5e-4)
@@ -318,21 +347,77 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                       f"acc={acc:.3f} peak={peak/1024:.2f} GiB", flush=True)
         train_sec = time.perf_counter() - t_train
 
-        # ---- eval leg: ONE held-out batch from the same slice, shared by
-        # both the fine-tuned and the INT8-of-fine-tuned legs so the delta is
-        # pure quantization cost (matched inputs, only weights differ). ----
+        # ---- eval leg: held-out batches from the same slice, shared by both
+        # the fine-tuned and the INT8-of-fine-tuned legs so the delta is pure
+        # quantization cost (matched inputs, only weights differ).
+        # E9 (--eval-episodes K>0): score K held-out batches and report the
+        # token-level action accuracy with a Wilson 95% CI. K=0/None keeps
+        # the legacy single-batch mode. Caveat (documented): the fork's RLDS
+        # pipeline streams a shuffled buffer — held-out draws are
+        # post-training samples of the same slice, not episode-indexed
+        # unseen data.
         vla.llm_backbone.eval()
+        eval_K = int(getattr(ctx, "eval_episodes", 0) or 0) \
+            if ctx is not None else 0
+
+        def _eval_counts(model, b_, device):
+            input_ids_ = b_["input_ids"].to(device)
+            attention_mask_ = b_["attention_mask"].to(device)
+            labels_ = b_["labels"].to(device)
+            pv = _to_half_cuda(b_["pixel_values"]) if device == "cuda" \
+                else b_["pixel_values"]
+            with torch.autocast("cuda", dtype=torch.float16,
+                                enabled=(device == "cuda")):
+                out_ = model(input_ids=input_ids_,
+                             attention_mask=attention_mask_,
+                             pixel_values=pv, labels=labels_)
+            logits = out_.logits[:, num_patches:-1]
+            preds = logits.argmax(dim=-1)
+            gt = labels_[:, 1:].to(preds.device)
+            mask = gt > action_tokenizer.action_token_begin_idx
+            return (int((preds[mask] == gt[mask]).sum().item()),
+                    int(mask.sum().item()))
+
+        eval_batches = []
+        if eval_stream is not None:
+            # Frozen-split mode: consume the whole held-out stream (all eval
+            # episodes), capped at eval_K batches when K>0.
+            for b_ in eval_stream:
+                eval_batches.append(b_)
+                if eval_K > 0 and len(eval_batches) >= eval_K:
+                    break
+        for _ in range(max(eval_K, 1) - len(eval_batches)):
+            try:
+                eval_batches.append(next(it))
+            except StopIteration:
+                it = iter(dl) if 'dl' in dir() else iter(eval_stream) \
+                    if eval_stream is not None else None
+                if it is None:
+                    break
+                eval_batches.append(next(it))
+
         with torch.inference_mode():
-            b = next(it)
-            input_ids = b["input_ids"].cuda()
-            attention_mask = b["attention_mask"].cuda()
-            pixel_values = _to_half_cuda(b["pixel_values"])
-            labels = b["labels"].cuda()
-            with torch.autocast("cuda", dtype=torch.float16):
-                out_ = vla(input_ids=input_ids, attention_mask=attention_mask,
-                           pixel_values=pixel_values, labels=labels)
-            eval_acc_ft = _action_acc(out_, labels)
-        print(f"  eval acc (fine-tuned): {eval_acc_ft:.4f}", flush=True)
+            ft_correct = ft_total = 0
+            for b_ in eval_batches:
+                c, t = _eval_counts(vla, b_, "cuda")
+                ft_correct += c
+                ft_total += t
+        eval_acc_ft = ft_correct / max(ft_total, 1)
+        ft_ci = _wilson(ft_correct, ft_total) if eval_K > 0 else None
+        # keep the legacy variable bindings for the save/int8 legs below
+        b = eval_batches[0]
+        input_ids = b["input_ids"].cuda()
+        attention_mask = b["attention_mask"].cuda()
+        pixel_values = _to_half_cuda(b["pixel_values"])
+        labels = b["labels"].cuda()
+        rec.metric(event="eval_ft", batches=max(eval_K, 1),
+                   correct=ft_correct, total=ft_total,
+                   action_acc=float(eval_acc_ft),
+                   ci_lo=None if ft_ci is None else float(ft_ci[0]),
+                   ci_hi=None if ft_ci is None else float(ft_ci[1]))
+        print(f"  eval acc (fine-tuned): {eval_acc_ft:.4f}"
+              + (f" [{ft_ci[0]:.4f}, {ft_ci[1]:.4f}] over {eval_K} batches"
+                 if ft_ci else ""), flush=True)
 
         # ---- persist the fine-tuned backbone (LoRA merged into dense) so
         # N2 can compress the SAME weights the baseline was measured on. ----
@@ -381,6 +466,7 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         # quantization cost at matched inputs, not fine-tuning vs not.
         # --skip-int8 (N2 pipeline): the INT8 baseline is already recorded in
         # the scored N1 run; don't re-burn ~9 CPU-minutes per seed.
+        i8_ci = None
         if ctx is not None and getattr(ctx, "skip_int8", False):
             print("  INT8 reference SKIPPED (--skip-int8; recorded in scored N1)",
                   flush=True)
@@ -402,18 +488,33 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                 vla_i8 = vla_i8.to(dtype=torch.float32).cpu()
                 vla_i8 = quantize_dynamic(vla_i8, dtype=torch.qint8)
                 with torch.inference_mode():
-                    input_ids_c = input_ids.cpu()
-                    attention_mask_c = attention_mask.cpu()
-                    pixel_values_c = b["pixel_values"]
-                    labels_c = labels.cpu()
-                    out_ = vla_i8(input_ids=input_ids_c,
-                                  attention_mask=attention_mask_c,
-                                  pixel_values=pixel_values_c, labels=labels_c)
-                eval_acc_i8 = _action_acc(out_, labels_c)
-                i8_sec = time.perf_counter() - t_i8
-                print(f"  eval acc (INT8 of fine-tuned, CPU): {eval_acc_i8:.4f} "
-                      f"({i8_sec:.1f}s)", flush=True)
-                _int8_note = f"torch.ao quantize_dynamic, qint8, {i8_sec:.0f}s"
+                    i8_correct = i8_total = 0
+                    for b_ in eval_batches:
+                        out_ = vla_i8(input_ids=b_["input_ids"],
+                                      attention_mask=b_["attention_mask"],
+                                      pixel_values=b_["pixel_values"],
+                                      labels=b_["labels"])
+                        logits = out_.logits[:, num_patches:-1]
+                        preds = logits.argmax(dim=-1)
+                        gt = b_["labels"][:, 1:]
+                        mask = gt > action_tokenizer.action_token_begin_idx
+                        i8_correct += int(
+                            (preds[mask] == gt[mask]).sum().item())
+                        i8_total += int(mask.sum().item())
+                eval_acc_i8 = i8_correct / max(i8_total, 1)
+                i8_ci = _wilson(i8_correct, i8_total) if eval_K > 0 else None
+                rec.metric(event="eval_int8", batches=max(eval_K, 1),
+                           correct=i8_correct, total=i8_total,
+                           action_acc=float(eval_acc_i8),
+                           ci_lo=None if i8_ci is None else float(i8_ci[0]),
+                           ci_hi=None if i8_ci is None else float(i8_ci[1]))
+                print(f"  eval acc (INT8 of fine-tuned, CPU): "
+                      f"{eval_acc_i8:.4f}"
+                      + (f" [{i8_ci[0]:.4f}, {i8_ci[1]:.4f}] over {eval_K} "
+                         f"batches" if i8_ci else "")
+                      + f" ({time.perf_counter() - t_i8:.1f}s)", flush=True)
+                _int8_note = (f"torch.ao quantize_dynamic, qint8, "
+                              f"{max(eval_K, 1)} held-out batches")
             except Exception as exc:  # INT8 must never kill the baseline row
                 print(f"  INT8 reference failed: {exc}", flush=True)
                 rec.metric(event="int8_reference", error=str(exc))
@@ -424,8 +525,13 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         delta = (eval_acc_i8 - eval_acc_ft) if not np.isnan(eval_acc_i8) else float("nan")
         verdict = "OK" if not np.isnan(eval_acc_ft) else "FAIL"
         status = "completed" if verdict == "OK" else "failed"
+        ft_cell = (f"{eval_acc_ft:.4f}±{(ft_ci[1]-ft_ci[0])/2:.4f}"
+                   if ft_ci else f"{eval_acc_ft:.4f}")
+        i8_cell = (f"{eval_acc_i8:.4f}±{(i8_ci[1]-i8_ci[0])/2:.4f}"
+                   if eval_K > 0 and not np.isnan(eval_acc_i8)
+                   else f"{eval_acc_i8:.4f}")
         out.append(f"| {seed} | {losses[-1]:.4f} | {accs[-1]:.4f} | "
-                   f"{eval_acc_ft:.4f} | {eval_acc_i8:.4f} | {delta:+.4f} | {verdict} |")
+                   f"{ft_cell} | {i8_cell} | {delta:+.4f} | {verdict} |")
 
         rec.sample_power()
         results = {
@@ -434,17 +540,24 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             "train_action_acc_last": float(accs[-1]),
             "train_sec": round(train_sec, 2),
             "int8_reference_sec": round(i8_sec, 2),
+            "eval_batches": max(eval_K, 1),
             "eval_acc_finetuned": float(eval_acc_ft),
+            "eval_ft_ci95": None if ft_ci is None else
+                [round(float(ft_ci[0]), 5), round(float(ft_ci[1]), 5)],
             "eval_acc_int8": float(eval_acc_i8),
-            "delta_int8_minus_ft": round(float(delta), 4) if delta == delta else None,
+            "eval_i8_ci95": None if i8_ci is None else
+                [round(float(i8_ci[0]), 5), round(float(i8_ci[1]), 5)],
             "int8_note": _int8_note,
             "verdict": verdict,
         }
         rec.metric(event="n1_results", int8_note=_int8_note,
                    eval_acc_finetuned=float(eval_acc_ft))
         finish_run(rec, status=status, results=results,
-                   tolerance_note="smoke steps unless --steps given; eval is one "
-                                  "held-out batch (same slice); INT8 on CPU")
+                   tolerance_note="smoke steps unless --steps given; eval is "
+                                  "the held-out protocol (--eval-episodes K "
+                                  "batches with Wilson 95% CI, K=0 = legacy "
+                                  "single batch; shuffled-buffer caveat "
+                                  "documented in code); INT8 on CPU")
         out.append(f"\nrecorded: {rec.run_dir}")
         return results
     except Exception as exc:
@@ -493,17 +606,21 @@ def _run_n3(out: list[str], ctx=None) -> None:
                             "layers": N3_LAYERS,
                             "ordering": "adaptive (near-square factors, "
                                          "N2' bit-reversed semantics)",
-                            "ranks": list(ranks),
-                            "note": "per-layer Lipschitz products at matched bond, "
-                                     "CPU (numpy reference kernels)"})
+                            "rank_plans": [[8], [16]],
+                            "gauge": "min_gauge_product: per-channel diagonal "
+                                     "bond-gauge descent (reconstruction-"
+                                     "invariant; monotone in the raw product)",
+                            "note": "per-layer L_raw / L_min(gauge) / tight / "
+                                    "kappa per bond plan, CPU (numpy kernels)"})
 
+    rank_plans = ((8,), (16,))
     out += table_header(
-        "N3 - Layer-1 exact Lipschitz table (L = prod_k ||G_k||_2, "
-        f"rank {ranks[0]})",
-        ["Layer", "M x N", "Params", "Lipschitz (L)", "Tight norm",
-         "Tightness (L/||W||)", "Status"])
+        "N3 - Layer-1 exact Lipschitz table (raw vs gauge-minimized; "
+        "kappa = L/tight)",
+        ["Layer", "Bond r", "M x N", "Params", "L_raw", "L_min (gauge)",
+         "Tight", "kappa_raw", "kappa_min", "Status"])
 
-    results: dict[str, dict] = {}
+    layer_cache: dict[str, tuple] = {}
     for layer_type, key in N3_LAYERS.items():
         W = sd["llm_backbone"][key].detach().float().cpu().numpy()
         M, N = W.shape
@@ -513,40 +630,65 @@ def _run_n3(out: list[str], ctx=None) -> None:
         n_a, n_b = _factorize(N)
         m_dims = (m_b, m_a) if m_b > m_a else (m_a, m_b)
         n_dims = (n_b, n_a) if n_b > n_a else (n_a, n_b)
-        cs = k.tt_svd(W, m_dims, n_dims, ranks)
-        L = k.lipschitz_product(cs.arrays)
-        tight = k.operator_norm_tight(cs.arrays, m_dims, n_dims)
-        params = int(sum(np.prod(g.shape) for g in cs.arrays))
-        ratio = L / max(tight, 1e-12)
-        # certificate is sound iff L >= tight (product bound upper-bounds)
-        ok = bool(L >= tight - 1e-9)
-        results[layer_type] = {"L": float(L), "tight": float(tight),
-                               "ratio": float(ratio), "params": params,
-                               "sound": ok, "m_dims": list(m_dims),
-                               "n_dims": list(n_dims)}
-        out.append(f"| {layer_type} | {M}x{N} | {params} | {L:.6f} | "
-                   f"{tight:.6f} | {ratio:.2f} | {'PASS' if ok else 'FAIL'} |")
-        if rec:
-            rec.metric(layer=layer_type, m=M, n=N, params=params,
-                       lipschitz=float(L), tight_norm=float(tight),
-                       tightness_ratio=float(ratio), sound=bool(ok))
+        layer_cache[layer_type] = (W, M, N, m_dims, n_dims)
+
+    results: dict[str, dict] = {}
+    for ranks in rank_plans:
+        for layer_type in N3_LAYERS:
+            W, M, N, m_dims, n_dims = layer_cache[layer_type]
+            cs = k.tt_svd(W, m_dims, n_dims, ranks)
+            L = k.lipschitz_product(cs.arrays)
+            L_min, gst = k.min_gauge_product(cs.arrays)
+            tight = k.operator_norm_tight(cs.arrays, m_dims, n_dims)
+            params = int(sum(np.prod(g.shape) for g in cs.arrays))
+            kappa_raw = L / max(tight, 1e-12)
+            kappa_min = L_min / max(tight, 1e-12)
+            # Sound iff the minimized product still upper-bounds the tight
+            # norm; tightening must never INCREASE the bound.
+            ok = bool(L_min >= tight - 1e-9 and L_min <= L * (1 + 1e-9))
+            cell = f"{layer_type}@r{ranks[0]}"
+            results[cell] = {"L_raw": float(L), "L_min": float(L_min),
+                             "tight": float(tight),
+                             "kappa_raw": float(kappa_raw),
+                             "kappa_min": float(kappa_min),
+                             "params": params, "sound": ok,
+                             "gauge_sweeps": int(gst["sweeps"]),
+                             "gauge_converged": bool(gst["converged"]),
+                             "m_dims": list(m_dims), "n_dims": list(n_dims)}
+            out.append(f"| {layer_type} | {ranks[0]} | {M}x{N} | {params} | "
+                       f"{L:.6f} | {L_min:.6f} | {tight:.6f} | "
+                       f"{kappa_raw:.2f} | {kappa_min:.2f} | "
+                       f"{'PASS' if ok else 'FAIL'} |")
+            if rec:
+                rec.metric(layer=layer_type, bond_ranks=list(ranks), m=M, n=N,
+                           params=params, lipschitz=float(L),
+                           lipschitz_gauge_min=float(L_min),
+                           tight_norm=float(tight), kappa_raw=float(kappa_raw),
+                           kappa_min=float(kappa_min), sound=bool(ok))
 
     n_sound = sum(1 for r in results.values() if r["sound"])
+    n_tightened = sum(1 for r in results.values()
+                      if r["L_min"] < r["L_raw"] * (1 - 1e-12))
     out.append("")
-    out.append(f"* Certificate sound (L >= tight) on {n_sound}/{len(results)} layers. "
-               f"Layer-1 bound is a global sanity bound; Layer-2a SOS (N4) is the "
-               f"local certificate.")
+    out.append(f"* Certificate sound (L_min >= tight) on {n_sound}/{len(results)} "
+               f"cells; gauge descent tightened the bound on {n_tightened}/"
+               f"{len(results)} cells. Layer-1 bound is a global sanity bound; "
+               f"Layer-2a SOS (N4) is the local certificate.")
 
     if rec:
         rec.sample_power()
         finish_run(rec, status="completed",
-                   results={"ordering": "adaptive near-square", "ranks": list(ranks),
+                   results={"ordering": "adaptive near-square",
+                            "rank_plans": [[8], [16]],
                             "layers": results,
                             "sound_count": n_sound,
+                            "tightened_count": n_tightened,
                             "kill_criterion": "R2: certified-safe-set <50% at all "
                                               "Pareto points (evaluated in N4)",
                             "verdict": "Layer-1 certificate computed — soundness "
-                                       "holds (bound >= tight norm)"},
+                                       "holds at the gauge-minimized product "
+                                       "(L_min >= tight); kappa_min <= kappa_raw "
+                                       "on every committed cell"},
                    tolerance_note="CPU numpy reference kernels; power iteration "
-                                  "100 iters")
+                                  "100 iters; gauge descent rel-conv 1e-12")
         out.append(f"\nrecorded: {rec.run_dir}")

@@ -33,6 +33,7 @@ class BenchContext:
     seeds: list[int] | None = None  # N1: explicit seed list
     steps_per_seed: int | None = None  # N1: steps per seed when seeds given
     save_ckpt: str | None = None       # N1: dir to save fine-tuned backbone (N1 -> N2)
+    eval_episodes: int | None = None   # N1/E9: enlarged held-out eval (0 = legacy single batch)
 
     @property
     def active(self) -> bool:

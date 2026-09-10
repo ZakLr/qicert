@@ -25,7 +25,13 @@
 #     (matched budget), on the FINE-TUNED weights (N1 --save-ckpt).
 #   * Certificate per point: per-layer exact Lipschitz product L and tight
 #     operator norm (power iteration); sound iff L >= tight (N3 machinery).
-"""N2 - {TT, QTT} compression Pareto sweep (bench module)."""
+"""N2 - {TT, QTT} compression Pareto sweep (bench module).
+
+Usage:
+    python -m qicert.bench.all --module n2_sweep --rows=compression-pareto
+    python -m qicert.bench.all --module n2_sweep --rows=recon-sweep \\
+        --out results --exp-id N2pre --run-tag 5060-recon
+"""
 from __future__ import annotations
 
 # Target param fractions of the compressed layers, spanning 2x..50x
@@ -46,10 +52,129 @@ import numpy as np
 from ._base import finish_run, start_run, table_header, wants
 from .compress import CKPT, DATA_ROOT
 
-
 def run(rows: str, out: list[str], ctx=None) -> None:
     if wants(rows, "compression-pareto", SMOKE):
         _run_n2(out, ctx)
+    if wants(rows, "recon-sweep", frozenset()):
+        _run_recon_sweep(out, ctx)
+
+
+# ========================================================================
+# N2pre (E4) - TT-SVD reconstruction sweep: per (layer-type x depth x
+# target param fraction), record rel err + L_raw / L_min(gauge) / tight /
+# tt-param count / wall time. No dataset, no eval leg — the pure
+# reconstruction-and-certificate surface that sizes the N2 bond allocator.
+# ========================================================================
+RECON_DEPTHS = (0, 7, 15, 23)
+RECON_FRACTIONS = (0.005, 0.01, 0.02, 0.04)
+
+
+def _run_recon_sweep(out: list[str], ctx=None) -> None:
+    import re
+    import time
+
+    import torch
+
+    from qicert.kernels import get_backend
+
+    k = get_backend()
+    base_sd = torch.load(str(CKPT), map_location="cpu", weights_only=True)
+    llm_sd = base_sd["model"]["llm_backbone"]
+
+    inventory = []
+    for layer_type, key in _llm_linear_keys(llm_sd):
+        depth = int(re.search(r"layers\.(\d+)\.", key).group(1))
+        if depth in RECON_DEPTHS:
+            inventory.append((layer_type, key, depth))
+
+    rec = start_run(ctx,
+                    exp_id=(ctx.exp_id if ctx and ctx.exp_id else "N2pre"),
+                    label="recon-sweep",
+                    config={"experiment": "N2pre TT-SVD reconstruction sweep",
+                            "backbone": "TT d=2 bit-reversed",
+                            "depths": list(RECON_DEPTHS),
+                            "fractions": list(RECON_FRACTIONS),
+                            "checkpoint": str(CKPT),
+                            "note": "per-cell recon rel-err + certificates "
+                                    "(E1 gauge descent); CPU numpy kernels"})
+
+    out += table_header(
+        f"N2pre - reconstruction sweep ({len(inventory)} layers x "
+        f"{len(RECON_FRACTIONS)} fractions, TT-SVD d=2 bit-reversed)",
+        ["Layer", "Depth", "M x N", "Frac", "r", "TT params", "Rel err",
+         "L_raw", "L_min", "Tight", "kappa_min", "Sec", "Status"])
+
+    n_fail = 0
+    n_mono_warn = 0
+    for layer_type, key, depth in inventory:
+        W = llm_sd[key].detach().float().cpu().numpy()
+        M, N = W.shape
+        m_dims = _factor_dims(M, 2)
+        n_dims = _factor_dims(N, 2)
+        prev_err = None
+        for frac in RECON_FRACTIONS:
+            r = _rank_for_fraction(frac, m_dims, n_dims)
+            t0 = time.perf_counter()
+            try:
+                cs = k.tt_svd(W, m_dims, n_dims,
+                              tuple(r for _ in range(len(m_dims) - 1)))
+                Wr = k.contract_cores(cs.arrays, m_dims, n_dims)
+                rel = float(np.linalg.norm(Wr - W) / np.linalg.norm(W))
+                L = float(k.lipschitz_product(cs.arrays))
+                # Gauge descent capped at 10 sweeps here (wall-clock: the
+                # full 50-sweep budget only buys marginal extra tightening
+                # on the biggest cells; N3's committed table keeps the full
+                # budget).
+                L_min, gst = k.min_gauge_product(cs.arrays, sweeps=10)
+                tight = float(k.operator_norm_tight(cs.arrays, m_dims, n_dims))
+                dt = time.perf_counter() - t0
+                cparams = int(sum(np.prod(g.shape) for g in cs.arrays))
+                kappa_min = L_min / max(tight, 1e-12)
+                ok = bool(np.isfinite(rel) and np.isfinite(L_min)
+                          and L_min >= tight - 1e-9)
+                out.append(f"| {layer_type} | {depth} | {M}x{N} | "
+                           f"{frac:.3f} | {r} | {cparams} | {rel:.5f} | "
+                           f"{L:.4f} | {L_min:.4f} | {tight:.4f} | "
+                           f"{kappa_min:.2f} | {dt:.1f} | "
+                           f"{'PASS' if ok else 'FAIL'} |")
+                if rec:
+                    rec.metric(layer=layer_type, depth=depth, fraction=frac,
+                               rank=int(r), tt_params=cparams,
+                               recon_rel_err=rel, lipschitz=float(L),
+                               lipschitz_gauge_min=float(L_min),
+                               tight_norm=float(tight),
+                               kappa_min=float(kappa_min), sound=bool(ok),
+                               wall_sec=round(dt, 2),
+                               gauge_converged=bool(gst["converged"]))
+                # Gate sanity: rel err must be monotone non-increasing in
+                # the fraction (more params cannot hurt optimal truncation).
+                if prev_err is not None and rel > prev_err * (1 + 1e-6):
+                    n_mono_warn += 1
+                    print(f"  [mono-warn] {layer_type} depth {depth}: rel err "
+                          f"rose {prev_err:.5f} -> {rel:.5f} at frac {frac}",
+                          flush=True)
+                prev_err = rel
+            except Exception as exc:  # noqa: BLE001
+                n_fail += 1
+                out.append(f"| {layer_type} | {depth} | {M}x{N} | "
+                           f"{frac:.3f} | {r} | - | - | - | - | - | - | - | "
+                           f"FAIL ({type(exc).__name__}: {exc}) |")
+
+    n_cells = len(inventory) * len(RECON_FRACTIONS)
+    out.append("")
+    verdict = (f"N2pre sweep complete: {n_cells - n_fail}/{n_cells} cells PASS, "
+               f"{n_mono_warn} monotonicity warnings.")
+    out.append(f"* {verdict}")
+    if rec:
+        rec.sample_power()
+        finish_run(rec, status="completed" if n_fail == 0 else "failed",
+                   results={"cells": n_cells, "failed": n_fail,
+                            "monotonicity_warnings": n_mono_warn,
+                            "verdict": verdict},
+                   tolerance_note="TT-SVD is exact-rank adaptive; rel err is "
+                                  "vs the dense weight; kappa = L_min/tight")
+
+
 
 
 def _factor_dims(n: int, d: int, bit_reversed: bool = True) -> tuple[int, ...]:
@@ -300,6 +425,9 @@ class _N2EvalHarness:
         # at import time. Set it before the first prismatic import.
         _os.environ.setdefault("PRISMATIC_DATA_ROOT",
                                str(repo / "weights" / "data"))
+        # transformers 5.x alias shim (same as N1) before prismatic imports.
+        from qicert.transformers5_compat import install as _tf5_install
+        _tf5_install()
 
         self.torch = torch
         torch.manual_seed(seed)
