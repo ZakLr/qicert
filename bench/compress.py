@@ -195,10 +195,11 @@ def _wilson(k: int, n: int, z: float = 1.959963984540054) -> tuple[float, float]
 
 def _eval_frame_total(ds, episode_names: list[str]) -> int:
     """Total frames across the frozen eval episodes (cheap: reads only actions)."""
+    import numpy as _np
     name_to_idx = {p.name: i for i, p in enumerate(ds.files)}
     total = 0
     for e in episode_names:
-        with np.load(ds.files[name_to_idx[e]], allow_pickle=False) as z:
+        with _np.load(ds.files[name_to_idx[e]], allow_pickle=False) as z:
             total += int(z["actions"].shape[0])
     return total
 
@@ -548,6 +549,7 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         # --skip-int8 (N2 pipeline): the INT8 baseline is already recorded in
         # the scored N1 run; don't re-burn ~9 CPU-minutes per seed.
         i8_ci = None
+        i8_sec = 0.0
         if ctx is not None and getattr(ctx, "skip_int8", False):
             print("  INT8 reference SKIPPED (--skip-int8; recorded in scored N1)",
                   flush=True)
@@ -592,6 +594,7 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                                   flush=True)
                 del vla_i8
                 eval_acc_i8 = i8_correct / max(i8_total, 1)
+                i8_sec = time.perf_counter() - t_i8
                 i8_ci = _wilson(i8_correct, i8_total) if (eval_K > 0 or
                                                           eval_stream_factory is not None) else None
                 rec.metric(event="eval_int8", batches=n_eval_final,
