@@ -255,8 +255,15 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         # self.llm_backbone(...); peft's generic (no-task_type) wrapper passes
         # through all kwargs, so we wrap vla.llm_backbone and let the full
         # forward run the multimodal path (verified in scripts/step1_*.py).
+        # peft >= 0.14 rejects target_modules="all-linear" when the wrapped
+        # object is a plain nn.Module (the LLM backbone is not a
+        # PreTrainedModel). Target the Qwen2 linear projections explicitly —
+        # exactly the set "all-linear" would match on this backbone (it
+        # excludes lm_head/embeddings the same way).
+        QWEN2_LINEAR = ["q_proj", "k_proj", "v_proj", "o_proj",
+                        "gate_proj", "up_proj", "down_proj"]
         lora_cfg = LoraConfig(r=lora_r, lora_alpha=min(lora_r, 16),
-                              target_modules="all-linear", lora_dropout=0.0,
+                              target_modules=QWEN2_LINEAR, lora_dropout=0.0,
                               bias="none")
         vla.llm_backbone = get_peft_model(vla.llm_backbone, lora_cfg)
         vla.llm_backbone.print_trainable_parameters()
@@ -342,9 +349,12 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             rec.metric(event="train_step", step=step, loss=float(loss.item()),
                        action_acc=float(acc) if acc == acc else None,
                        peak_vram_mb=round(peak, 1))
-            if step % 8 == 0 or step == steps - 1:
+            if step % 25 == 0 or step == steps - 1 or step < 3:
+                el = time.perf_counter() - t_train
+                eta = el / (step + 1) * (steps - step - 1)
                 print(f"  step {step+1}/{steps}: loss={loss.item():.4f} "
-                      f"acc={acc:.3f} peak={peak/1024:.2f} GiB", flush=True)
+                      f"acc={acc:.3f} peak={peak/1024:.2f} GiB "
+                      f"elapsed={el:.0f}s ETA={eta/60:.1f}min", flush=True)
         train_sec = time.perf_counter() - t_train
 
         # ---- eval leg: held-out batches from the same slice, shared by both
@@ -381,27 +391,43 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         eval_batches = []
         if eval_stream is not None:
             # Frozen-split mode: consume the whole held-out stream (all eval
-            # episodes), capped at eval_K batches when K>0.
+            # episodes), capped at eval_K batches when K>0. K<=0 => the FULL
+            # frozen split (recommended: exactly the 108 hashed episodes).
+            n_eval_total = None
+            t_eval0 = time.perf_counter()
             for b_ in eval_stream:
                 eval_batches.append(b_)
                 if eval_K > 0 and len(eval_batches) >= eval_K:
                     break
-        for _ in range(max(eval_K, 1) - len(eval_batches)):
-            try:
-                eval_batches.append(next(it))
-            except StopIteration:
-                it = iter(dl) if 'dl' in dir() else iter(eval_stream) \
-                    if eval_stream is not None else None
-                if it is None:
-                    break
-                eval_batches.append(next(it))
+            eval_prep_sec = time.perf_counter() - t_eval0
+            print(f"  eval prep: {len(eval_batches)} frozen batches "
+                  f"in {eval_prep_sec:.1f}s", flush=True)
+        # Integrity guard: the top-up below draws from the TRAINING iterator,
+        # so it must never run in frozen-split mode (eval contamination).
+        if eval_stream is None:
+            for _ in range(max(eval_K, 1) - len(eval_batches)):
+                try:
+                    eval_batches.append(next(it))
+                except StopIteration:
+                    it = iter(dl) if 'dl' in dir() else None
+                    if it is None:
+                        break
+                    eval_batches.append(next(it))
 
         with torch.inference_mode():
             ft_correct = ft_total = 0
-            for b_ in eval_batches:
+            t_eval_ft0 = time.perf_counter()
+            n_eval = len(eval_batches)
+            for bi, b_ in enumerate(eval_batches):
                 c, t = _eval_counts(vla, b_, "cuda")
                 ft_correct += c
                 ft_total += t
+                if n_eval >= 20 and (bi % 20 == 0 or bi == n_eval - 1):
+                    el = time.perf_counter() - t_eval_ft0
+                    eta = el / (bi + 1) * (n_eval - bi - 1)
+                    print(f"  [eval-FT {bi+1}/{n_eval}] "
+                          f"acc={ft_correct/max(ft_total,1):.4f} "
+                          f"elapsed={el:.0f}s ETA={eta:.0f}s", flush=True)
         eval_acc_ft = ft_correct / max(ft_total, 1)
         ft_ci = _wilson(ft_correct, ft_total) if eval_K > 0 else None
         # keep the legacy variable bindings for the save/int8 legs below

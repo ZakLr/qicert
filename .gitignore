@@ -37,3 +37,8 @@ weights/
 # — it would go stale and bloat the repo).
 kaggle/n1_baseline.py
 kaggle-out/
+
+# Local venvs / run artifacts
+.venv*/
+results/*ckpt*/
+*.pt
