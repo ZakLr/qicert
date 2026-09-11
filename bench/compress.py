@@ -145,11 +145,32 @@ def _run_n1(out: list[str], ctx=None) -> None:
 
     save_dir = (Path(ctx.save_ckpt) if ctx and ctx.save_ckpt else None)
     all_rows = []
+    # One VLA (~4.8 GiB at batch 2 on this 1B) loaded per seed; with no
+    # explicit cleanup between seeds the second reload OOMs on 8 GiB GPUs.
+    # Seed 0 completes cleanly; seeds 1, 2 die mid-reload without this.
+    import gc
+    try:
+        import torch as _torch
+        HAS_CUDA = _torch.cuda.is_available()
+    except Exception:
+        HAS_CUDA = False
     for seed in seeds:
         row = _run_n1_seed(out, ctx, seed, steps_per_seed, batch, lora_r,
                            save_dir=save_dir)
         if row:
             all_rows.append(row)
+        # Free the per-seed VLA (it owns ~4.8 GiB) so the next seed's reload
+        # never OOMs on 8 GiB laptop GPUs. Deterministic cleanup, not luck.
+        if HAS_CUDA:
+            try:
+                _torch.cuda.synchronize()
+                _torch.cuda.empty_cache()
+            except Exception:
+                pass
+        gc.collect()
+        if len(seeds) > 1:
+            print(f"  [seed {seed} done; GPU cache cleared] "
+                  f"{len(all_rows)}/{len(seeds)} seeds complete", flush=True)
 
     if all_rows:
         acc_ft = np.array([r["eval_acc_finetuned"] for r in all_rows])
@@ -170,6 +191,16 @@ def _wilson(k: int, n: int, z: float = 1.959963984540054) -> tuple[float, float]
     centre = (p + z * z / (2 * n)) / d
     half = z * ((p * (1 - p) / n + z * z / (4 * n * n)) ** 0.5) / d
     return centre - half, centre + half
+
+
+def _eval_frame_total(ds, episode_names: list[str]) -> int:
+    """Total frames across the frozen eval episodes (cheap: reads only actions)."""
+    name_to_idx = {p.name: i for i, p in enumerate(ds.files)}
+    total = 0
+    for e in episode_names:
+        with np.load(ds.files[name_to_idx[e]], allow_pickle=False) as z:
+            total += int(z["actions"].shape[0])
+    return total
 
 
 def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
@@ -388,24 +419,27 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             return (int((preds[mask] == gt[mask]).sum().item()),
                     int(mask.sum().item()))
 
-        eval_batches = []
+        eval_batches: list[dict] = []
+        eval_stream_factory = None
+        n_eval_batches = 1
         if eval_stream is not None:
-            # Frozen-split mode: consume the whole held-out stream (all eval
-            # episodes), capped at eval_K batches when K>0. K<=0 => the FULL
-            # frozen split (recommended: exactly the 108 hashed episodes).
-            n_eval_total = None
-            t_eval0 = time.perf_counter()
-            for b_ in eval_stream:
-                eval_batches.append(b_)
-                if eval_K > 0 and len(eval_batches) >= eval_K:
-                    break
-            eval_prep_sec = time.perf_counter() - t_eval0
-            print(f"  eval prep: {len(eval_batches)} frozen batches "
-                  f"in {eval_prep_sec:.1f}s", flush=True)
-        # Integrity guard: the top-up below draws from the TRAINING iterator,
-        # so it must never run in frozen-split mode (eval contamination).
-        if eval_stream is None:
-            for _ in range(max(eval_K, 1) - len(eval_batches)):
+            # Frozen-split mode: stream the held-out episodes lazily — a FRESH
+            # stream per eval leg (FT on GPU, INT8 on GPU), never materializing
+            # all batches. The earlier design held ~6.5k batches (~16 GB CPU
+            # RAM) in a list, which OOM-killed the process silently during the
+            # second model load (observed 2026-09-11, host 3-seed attempt).
+            _split_eps = list(_split["eval"])
+            eval_stream_factory = (lambda: LocalEvalSplitStream(
+                ep_ds, lb, _split_eps, batch_size=batch))
+            import math as _math
+            n_eval_batches = max(1, _math.ceil(
+                _eval_frame_total(ep_ds, _split_eps) / batch))
+            _capped = f" (capped at {eval_K})" if eval_K > 0 else ""
+            print(f"  eval: streaming frozen split — {len(_split_eps)} "
+                  f"episodes -> {n_eval_batches} batches{_capped}", flush=True)
+        else:
+            # Legacy no-split mode: capped list of held-out batches.
+            for _ in range(max(eval_K, 1)):
                 try:
                     eval_batches.append(next(it))
                 except StopIteration:
@@ -417,32 +451,53 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         with torch.inference_mode():
             ft_correct = ft_total = 0
             t_eval_ft0 = time.perf_counter()
-            n_eval = len(eval_batches)
-            for bi, b_ in enumerate(eval_batches):
-                c, t = _eval_counts(vla, b_, "cuda")
-                ft_correct += c
-                ft_total += t
-                if n_eval >= 20 and (bi % 20 == 0 or bi == n_eval - 1):
-                    el = time.perf_counter() - t_eval_ft0
-                    eta = el / (bi + 1) * (n_eval - bi - 1)
-                    print(f"  [eval-FT {bi+1}/{n_eval}] "
-                          f"acc={ft_correct/max(ft_total,1):.4f} "
-                          f"elapsed={el:.0f}s ETA={eta:.0f}s", flush=True)
+            if eval_stream_factory is not None:
+                n_eval = (n_eval_batches if eval_K <= 0
+                          else min(n_eval_batches, eval_K))
+                for bi, b_ in enumerate(eval_stream_factory()):
+                    if bi >= n_eval:
+                        break
+                    c, t = _eval_counts(vla, b_, "cuda")
+                    ft_correct += c
+                    ft_total += t
+                    if bi % 50 == 0 or bi == n_eval - 1:
+                        el = time.perf_counter() - t_eval_ft0
+                        eta = el / (bi + 1) * (n_eval - bi - 1)
+                        print(f"  [eval-FT {bi+1}/{n_eval}] "
+                              f"acc={ft_correct/max(ft_total,1):.4f} "
+                              f"elapsed={el:.0f}s ETA={eta:.0f}s", flush=True)
+            else:
+                n_eval = len(eval_batches)
+                for bi, b_ in enumerate(eval_batches):
+                    c, t = _eval_counts(vla, b_, "cuda")
+                    ft_correct += c
+                    ft_total += t
+                    if n_eval >= 20 and (bi % 20 == 0 or bi == n_eval - 1):
+                        el = time.perf_counter() - t_eval_ft0
+                        eta = el / (bi + 1) * (n_eval - bi - 1)
+                        print(f"  [eval-FT {bi+1}/{n_eval}] "
+                              f"acc={ft_correct/max(ft_total,1):.4f} "
+                              f"elapsed={el:.0f}s ETA={eta:.0f}s", flush=True)
+        n_eval_final = n_eval
         eval_acc_ft = ft_correct / max(ft_total, 1)
-        ft_ci = _wilson(ft_correct, ft_total) if eval_K > 0 else None
+        ft_ci = _wilson(ft_correct, ft_total) if (eval_K > 0 or
+                                                  eval_stream_factory is not None) else None
         # keep the legacy variable bindings for the save/int8 legs below
-        b = eval_batches[0]
+        if eval_stream_factory is not None:
+            b = next(iter(eval_stream_factory()))
+        else:
+            b = eval_batches[0]
         input_ids = b["input_ids"].cuda()
         attention_mask = b["attention_mask"].cuda()
         pixel_values = _to_half_cuda(b["pixel_values"])
         labels = b["labels"].cuda()
-        rec.metric(event="eval_ft", batches=max(eval_K, 1),
+        rec.metric(event="eval_ft", batches=n_eval_final,
                    correct=ft_correct, total=ft_total,
                    action_acc=float(eval_acc_ft),
                    ci_lo=None if ft_ci is None else float(ft_ci[0]),
                    ci_hi=None if ft_ci is None else float(ft_ci[1]))
         print(f"  eval acc (fine-tuned): {eval_acc_ft:.4f}"
-              + (f" [{ft_ci[0]:.4f}, {ft_ci[1]:.4f}] over {eval_K} batches"
+              + (f" [{ft_ci[0]:.4f}, {ft_ci[1]:.4f}] over {n_eval_final} batches"
                  if ft_ci else ""), flush=True)
 
         # ---- persist the fine-tuned backbone (LoRA merged into dense) so
@@ -502,45 +557,55 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             _int8_note = "skipped (recorded in scored N1 run)"
         else:
             try:
-                from torch.ao.quantization import quantize_dynamic
+                from torchao.quantization import quantize_, Int8WeightOnlyConfig
                 t_i8 = time.perf_counter()
-                # clone the fine-tuned weights (fresh module tree, same state)
+                # Fresh module tree with the fine-tuned (LoRA-merged) weights,
+                # then torchao weight-only INT8 on the LLM backbones' linears.
+                # GPU execution (CPU quantize_dynamic would need hours over the
+                # full frozen split). Same methodology as the recorded host
+                # revalidation (results/N1v2-baseline-host.json).
+                print("  INT8: loading fresh VLA + LoRA-merged FT weights...",
+                      flush=True)
                 vla_i8 = load_vla(str(CKPT), hf_token=None, load_for_training=False)
                 merged_i8 = merged if save_dir is not None else \
                     vla.llm_backbone.merge_and_unload()
                 vla_i8.llm_backbone.load_state_dict(merged_i8.state_dict())
-                # quantize_dynamic (CPU) needs fp32 input tensors; the quantized
-                # linears reject fp16 ("Input type (float) and bias type (c10::Half)").
-                vla_i8 = vla_i8.to(dtype=torch.float32).cpu()
-                vla_i8 = quantize_dynamic(vla_i8, dtype=torch.qint8)
+                vla_i8 = vla_i8.to(dtype=torch.float16, device="cuda")
+                quantize_(vla_i8.llm_backbone, Int8WeightOnlyConfig())
+                print("  INT8: quantized (torchao Int8WeightOnlyConfig, GPU) — "
+                      "evaluating the frozen split...", flush=True)
                 with torch.inference_mode():
                     i8_correct = i8_total = 0
-                    for b_ in eval_batches:
-                        out_ = vla_i8(input_ids=b_["input_ids"],
-                                      attention_mask=b_["attention_mask"],
-                                      pixel_values=b_["pixel_values"],
-                                      labels=b_["labels"])
-                        logits = out_.logits[:, num_patches:-1]
-                        preds = logits.argmax(dim=-1)
-                        gt = b_["labels"][:, 1:]
-                        mask = gt > action_tokenizer.action_token_begin_idx
-                        i8_correct += int(
-                            (preds[mask] == gt[mask]).sum().item())
-                        i8_total += int(mask.sum().item())
+                    _i8_stream = (eval_stream_factory()
+                                  if eval_stream_factory is not None
+                                  else eval_batches)
+                    for bi8, b_ in enumerate(_i8_stream):
+                        if bi8 >= n_eval_final:
+                            break
+                        c, t = _eval_counts(vla_i8, b_, "cuda")
+                        i8_correct += c
+                        i8_total += t
+                        if (bi8 % 100 == 0 or bi8 == n_eval_final - 1) \
+                                and eval_stream_factory is not None:
+                            print(f"  [eval-INT8 {bi8+1}/{n_eval_final}] "
+                                  f"acc={i8_correct/max(i8_total,1):.4f}",
+                                  flush=True)
+                del vla_i8
                 eval_acc_i8 = i8_correct / max(i8_total, 1)
-                i8_ci = _wilson(i8_correct, i8_total) if eval_K > 0 else None
-                rec.metric(event="eval_int8", batches=max(eval_K, 1),
+                i8_ci = _wilson(i8_correct, i8_total) if (eval_K > 0 or
+                                                          eval_stream_factory is not None) else None
+                rec.metric(event="eval_int8", batches=n_eval_final,
                            correct=i8_correct, total=i8_total,
                            action_acc=float(eval_acc_i8),
                            ci_lo=None if i8_ci is None else float(i8_ci[0]),
                            ci_hi=None if i8_ci is None else float(i8_ci[1]))
-                print(f"  eval acc (INT8 of fine-tuned, CPU): "
+                print(f"  eval acc (INT8 of fine-tuned, GPU): "
                       f"{eval_acc_i8:.4f}"
-                      + (f" [{i8_ci[0]:.4f}, {i8_ci[1]:.4f}] over {eval_K} "
-                         f"batches" if i8_ci else "")
+                      + (f" [{i8_ci[0]:.4f}, {i8_ci[1]:.4f}] over "
+                         f"{n_eval_final} batches" if i8_ci else "")
                       + f" ({time.perf_counter() - t_i8:.1f}s)", flush=True)
-                _int8_note = (f"torch.ao quantize_dynamic, qint8, "
-                              f"{max(eval_K, 1)} held-out batches")
+                _int8_note = (f"torchao Int8WeightOnlyConfig (weight-only int8, "
+                              f"GPU), {n_eval_final} frozen batches")
             except Exception as exc:  # INT8 must never kill the baseline row
                 print(f"  INT8 reference failed: {exc}", flush=True)
                 rec.metric(event="int8_reference", error=str(exc))
@@ -566,7 +631,7 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
             "train_action_acc_last": float(accs[-1]),
             "train_sec": round(train_sec, 2),
             "int8_reference_sec": round(i8_sec, 2),
-            "eval_batches": max(eval_K, 1),
+            "eval_batches": n_eval_final,
             "eval_acc_finetuned": float(eval_acc_ft),
             "eval_ft_ci95": None if ft_ci is None else
                 [round(float(ft_ci[0]), 5), round(float(ft_ci[1]), 5)],
