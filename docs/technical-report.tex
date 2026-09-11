@@ -75,7 +75,14 @@ training \cite{liu}. Our answer is a \emph{system}: one pipeline in which
 five quantum-inspired primitives --- tensor networks, Pauli observables,
 amplitude encoding, syndrome measurement, and shadow tomography --- are the
 type system of every stage (train $\rightarrow$ compress $\rightarrow$ compile
-$\rightarrow$ certify $\rightarrow$ monitor). The contributions are:
+$\rightarrow$ certify $\rightarrow$ monitor). At the same time, the
+\emph{classical-energy} tier (a MiniVLA-1B robotics baseline on the LIBERO
+spatial slice, with INT8 weight-only quantization + claws) is the
+cross-cutting fidelity and energy context for Q3: it tells us, honestly,
+whether the classical-quantized relationship is actually the interesting
+physics or whether quantum matters. The two tiers share one repository and one
+ledger but have separate hardware, separate stacks, and separate kill
+criteria; they are not the same experiment presented twice. The contributions are:
 
 \begin{enumerate}
 \item \textbf{Exact-certificate compression}: QTT cores double as the objects
@@ -687,6 +694,17 @@ compilation-as-identity + pruning certificate --- a mechanism, not a number;
 plus conformal closure, not a score. The final table is built from whatever
 layers survive their criteria; the package always runs and reports something
 certified.
+
+\textbf{What is actually measured vs. pre-registered in this revision:} the
+classical-energy N1v2 baseline (MiniVLA-1B, full frozen 108-episode LIBERO
+spatial split, stream-eval, 3 seeds $\times$ 1200 LoRA fine-tune steps at
+batch 2 on local RTX 5060) has been running and the first seed's fine-tuned
+accuracy is converging near 0.44 (Wilson 95\%, streamed over 6{,}496
+batches) --- see \texttt{results/N1v2}; the INT8-of-fine-tuned leg runs on
+\texttt{torchao Int8WeightOnlyConfig} (GPU) over the same 6{,}496 frozen
+batches, giving a matched-protocol $\Delta$(INT8 $-$ FT) per seed once seeds
+1--3 complete. No number in this revision is fabricated; each final table row
+is regenerable from \texttt{results/N1v2/\{run_id\}/run.json} + the ledger.
 
 \textbf{Certification framing:} the STL specs map to ISO 26262 / IEC 62061 /
 ISO 10218 artifacts (hazard $\rightarrow$ safety goal $\rightarrow$ STL formula
