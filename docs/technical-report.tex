@@ -696,14 +696,14 @@ and the certificate stack provides the evidence trail an assessor expects.
 % ---------------------------------------------------------------------------
 \section{Resource Declaration}
 
-\textbf{Hardware:} Kaggle 2$\times$NVIDIA T4 16 GB (primary), local RTX 5060
-(secondary). \textbf{Total:} 87 GPU-h core (quota-hours) + headroom; silicon
-hours logged separately in the ledger. \textbf{Simulation:} CUDA-Q (pinned
-version), PennyLane, tntorch --- versions in \texttt{environment.yml}.
-\textbf{Shot/gate budgets:} per benchmark, stated in the compiler's pass-5 table.
-\textbf{Energy:} measured by the \texttt{qicert} profiler (kWh + CO$_2$e at
-declared grid intensity). Reproducibility evidence: \texttt{qicert.bench.all}
-from a fresh virtualenv, verified by N14.
+\textbf{Hardware (quantum simulation tier):} Kaggle 2$\times$NVIDIA T4 16\,GB (primary), local RTX 5060 laptop (secondary, development + classical baseline).  
+\textbf{Hardware (classical-energy baseline tier):} local RTX 5060 (1$\,\times\,$8\,GB) — the N1/N2 classical-energy runs that validate the energy accounting and provide the QNN-vs-classifier fidelity context for Q3, 
+all on this host only (no GPU cluster relied upon).  
+\textbf{Total:} 87 GPU-h core (quota-hours) + headroom; silicon hours logged separately in the ledger.  
+\textbf{Simulation stack (quantum):} CUDA-Q (pinned version), PennyLane, tntorch --- versions in \texttt{environment.yml}; CUDA-Q available through Docker on this host.  
+\textbf{Energy baseline stack (classical):} PyTorch 2.14 + torchao + peft + HF transformers 5.x + Min\'iVLA-1B backbone weights --- versions in \texttt{docs/resource-declaration.md} (auto-generated from run provenance during the live bench).  
+\textbf{Streamed eval workload note:} on the classical-energy baseline tier, the eval split is consumed lazily (two fresh stream iterators, one per eval leg) so the whole 108-episode held-out set (6{,}496 batches, ~16\,GB of batches in the earlier design) fits stably in ~10\,MB per batch without materialization --- the earlier materialized-batch design OOM-killed processes silently; the streaming fix is in \texttt{bench/compress.py} since 2026-09-11.\n\textbf{Shot/gate budgets:} per quantum benchmark, stated in the compiler's pass-5 table.  
+\textbf{Energy:} measured by the \texttt{qicert} profiler (kWh + CO$_2$e at declared grid intensity). Reproducibility evidence: \texttt{qicert.bench.all} from a fresh virtualenv, verified by the certify suite (B14a--B14h) and --skip-int8 handoff for N2.
 
 % ---------------------------------------------------------------------------
 \section{Conclusion}
