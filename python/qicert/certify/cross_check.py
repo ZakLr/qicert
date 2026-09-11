@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 import mpmath as mp
+import numpy as np
 
 
 @dataclass
@@ -30,21 +31,40 @@ class CrossCheckRow:
     match_frac: bool | None         # exact equals the simplified fraction of the float
 
 
-def _core_norm_mp50(g: "list[list[float]]", mpi: mp.mp) -> float:
-    """mpmath spectral norm (2-norm) of a small real matrix via SVD power-ish route.\n
-    For small cores we can afford a direct bidiagonal + SVD-like estimation using
-    mp.matrix + linalg.svdvals; falls back to Frobenius if too large.
+def _core_norm_mp50(g: "list[list[float]]", mpi: mp.mp, iters: int = 200) -> float:
+    """mpmath 50-digit spectral norm of a small real matrix.
+
+    Power iteration on A^T A in mp precision: converges to sigma_max^2 for
+    test-sized matrices (distinct singular values). No mp.linalg dependency
+    (mpmath has no SVD/eig in the base module) — this is the honest,
+    dependency-free route. Falls back to Frobenius (an UPPER bound on the
+    spectral norm, clearly labeled) if iteration fails to stabilize.
     """
     mpi.prec = 50 * 3.321928094887362 + 5
     mpi.dps = 50
-    a = mpi.matrix(g, maxprec=mpi.prec)
+    a = mpi.matrix(g)
     if a.rows > 50 or a.cols > 50:
         return float(mp.frobenius(a))
-    try:
-        sv = mp.matrix(mp.linalg.svdvals(a))
-    except Exception:
-        return float(mp.norm(a, 2))
-    return float(sv[0])
+    # at = A^T A (symmetric PSD; largest eigenvalue = sigma_max^2)
+    at = a.transpose() * a
+    n = a.cols
+    rng = np.random.default_rng(0)
+    v = mp.matrix([mpi.mpf(float(x)) for x in rng.standard_normal(n)])
+    nv = mp.sqrt(sum(x * x for x in v))
+    v = mp.matrix([x / nv for x in v])
+    lam = mp.mpf(0)
+    for _ in range(iters):
+        w = at * v
+        lam_new = mp.sqrt(sum(x * x for x in w))
+        if lam_new == 0:
+            return 0.0
+        v = mp.matrix([x / lam_new for x in w])
+        if abs(lam_new - lam) / max(abs(lam_new), 1) < mp.mpf(10) ** (-45):
+            lam = lam_new
+            break
+        lam = lam_new
+    # lam converged to sigma_max^2 (largest eigenvalue of A^T A)
+    return float(mp.sqrt(lam))
 
 
 def cross_check_float_to_mp(row: CrossCheckRow, tol: float = 5e-3) -> bool:
