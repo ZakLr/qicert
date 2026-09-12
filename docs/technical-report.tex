@@ -44,9 +44,15 @@ statistical tail bounds on signal-temporal-logic robustness estimated by
 iterative quantum amplitude estimation raced against the strongest honest
 classical estimator (RESTART+GEV) and closed by scenario-optimization and
 conformal calibration. A syndrome--shadow monitor guards the action stream with
-theorem-budgeted false-alarm rates. The INT8 baseline can match our accuracy at
-matched compression; it cannot compute our certificates, which are exact
-functions of the compressed cores.
+theorem-budgeted false-alarm rates. We report the honest measured status on a
+fine-tuned MiniVLA-1B (full frozen 108-episode split, validated harness,
+FT-anchor exactness $+0.0000$): calibrated INT8 is accuracy leader at
+2$\times$ compression (0.4466 vs 0.4468 dense), while our certified
+TT+residual track measurably trails on accuracy at 2.86$\times$ (0.1529) ---
+and is the only compressed model in the comparison that ships sound runtime
+certificates, enforced by a load/step guard that refuses every action or
+artifact it cannot certify. The INT8 baseline cannot compute these
+certificates, which are exact functions of the compressed cores.
 \end{abstract}
 
 \begin{IEEEkeywords}
@@ -281,6 +287,17 @@ $\mathrm{survival}(r)$. The submission prints the \emph{predicted} largest safe
 ratio $r^*$ \emph{before} measuring it, then reports
 $|r^* - r_{\mathrm{measured}}|$.
 
+\textbf{Measured form (N5-v2, this revision).} The degradation curve is
+measured as token-level \emph{action agreement} between each compressed
+checkpoint and the fine-tuned reference over a fixed prefix of the frozen
+eval split (open-loop proxy; closed-loop Lyapunov rollouts are future work),
+with the exact per-layer spectral deviation $\norm{W_{\mathrm{comp}} - W_{\mathrm{ref}}}_2$
+(power iteration) logged alongside. The predictor uses \emph{only}
+weight-space features computable at compression time, is validated
+leave-one-out, and emits $r^*$ with its measured counterpart; at the current
+point count the LOO $R^2$ is reported as indicative, not confirmatory.
+Artifacts: \texttt{results/lyapunov/\{degradation\_seed0.json, predictor.json\}}.
+
 \subsection{Layer 3: Statistical tail bounds on formal robustness}
 
 Safety requirements are Signal-Temporal-Logic (STL) formulas with quantitative
@@ -454,6 +471,27 @@ over finite ensembles --- precisely the case the oracle dilemma flags --- and
 our in-domain delta is the realized cheap oracle over a structured domain fused
 with exact structural certificates.
 
+\textbf{Measured race (N6, this revision).} On the seeded heavy-tailed margin
+oracle with analytic ground truth $p_{\mathrm{true}} = 1.37\times10^{-4}$
+(rare-event regime, per-seed deterministic rollouts), the three arms ran at
+matched query budgets: simulated Bayesian IQAE reaches a 95\% interval width
+of $4.0\times10^{-5}$ with $\sim$630 oracle queries, while naive Monte-Carlo
+counting needs $10^{6}$ queries for width $4.4\times10^{-5}$ (a
+$\sim$1587$\times$ budget ratio at matched width); the GEV extreme-tail arm
+covers the truth at $10^{6}$ queries. All covering arms are reported with
+their coverage column; an arm that is narrow but misses $p_{\mathrm{true}}$
+is scored \emph{worse} than a wide honest one. Two scoping statements: (i) the
+RESTART \emph{splitting} half of C-strong requires rollout trajectory access,
+which a seed$\to\rho$ oracle does not expose, so C-strong is implemented as
+the block-minima GEV estimator with block-bootstrap CI; (ii) the Grover
+amplification is \emph{simulated} --- the true amplitude lives only in the
+simulator and the estimator receives measurement counts exactly as it would
+on hardware. Scenario-optimization closure (Campi--Garatti, $d=2$, zero
+violations): $\varepsilon \le 6.6\times10^{-4}$ at $N=10^4$
+($\beta=0.01$), $\varepsilon \le 6.6\times10^{-6}$ at $N=10^6$. Conformal
+coverage on fresh seeds: targets 0.99/0.95/0.90 measured as
+0.9894/0.9475/0.8943. Artifacts: \texttt{results/safety/}.
+
 \subsection{Closure}
 \textbf{Scenario optimization} (Campi--Garatti): with $N$ scenarios and
 solution complexity $d$, $\Pr[\text{violation}>\varepsilon]\le\beta$ whenever
@@ -500,6 +538,15 @@ verification of the artifacts that feed it and from the formal SMT check of the
 guard logic itself. A deployed monitor would additionally log each step's
 $a$, $a_{\text{ref}}$, $L{\cdot}d$, and accept/reject decision to a tamper-evident
 log (the manifest's self-signing pattern extends to the log).
+
+\textbf{End-to-end demonstration (this revision).} \texttt{scripts/demo\_guard.py}
+builds a certified run directory through the real certificate chain (TT-SVD
+$\to$ residual compensation $\to$ sound Lipschitz bound $\to$ signed manifest)
+and exercises both gates: a clean deployment is \textsc{serve}d; an
+out-of-ball action is \textsc{refuse}d (safe fallback engaged); a certificate
+tampered \emph{after} manifest signing is \textsc{refuse}d (hash mismatch);
+a NaN bound is \textsc{refuse}d; a missing manifest is \textsc{refuse}d.
+Transcript (1 serve / 4 refuse): \texttt{results/guard-demo/transcript.json}.
 
 
 \label{sec:monitor}
@@ -640,6 +687,24 @@ recipe + the QuaSAR-stable-pseudoinverse guard) that is the actual
 ``INT8-competitive'' arm. Seeds 1 and 2 of the N1v2 baseline were launched
 concurrently with this writing and will land in the ledger as they finish.
 
+\textbf{Measured compression status (full-split, validated harness, this
+revision).} The eval harness was independently validated: loading the
+unmodified fine-tuned weights through the compressed-eval swap path
+reproduces the streamed reference to $+0.0000$ (0.4468, 6{,}496 batches,
+114{,}497 action tokens). On that protocol, per-channel \emph{calibrated}
+INT8 is near-lossless at 2.00$\times$ (0.4466, $\Delta=-0.0001$) --- which
+also proves the earlier 0.0000 naive-INT8 row was a calibration artifact,
+not a property of INT8 --- while the certified TT+residual track at its
+best measured point holds 0.1529 at 2.86$\times$ ($\Delta=-0.2939$), with
+all 168 per-layer certificates sound. The pre-registered R1 bar (some point
+at $\ge 2\times$ with $\Delta \ge -0.05$) is therefore \textbf{not met} by
+the uniform and Frobenius-residual arms; the activation-weighted fit
+(N2R-v2, GPTQ-style) and mixed allocation are the pre-registered next
+measurements, and the honest current claim is the certificate stack (the
+only compressed model with sound runtime certificates), not accuracy
+leadership. Every number in this paragraph regenerates from
+\texttt{results/} run artifacts + the ledger.
+
 \begin{table}[!t]
 \caption{Main results table (structure; $\dagger$ = pre-registered target).}
 \label{tab:main}
@@ -758,18 +823,38 @@ certified.
 \textbf{What is actually measured vs. pre-registered in this revision:} the
 classical-energy N1v2 baseline (MiniVLA-1B, full frozen 108-episode LIBERO
 spatial split, stream-eval, 3 seeds $\times$ 1200 LoRA fine-tune steps at
-batch 2 on local RTX 5060) has been running and the first seed's fine-tuned
-accuracy is converging near 0.44 (Wilson 95\%, streamed over 6{,}496
+batch 2 on local RTX 5060; seed 0 is complete with fine-tuned accuracy
+0.4468 (Wilson 95\%, streamed over 6{,}496
 batches) --- see \texttt{results/N1v2}; the INT8-of-fine-tuned leg runs on
 \texttt{torchao Int8WeightOnlyConfig} (GPU) over the same 6{,}496 frozen
 batches, giving a matched-protocol $\Delta$(INT8 $-$ FT) per seed once seeds
-1--3 complete. No number in this revision is fabricated; each final table row
-is regenerable from \texttt{results/N1v2/\{run_id\}/run.json} + the ledger.
+1--2 complete (staged one at a time; \texttt{EXECUTION-PLAN.md}). The
+measured table now also includes the FT-anchor validation ($+0.0000$), the
+calibrated-INT8 comparator (0.4466 at 2.00$\times$), and the certified
+TT+residual verdicts (0.1529 at 2.86$\times$, 168/168 certificates sound) ---
+see the Results Framework measured-status paragraph. No number in this revision is fabricated; each final table row
+is regenerable from \texttt{results/N1v2/\{run\_id\}/run.json} + the ledger.
 
 \textbf{Certification framing:} the STL specs map to ISO 26262 / IEC 62061 /
 ISO 10218 artifacts (hazard $\rightarrow$ safety goal $\rightarrow$ STL formula
 $\rightarrow$ robustness predicate $\rightarrow$ certified tail probability),
 and the certificate stack provides the evidence trail an assessor expects.
+
+\textbf{Scope generalization (explicit limitation).} All compression
+measurements to date are on one backbone (MiniVLA-1B, qwen2.5-0.5B LLM) and
+one task suite (LIBERO spatial, frozen 108-episode split). The measured
+TT-truncation collapse at $\ge 2\times$ is partly a property of this
+backbone's unusually flat weight spectra (information spread across singular
+directions; little discardable redundancy) and its fragile action head;
+literature reports structured and transformer backbones compressing far more
+gracefully. The certificate machinery, the guard, the estimator race, and the
+conformal closure are \emph{model-agnostic by construction} (they operate on
+whatever weights the pipeline produces). Phase-2 work: repeat the full
+pipeline on a second backbone and a second task suite; extend Layer-2b to
+closed-loop Lyapunov rollouts; add an INT4 comparator for the $>2\times$
+regime; and a hardware-queue run. Layer-2a SOS boxes remain scoped behind
+the Julia pin (Q22) and are reported as attempted-not-run at submission if
+the pin does not land.
 
 % ---------------------------------------------------------------------------
 \section{Resource Declaration}
@@ -780,7 +865,8 @@ all on this host only (no GPU cluster relied upon).
 \textbf{Total:} 87 GPU-h core (quota-hours) + headroom; silicon hours logged separately in the ledger.  
 \textbf{Simulation stack (quantum):} CUDA-Q (pinned version), PennyLane, tntorch --- versions in \texttt{environment.yml}; CUDA-Q available through Docker on this host.  
 \textbf{Energy baseline stack (classical):} PyTorch 2.14 + torchao + peft + HF transformers 5.x + Min\'iVLA-1B backbone weights --- versions in \texttt{docs/resource-declaration.md} (auto-generated from run provenance during the live bench).  
-\textbf{Streamed eval workload note:} on the classical-energy baseline tier, the eval split is consumed lazily (two fresh stream iterators, one per eval leg) so the whole 108-episode held-out set (6{,}496 batches, ~16\,GB of batches in the earlier design) fits stably in ~10\,MB per batch without materialization --- the earlier materialized-batch design OOM-killed processes silently; the streaming fix is in \texttt{bench/compress.py} since 2026-09-11.\n\textbf{Shot/gate budgets:} per quantum benchmark, stated in the compiler's pass-5 table.  
+\textbf{Streamed eval workload note:} on the classical-energy baseline tier, the eval split is consumed lazily (two fresh stream iterators, one per eval leg) so the whole 108-episode held-out set (6{,}496 batches, ~16\,GB of batches in the earlier design) fits stably in ~10\,MB per batch without materialization --- the earlier materialized-batch design OOM-killed processes silently; the streaming fix is in \texttt{bench/compress.py} since 2026-09-11.
+\textbf{Shot/gate budgets:} per quantum benchmark, stated in the compiler's pass-5 table.  
 \textbf{Energy:} measured by the \texttt{qicert} profiler (kWh + CO$_2$e at declared grid intensity). Reproducibility evidence: \texttt{qicert.bench.all} from a fresh virtualenv, verified by the certify suite (B14a--B14h) and --skip-int8 handoff for N2.
 
 % ---------------------------------------------------------------------------
