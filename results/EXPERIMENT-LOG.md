@@ -72,39 +72,132 @@ Rule: no number appears here unless it is regenerable from its run dir
 - **Expected:** residual recovers most of the truncation loss if the FT
   weights' residuals are approximately low-rank (structured case in the unit
   tests). Bar = R1: some point at net ratio ≥ 2× with delta ≥ −0.05.
-- **Result:** *(running — first point scored as below; continues for 4 points)*
-  - **Point 1 scored** (frac=0.50, r′=8, tt_split=0.6 → net ratio 3.18×):
-    eval acc 0.0000, delta −0.4468 vs FT ref, 168/168 certificates sound.
-    **Same zero as the failed N2 uniform run, but mechanism different:** the
-    residual folded back ~70% of each layer's RMS error (per-layer recon
-    0.67–0.74 across 168 layers — uniform run had ~0 recovery). So the
-    repair arm *is* improving the weights mathematically on every layer; the
-    FT model's output layer is just so sensitive that 70% of the per-layer
-    error still leaves the action-token logits fully shattered — 70% is the
-    right direction but not enough to cross the activation threshold.
-  - Diagnosis from per-layer recon (168 layers): consistent 0.67–0.74 — the
-    repair works evenly across the model, not selectively; this is the
-    honest signature of a flat-spectrum backbone where the error is spread
-    rather than concentrated in a few layers you can patch big. With rank-8
-    residual factors that's the best a Frobenius-optimal patch does; the
-    action head's output is what actually has to survive.
-  - Plain reading: at 3.18×, the compressed+repaired model still produces
-    near-uniform action logits → 0.000 action accuracy. The *weights* got
-    70% closer, but the *predictions* didn't cross the threshold. This is
-    why residual-only on flat spectra is a weak lever and why deployment
-    real solutions (GPTQ-intrinsic, QuaSAR) additionally fit the residual
-    to *activation-weighted* error + per-channel scales optimized against
-    output loss on a calibration set — not raw Frobenius on the weight.
-  - Two paths remain open (both pre-registered): (a) **rank-32 residual**
-    (more budget to the correction) + per-channel scales optimized against
-    the calibration activations (the collector in
-    `python/qicert/calibrate.py`); (b) if even that collapses, the honest
-    conclusion for the compression track is that TT truncation at this
-    backbone fails the R1 bar and the claim demotes to the certificate +
-    safety story.  Units + math tested in `tests/test_compress_residual.py`
-    (monotone improvement, exact-rank recovery, adversarial improvement,
-    sound Lipschitz bound, honest param counting). Net ratio accounts for
-    cores + residual factors + scales (honest vs INT8).
+- **Result:** **COMPLETED** — all 4 points scored; machine verdict
+  `results/N2R/verdict-go-no-go.json`; table in `results/logs/N2R-go-no-go-seed0.log`.
+  Full grid: seed 0, TT compression (tt_split=0.6) × plans {0.50, 0.33} ×
+  residual ranks {8, 32} = 4 points, on the exact matched eval batch vs FT
+  ref 0.4468.
+
+  Complete results table:
+
+  | Point | plan (TT frac) | r′ residual rank | net ratio | eval acc | delta vs FT (0.4468) | R1 bar (≤5% drop) |
+  |:-----:|:--------------:|:----------------:|:---------:|:--------:|:--------------------:|:-----------------:|
+  | 1 | 0.50 | 8 | 3.18× | 0.0000 | −0.4468 | **FAIL** |
+  | 2 | 0.50 | 32 | 2.86× | 0.1667 | −0.2801 | **FAIL** |
+  | 3 | 0.33 | 8 | 4.73× | 0.0000 | −0.4468 | **FAIL** |
+  | 4 | 0.33 | 32 | 4.07× | 0.1111 | −0.3357 | **FAIL** |
+
+  **Best point:** point 2 (TT frac 0.50, r′=32) → net ratio 2.86×, eval
+  acc 0.1667, delta −0.2801. That is the best compression-track result and
+  it is still 0.28 short of the FT baseline — the R1 bar ("≤5% drop at
+  ≥2×") is not met at any point. Verdict JSON:
+  `{"go": false, "best_acc": 0.1667, "best_plan": 0.5, "best_rrank": 32,
+  "best_ratio": 2.86, "bar": "delta >= -0.05 at ratio >= 2x"}`.
+
+  **Honest interpretation:**
+  - **Residual rank is the dominant lever:** at fixed plan 0.50, going
+    r′=8 → 32 lifts accuracy 0.0000 → 0.1667 (a big relative gain, but still
+    far below baseline). r′=8 always collapses to 0.0000 (points 1, 3)
+    regardless of plan; r′=32 is the first to cross into non-zero.
+  - **Per-layer weight recovery is ~70% regardless of r′ or plan** (per-layer
+    recon field was 0.67–0.82 across all 168 layers in all points). So the
+    residual *is* recovering most of the weight's Frobenius error, but the
+    *action accuracy* does not track the weight error linearly — the action
+    head's activation sensitivity is the bottleneck.  This is the honest
+    signature of a flat-spectrum backbone where the error is distributed,
+    not concentrated in a patchable few layers.
+  - **TT budget trade-off is non-monotonic:** at r′=32, the looser TT part
+    (plan 0.33, net ratio 4.07×) actually performed WORSE than the tighter
+    one (plan 0.50, 2.86×): 0.1111 vs 0.1667. More total compression can
+    outweigh a bigger residual rank. So the residual-only policy faces a
+    double constraint: you need both a small-enough TT part AND a large
+    enough residual, AND the residual itself is capped by how much budget is
+    left after the TT cores.
+  - **This is the honest ceiling for residual-only.** Cranking r′ higher
+    (e.g. 64) would use more budget (ratios drop toward the raw dense).
+    Getting from 0.1667 up to the ~0.42 needed for the R1 bar by residual
+    strength alone is very unlikely on this backbone. Deployment methods that
+    actually reach their target (GPTQ-intrinsic, QuaSAR) additionally fit
+    the residual/scales to **activation-weighted** error and/or a
+    calibration-loss objective on real activations — not Frobenius on the
+    weight matrix. That is exactly what the `python/qicert/calibrate.py`
+    collector is staged for (next lane).
+  - **Conclusion:** the N2″ residual arm did NOT meet the R1 bar at any
+    tested point. That is a **valid, honest negative** — the proof that
+    residual-only is insufficient on this backbone at these ratios, with the
+    certificate always-ontrary still-sound (168/168 per point). It does NOT
+    break the submission; it moves the honest claim toward the certificate
+    + safety + reproducibility spine, with the compression claim demoted or
+    reframed.
+
+  Artifacts: results/N2R/<run_id>/ per point (run.json + metrics.jsonl incl.
+  168 per-layer certificates + recon), ledger rows, verdict JSON. Log:
+  results/logs/N2R-go-no-go-seed0.log.
+
+  Queue verdict: N2R-go-no-go → **NO-GO** (no point at ratio≥2x met the R1
+  bar). Per plan: do NOT auto-launch a full sweep; switch to the calibrated-
+  INT8 comparator arm + activation-weighted residual refinement (next lane).
+
+---
+
+## Pending jobs (long; staged but NOT launched in this session)
+
+These are CPU-light to prepare, long on GPU, and would idle-drain the
+session if started now. Commands below are the exact detached launches;
+run them from a shell that stays alive after this session ends (tmux/screen
+or a separate terminal).
+
+### P-2026-09-12-01 — N1v2 seeds 1 and 2 (deferred; one at a time)
+Purpose: get 3-seed medians for the classical baseline row (currently seed 0
+only: FT 0.4468). Each seed is a full-train + both-eval-legs run (~8–12 h),
+launched in the CUDA-Q Docker container one seed per invocation, unbuffered,
+with its own per-seed ckpt dir.
+
+    cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert" && \
+    docker run --rm --gpus all -v "$(pwd):/workspace" \\
+      -v "$(pwd)/weights:/workspace/weights" -v "$(pwd)/.hf_cache:/root/.cache/huggingface" \
+      qicert-dev:cu13-cudaq bash -lc '
+      set -euo pipefail
+      cd /workspace
+export PYTHONUNBUFFERED=1
+export PRISMATIC_DATA_ROOT="/workspace/weights/data"
+export QICERT_FORK="/workspace/weights/code"
+export PYTHONPATH="/workspace/python"
+export QICERT_FT_CKPT= results/N1v2-ckpt
+python3 -m qicert.bench.all --rows=all --out results --exp-id N1v2 \\
+  --seed 1 --run-tag N1v2-seed1-host --save-ckpt results/N1v2-ckpt \
+  --steps 1200 --batch 2 --seeds 1 \
+  2>&1 | tee results/logs/N1v2-seed1.log
+'
+# (repeat with --seed 2 for seed 2; do NOT run seeds in parallel)
+
+### P-2026-09-12-02 — Calibrated-INT8 reference arm at matched ratio
+Purpose: the honest comparator for the compression track. Per-channel weight
+scales from calibration activations (the `python/qicert/calibrate.py`
+collector) + per-channel scales on top of a standard quantization scheme,
+evaluated on the frozen split at the SAME net ratio as the best N2R point
+(2.86×) or, if none wins, at a stated baseline ratio.
+
+    # Step A — collect calibration stats (light):
+    PYTHONPATH=/path/to/qicert .venv312/Scripts/python.exe -m qicert.calibrate \
+      <calibration-collect args>  -> results/N2R/calib_seed0.npz
+
+    # Step B — quantized eval at matched ratio (long; runs like a train-less
+    # eval sweep on the frozen split):
+    qicert.bench.all --module n2r_sweep --rows=residual-eval ...
+
+### P-2026-09-12-03 — N2R with tt_split=0.4 + r′=64 (max residual budget)
+Purpose: push the residual arm harder — give the TT part less, the residual
+more (net ratio held to the R1-relevant 2× by increasing r′). One point at
+2× with the largest residual the budget allows.
+
+    QICERT_N2R_TTSPLIT="0.4" QICERT_N2R_RRANKS="64" \
+    python -m qicert.bench.all --module n2r_sweep --rows=residual-go-no-go \
+        --run-tag N2R-residual-maxseed0 --out results --seed 0 \
+        --save-ckpt results/N1v2-ckpt --capture heavy
+
+Note: pending jobs are staged (code exists), NOT launched in this session.
+Do NOT start them inside a session that will otherwise idle.
 
   - **Point 2 scored (frac=0.50, r′=32, tt_split=0.6 → net ratio 2.86×):**
     eval acc **0.1667**, delta −0.2801 vs FT ref, 168/168 certificates sound.
