@@ -33,6 +33,7 @@ MODULES = [
     "compress",          # N1, N2', N3
     "n2_sweep",          # N2 (compression Pareto sweep)
     "n2r_sweep",         # N2R (residual-compensated compression, N2'' repair)
+    "n8c_int8",          # N8C (calibrated-INT8 honest comparator)
     "certify_layers12",  # N4, N5
     "safety",            # N6
     "compiler",          # N7
