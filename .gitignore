@@ -30,6 +30,8 @@ build_cpp/
 results/*
 !results/N1v2-report.md
 !results/ledger.csv
+!results/N2/
+scripts/n2_prepare.py
 
 # checkpoints (large, gitignored)
 results/*ckpt*/

@@ -1,0 +1,45 @@
+{
+  "seed": 0,
+  "handoff": {
+    "seed": 0,
+    "seed_pt_exists": true,
+    "seed_pt_mb": 942.4,
+    "eval_batch_exists": true,
+    "eval_batch_mb": 1.2,
+    "baseline_json_exists": true,
+    "baseline_ft_acc": 0.44677153113182005,
+    "clean_handoff": true
+  },
+  "exp_id": "N2",
+  "run_tag": "N2-compression-pareto-seed0",
+  "seeds": [
+    0
+  ],
+  "backbones": [
+    "TT",
+    "QTT"
+  ],
+  "bond_plans": [
+    0.02,
+    0.04,
+    0.08,
+    0.16,
+    0.33,
+    0.5
+  ],
+  "layers_scope": "all LLM linear projections (24 layers x q/k/v/o/gate/up/down)",
+  "ordering": "bit-reversed",
+  "kernel": "tt_svd (deterministic reference; tt_cross = Q19 CUDA-Q port)",
+  "points": 12,
+  "eval_protocol": "matched-budget N1 batch, fine-tuned weights",
+  "fine_tuned_handoff_dir": "C:\\Users\\zakil\\Desktop\\AQC\\Quantum Insider\\challenge\\qicert\\results\\N1v2-ckpt",
+  "fine_tuned_ckpt_note": "LoRA-merged FT LLM backbone (seed0.pt) + the EXACT eval batch (eval_batch_seed0.pt) + FT reference acc (baseline_seed0.json). N2 scores each compressed model on that fixed batch, so delta vs the FT baseline is a matched-budget comparison.",
+  "launch_env_overrides": {
+    "PRISMATIC_DATA_ROOT": "C:\\Users\\zakil\\Desktop\\AQC\\Quantum Insider\\challenge\\qicert\\weights\\data",
+    "QICERT_FORK": "C:\\Users\\zakil\\Desktop\\AQC\\Quantum Insider\\challenge\\qicert\\weights\\code",
+    "QICERT_FT_CKPT": "C:\\Users\\zakil\\Desktop\\AQC\\Quantum Insider\\challenge\\qicert\\results\\N1v2-ckpt",
+    "QICERT_N2_LAYERS": "all"
+  },
+  "command_host_venv_fallback": "cd /c/Users/zakil/Desktop/AQC/Quantum\\ Insider/challenge/qicert && export PYTHONUNBUFFERED=1 && export PRISMATIC_DATA_ROOT=$(pwd)/weights/data && export QICERT_FORK=$(pwd)/weights/code && export PYTHONPATH=$(pwd)/python:$(pwd)/weights/code && .venv312/Scripts/python.exe -m qicert.bench.all --module n2_sweep --rows=compression-pareto --out results --exp-id N2 --seed 0 --run-tag N2-compression-pareto-seed0 --save-ckpt results/N1v2-ckpt --capture heavy 2>&1 | tee results/logs/N2-compression-pareto-seed0.log",
+  "command_docker(self-contained)": "cd /c/Users/zakil/Desktop/AQC/Quantum\\ Insider/challenge/qicert && MSYS_NO_PATHCONV=1 docker run --rm --gpus all -v \"$(pwd):/workspace\" -v \"$(pwd)/weights:/workspace/weights\" -v \"$(pwd)/.hf_cache:/root/.cache/huggingface\" qicert-dev:cu13-cudaq bash -lc '\nset -euo pipefail\ncd /workspace\nexport PYTHONUNBUFFERED=1\nexport PRISMATIC_DATA_ROOT=\"/workspace/weights/data\"\nexport QICERT_FORK=\"/workspace/weights/code\"\nexport QICERT_FT_CKPT=\"/workspace/results/N1v2-ckpt\"\npython -m qicert.bench.all --module n2_sweep --rows=compression-pareto --out results --exp-id N2 --seed 0 --run-tag N2-compression-pareto-seed0 --save-ckpt results/N1v2-ckpt --capture heavy 2>&1 | tee results/logs/N2-compression-pareto-seed0.log\n'"
+}
