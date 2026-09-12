@@ -32,6 +32,7 @@ if hasattr(sys.stdout, "reconfigure"):
 MODULES = [
     "compress",          # N1, N2', N3
     "n2_sweep",          # N2 (compression Pareto sweep)
+    "n2r_sweep",         # N2R (residual-compensated compression, N2'' repair)
     "certify_layers12",  # N4, N5
     "safety",            # N6
     "compiler",          # N7

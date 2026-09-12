@@ -38,6 +38,7 @@ def load_points(n2_dir: Path) -> list[dict]:
             "label": rec.get("label", ""),
             "backbone": results.get("backbone"),
             "plan": results.get("plan_fraction"),
+            "rrank": results.get("residual_rank_cap"),
             "ratio": results.get("ratio"),
             "acc": results.get("eval_acc"),
             "delta": results.get("delta_vs_n1_ft"),
@@ -86,10 +87,10 @@ def main() -> None:
     if not rows:
         raise SystemExit(f"no recorded N2 Pareto points under {n2_dir}")
 
-    # Latest record per (backbone, plan) by start_utc (not dir-name order).
+    # Latest record per (backbone, plan[, residual rank]) by start_utc.
     latest: dict[tuple, dict] = {}
     for r in sorted(rows, key=lambda x: x["start_utc"]):
-        key = (r["backbone"], r["plan"])
+        key = (r["backbone"], r["plan"], r.get("rrank"))
         latest[key] = r  # later start_utc wins
 
     if ft_ref is None:
@@ -100,13 +101,15 @@ def main() -> None:
         f"FT reference (seed 0, matched batch): {ft_ref if ft_ref is not None else 'n/a'}",
         f"Invocation filter: {args.invocation_tag or 'none (all recorded points)'}",
         "",
-        "| Backbone | Plan | Ratio | Eval acc | Delta vs FT | Cert sound | Matched | Wall s | Run |",
-        "|----------|------|------:|---------:|------------:|-----------:|:-------:|-------:|-----|",
+        "| Backbone | Plan | R' | Ratio | Eval acc | Delta vs FT | Cert sound | Matched | Wall s | Run |",
+        "|----------|------|:--:|------:|---------:|------------:|-----------:|:-------:|-------:|-----|",
     ]
     completed = failed = collapsed = 0
     best_r = None
-    for (bb, plan) in sorted(latest, key=lambda k: (str(k[0]), -(k[1] or 0))):
-        r = latest[(bb, plan)]
+    for key in sorted(latest, key=lambda k: (str(k[0]), -(k[1] or 0),
+                                             -(k[2] or 0))):
+        bb, plan, rrank = key
+        r = latest[key]
         if r["status"] != "completed":
             failed += 1
             lines.append(f"| {bb} | {plan} | - | FAILED ({r['status']}) | - | - | - | - | {r['run_id'][:8]} |")
@@ -121,7 +124,7 @@ def main() -> None:
             if best_r is None or r["ratio"] > best_r:
                 best_r = r["ratio"]
         lines.append(
-            f"| {bb} | {plan} | {r['ratio']:.2f}x | {acc:.4f} | {dstr} | "
+            f"| {bb} | {plan} | {rrank if rrank else '-'} | {r['ratio']:.2f}x | {acc:.4f} | {dstr} | "
             f"{r['sound']} | "
             f"{'yes' if r['matched'] else 'NO'} | {r['wall']:.0f} | {r['run_id'][:8]} |")
 
@@ -156,11 +159,13 @@ def main() -> None:
             "bar": "delta >= -0.05 at ratio >= 2x (R1: <=5% drop at >=2x)",
             "best_acc": best["acc"] if best else None,
             "best_plan": best["plan"] if best else None,
+            "best_rrank": best.get("rrank") if best else None,
             "best_backbone": best["backbone"] if best else None,
             "best_ratio": best["ratio"] if best else None,
             "points": [
                 {"backbone": r["backbone"], "plan": r["plan"],
-                 "ratio": r["ratio"], "acc": r["acc"], "delta": r["delta"],
+                 "rrank": r.get("rrank"), "ratio": r["ratio"],
+                 "acc": r["acc"], "delta": r["delta"],
                  "sound": r["sound"], "status": r["status"]}
                 for r in latest.values()
             ],

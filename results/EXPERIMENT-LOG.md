@@ -29,7 +29,52 @@ Rule: no number appears here unless it is regenerable from its run dir
   (TT-0.50 → acc 0.25; QTT-0.50 → 0.0) — if it collapses again on the FT
   weights, the residual-fitting arm (N2″) becomes the pivot and the uniform
   allocator is reported as the honest negative result.
-- **Result:** *(running — log: results/logs/N2-go-no-go-seed0.log)*
+- **Result:** **COMPLETED — formal NO-GO** (12:29, machine verdict
+  `results/N2/verdict-go-no-go.json`; table `results/N2/summary.md`).
+  All 4 points collapsed to eval acc 0.0000 (delta −0.4468 vs FT ref 0.4468):
+
+  | Backbone | Plan | Net ratio | Eval acc | Cert sound |
+  |----------|------|----------:|---------:|-----------:|
+  | TT  | 0.50 | 2.00×  | 0.0000 | 168/168 |
+  | TT  | 0.33 | 3.03×  | 0.0000 | 168/168 |
+  | QTT | 0.50 | 16.27× | 0.0000 | 168/168 |
+  | QTT | 0.33 | 16.44× | 0.0000 | 168/168 |
+
+  Reading: uniform-ratio TT/QTT truncation destroys the FT model at every
+  tested ratio ≥ 2× — the certificates stay sound (the math is right), the
+  *uniform allocator* is what fails (flat spectra: it removes signal, not
+  redundancy). 0.0000 (not merely degraded) matches the naive-INT8 pattern of
+  a fully collapsed action-logit distribution. Per the pre-registered R1 kill
+  criterion the full 12-point uniform sweep was NOT launched; the track moves
+  to the repair arm N2″ (closed-form residual compensation, E-2026-09-12-02).
+- **Artifacts:** results/N2/ca7a67ff*, 7ef7ff4f*, 8786c87f*, 61a00561* (per
+  point: run.json + metrics.jsonl incl. 168 per-layer certificates) + ledger
+  rows + queue verdict. Log: results/logs/N2-go-no-go-seed0.log.
+
+---
+
+## E-2026-09-12-02 — N2″ repair arm: TT-SVD + closed-form residual, seed 0
+
+- **Commit at launch:** *(this commit)*
+- **Method:** keep the TT reconstruction Ŵ (uniform plan), fit R = W − Ŵ with
+  the best rank-r′ truncated SVD, store the factors alongside the cores
+  (QuaSAR-style closed-form compensation, lit-swarm L1/L5). Honest ratio =
+  (cores + u + v + scales) vs dense, counted by
+  `qicert.compress_residual.compressed_params`. Certificate per layer:
+  `lipschitz_bound` = sound product bound over (TT layer, ‖U‖, ‖V‖, scales).
+  Unit-tested in `tests/test_compress_residual.py` (monotone improvement,
+  exact recovery for rank ≤ r′ residuals, adversarial-noise improvement,
+  soundness of the bound vs the true operator norm, honest param counting).
+- **Go/no-go grid:** TT backbone × plans {0.50, 0.33} × residual ranks
+  {8, 32} = 4 points, seed 0, matched eval batch vs FT ref 0.4468. QTT (16×)
+  deliberately excluded from the first repair grid — reviving 16× needs more
+  than a rank-32 patch; TT 2× is the R1-relevant target.
+- **Expected:** residual recovers most of the truncation loss if the FT
+  weights' residuals are approximately low-rank (structured case in the unit
+  tests). Bar = R1: some point at net ratio ≥ 2× with delta ≥ −0.05.
+- **Result:** *(queued — runs automatically after E-2026-09-12-01; log:
+  results/logs/N2R-go-no-go-seed0.log)*
+- **Artifacts:** results/N2R/<run_id>/ per point + ledger rows.
 - **Artifacts:** results/N2/<run_id>/ per point (run.json, config.json,
   system.json, env.json, metrics.jsonl incl. per-layer certificates) +
   results/ledger.csv rows.
