@@ -106,6 +106,13 @@ def main(argv: list[str] | None = None) -> int:
     from qicert.bench._base import BenchContext
     ctx = BenchContext(out=args.out, exp_id=args.exp_id, seed=args.seed,
                        run_tag=args.run_tag, capture=args.capture)
+    # Wire the seed list through (challenge 5.2: mean +/- std over >= 3
+    # independent runs).  Found unwired 2026-09-12: --seeds was parsed but
+    # never assigned, so multi-seed loops silently ran one seed.
+    ctx.seeds = ([int(s) for s in args.seeds.split(",") if s.strip()]
+                 if args.seeds else None)
+    if ctx.seeds:
+        ctx.seed = ctx.seeds[0]   # run-dir / checkpoint naming consistency
     ctx.steps = args.steps
     ctx.batch = args.batch
     ctx.save_ckpt = args.save_ckpt

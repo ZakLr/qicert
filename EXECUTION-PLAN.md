@@ -82,9 +82,26 @@ model that ships with sound runtime certificates* — not accuracy leadership.
 
 ## 2. GPU QUEUE (launch strictly one at a time, in this order)
 
-Every command: run from repo root in bash. Expect live progress lines
-(`<- live` markers). Record the verdict + numbers in EXPERIMENT-LOG.md
-under a new dated entry BEFORE launching the next job.
+**One-command option (preferred, 2026-09-12):** the whole queue runs via
+
+```bash
+cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert" && \
+.venv312/Scripts/python.exe scripts/run_remaining_experiments.py
+```
+
+`scripts/run_remaining_experiments.py` implements everything below: per-stage
+pre-flight compile/import checks, full pytest first, GPU-busy detection,
+live timestamped logs in `results/logs/queue/<stage>.log`, pre-registered
+gating (N2R2 GO/NO-GO decides the mixed stage), resume/skip on existing
+artifacts, checkpoint-duplicate detection, and a final
+`results/QUEUE-SUMMARY.json`. Flags: `--list`, `--dry-run`, `--exclude n1v2`,
+`--only <stages>`, `--no-tests`. Interrupted? Just re-run it — finished
+stages skip automatically.
+
+Manual commands (equivalent, if you prefer step-by-step): each command run
+from repo root in bash. Expect live progress lines (`<- live` markers).
+Record the verdict + numbers in EXPERIMENT-LOG.md under a new dated entry
+BEFORE launching the next job.
 
 ### JOB 1 — Calibration top-up (mean-abs stats) — ~10 min
 Only needed for the `stat=mean` arm. If skipped, N2R-v2 falls back to
