@@ -46,11 +46,14 @@ def collect_calibration_stats(
             else:
                 x2 = x.reshape(-1, x.shape[-1])
             am = x2.abs().amax(dim=0).float().cpu()   # (in_features,)
+            sm = x2.abs().sum(dim=0).float().cpu()    # (in_features,) for mean|.| 
             if name not in stats:
-                stats[name] = {"absmax": am, "count": int(x2.shape[0])}
+                stats[name] = {"absmax": am, "abssum": sm,
+                               "count": int(x2.shape[0])}
             else:
                 st = stats[name]
                 st["absmax"] = torch.maximum(st["absmax"], am)
+                st["abssum"] = st["abssum"] + sm
                 st["count"] += int(x2.shape[0])
         return hook
 
@@ -76,6 +79,8 @@ def collect_calibration_stats(
 
     out = {
         name: {"absmax": st["absmax"].numpy(),
+               "mean_abs": (st["abssum"].numpy()
+                            / max(st["count"], 1)).astype(np.float32),
                "count": st["count"]}
         for name, st in stats.items()
     }
@@ -94,6 +99,7 @@ def save_stats(stats: dict, path: Path, meta: dict | None = None) -> None:
     np.savez_compressed(
         path,
         **{f"absmax__{k}": v["absmax"] for k, v in stats.items()},
+        **{f"mean_abs__{k}": v["mean_abs"] for k, v in stats.items()},
         **{f"count__{k}": np.int64(v["count"]) for k, v in stats.items()},
     )
     meta_out = {"n_layers": len(stats), "meta": meta or {}}
@@ -108,6 +114,10 @@ def load_stats(path: Path) -> dict:
             name = key[len("absmax__"):]
             out.setdefault(name, {})
             out[name]["absmax"] = z[key]
+        elif key.startswith("mean_abs__"):
+            name = key[len("mean_abs__"):]
+            out.setdefault(name, {})
+            out[name]["mean_abs"] = z[key]
         elif key.startswith("count__"):
             name = key[len("count__"):]
             out.setdefault(name, {})

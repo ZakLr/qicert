@@ -30,26 +30,68 @@ import numpy as np
 
 
 def svd_residual(cores, m_dims, n_dims, W: np.ndarray,
-                 residual_rank: int) -> dict:
+                 residual_rank: int,
+                 activation_weight: np.ndarray | None = None,
+                 scale: str = "absmax") -> dict:
     """Closed-form residual compensation for one compressed layer.
+
+    activation_weight (N2R-v2, 2026-09-12): per-input-channel weight vector
+    w (shape (N,), w >= 0).  The compensated operator remains a PLAIN
+    matrix W_comp = What + C with C = U V (rank r'); the weighting changes
+    WHICH C is chosen: C minimizes the activation-weighted error
+        ||(W - What - C) diag(sqrt(w))||_F
+    (GPTQ-style: spend the correction budget where the model actually
+    computes).  Closed form: SVD of (W - What) diag(sqrt(w)) gives
+    U S Vt; then C = U_r S_r Vt_r diag(1/sqrt(w)) with a zero-guard on
+    channels whose weight is ~0 (their correction columns are set to 0:
+    zero weight = "this channel is never exercised", so the optimum there
+    is arbitrary and 0 keeps C finite).
+
+    `scale` is a diagnostic label recorded in the dict ("absmax" | "mean"
+    | "none") describing which calibration statistic built w; it does not
+    change the operator.  Channel scales s_in/s_out stay identity, so the
+    Layer-1 certificate of the compensated layer is exactly
+    ||TT|| + ||U|| ||V|| (no extra diagonal factors).
 
     Returns the storage dict:
         cores   — the TT cores (unchanged; reuse existing certificates)
-        u       — (M, r') residual left factor (float32)
-        v       — (r', N) residual right factor (float32)
-        s_in    — (N,) per-input-channel scale (currently all-ones; kept for
-                  the activation-aware extension and for the certificate)
-        s_out   — (M,) per-output-channel scale
+        u       — (M, r') residual left factor (float32, singular values folded)
+        v       — (r', N) residual right factor (float32, de-weighted)
+        s_in    — (N,) per-input-channel scale (identity; kept for interface
+                  compatibility and future scale-aware arms)
+        s_out   — (M,) per-output-channel scale (identity)
     """
     from .kernels import get_backend
     k = get_backend()
     What = k.contract_cores(cores, m_dims, n_dims)
     R = W - What
-    # Best rank-r' approximation of R: truncated SVD (Eckart-Young).
-    u, s, vt = np.linalg.svd(R, full_matrices=False)
+    if activation_weight is not None:
+        w = np.asarray(activation_weight, dtype=np.float64).reshape(-1)
+        if w.shape[0] != R.shape[1]:
+            raise ValueError(
+                f"activation_weight has {w.shape[0]} channels, "
+                f"layer expects {R.shape[1]}")
+        if not np.all(np.isfinite(w)) or np.any(w < 0):
+            raise ValueError("activation_weight must be finite and >= 0")
+        sw = np.sqrt(w)
+        Rfit = R * sw[None, :]          # fit in the sqrt(w)-weighted space
+    else:
+        sw = None
+        Rfit = R
+    # Best rank-r' approximation of Rfit: truncated SVD (Eckart-Young in the
+    # (activation-)weighted space).
+    u, s, vt = np.linalg.svd(Rfit, full_matrices=False)
     r = int(min(residual_rank, len(s)))
     u = u[:, :r] * s[:r]          # fold singular values into U (storage: M*r)
-    v = vt[:r, :]                 # storage: r*N
+    vt = vt[:r, :]
+    if sw is not None:
+        # De-weight V back into the unweighted (operator) space:
+        # C = U Vt diag(1/sw); zero-weight channels get zero columns.
+        floor = float(sw.max()) * 1e-8 if sw.size and sw.max() > 0 else 1.0
+        inv_sw = np.where(sw > floor, 1.0 / np.maximum(sw, floor), 0.0)
+        v = vt * inv_sw[None, :]
+    else:
+        v = vt
     return {
         "cores": cores,
         "u": u.astype(np.float32),
@@ -58,6 +100,8 @@ def svd_residual(cores, m_dims, n_dims, W: np.ndarray,
         "s_out": np.ones(int(np.prod(m_dims)), dtype=np.float32),
         "residual_rank": r,
         "residual_energy": float(np.sum(s[:r] ** 2) / max(np.sum(s ** 2), 1e-30)),
+        "activation_weighted": bool(sw is not None),
+        "scale_stat": (scale if sw is not None else "none"),
     }
 
 
@@ -77,7 +121,9 @@ def apply(comp: dict, x: np.ndarray, m_dims, n_dims) -> np.ndarray:
 def to_dense(comp: dict, m_dims, n_dims) -> np.ndarray:
     """Materialize the compensated weight (for state-dict swap evals).
 
-    W_comp = S_out (What + U V^T) S_in — what the dense fallback runs.
+    W_comp = What + U V — exactly what `apply` computes (verified by
+    test_weighted_apply_matches_to_dense), so the dense fallback runs
+    the same operator the certificate bounds.
     """
     from .kernels import get_backend
     k = get_backend()
@@ -89,9 +135,11 @@ def to_dense(comp: dict, m_dims, n_dims) -> np.ndarray:
 def lipschitz_bound(comp: dict, m_dims, n_dims) -> float:
     """SOUND upper bound on the compensated layer's operator norm.
 
-    ||S_out (TT + U V^T) S_in|| <= ||TT|| * max|s_out| * max|s_in|
-                                 + ||U|| * ||V|| * max|s_out| * max|s_in|
-    where ||TT|| <= lipschitz_product(cores) (the existing Layer-1 bound).
+    ||What + U V|| <= ||TT|| + ||U|| ||V||  (triangle ineq.; submultiplicativity)
+    with ||TT|| <= lipschitz_product(cores) (the existing Layer-1 bound) and
+    ||S_out|| = max|s_out|, ||S_in|| = max|s_in| multiplying exactly (diagonal
+    operators).  The weighted arm keeps s_in/s_out at identity, so its bound
+    is exactly ||TT|| + ||U|| ||V||.
     """
     from .kernels import get_backend
     k = get_backend()

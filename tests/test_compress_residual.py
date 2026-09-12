@@ -133,3 +133,90 @@ def test_layer_report_finite_and_sound(backend):
     assert np.isfinite(rep["lipschitz_bound"])
     assert rep["sound"] is True
     assert rep["params"] < rep["dense_params"]
+
+
+# ---------------------------------------------------------------------------
+# N2R-v2: activation-weighted residual fit (2026-09-12)
+# ---------------------------------------------------------------------------
+
+def test_weighted_fit_minimizes_weighted_error(backend):
+    """Eckart-Young in the sqrt(w) space: the weighted fit must beat the
+    plain Frobenius fit ON THE WEIGHTED OBJECTIVE, for any weight vector."""
+    rng = np.random.default_rng(11)
+    m_dims, n_dims = (4, 4), (4, 4)
+    W = rng.standard_normal((16, 16))
+    cs = backend.tt_svd(W, m_dims, n_dims, (2,))
+    What = backend.contract_cores(cs.arrays, m_dims, n_dims)
+    w = (1.0 + rng.random(16)) ** 3          # strongly non-uniform weights
+    sw = np.sqrt(w)
+    for rrank in (1, 3, 8):
+        comp_plain = svd_residual(cs.arrays, m_dims, n_dims, W, rrank)
+        comp_w = svd_residual(cs.arrays, m_dims, n_dims, W, rrank,
+                              activation_weight=w)
+        A = W - What
+        def werr(c):
+            Wc = to_dense(c, m_dims, n_dims) - What
+            return np.linalg.norm((A - Wc) * sw[None, :])
+        assert werr(comp_w) <= werr(comp_plain) + 1e-9, (
+            f"weighted fit must minimize the weighted objective at r'={rrank}")
+
+
+def test_weighted_apply_matches_to_dense(backend):
+    """`apply` and `to_dense` must implement the same weighted operator."""
+    rng = np.random.default_rng(12)
+    m_dims, n_dims = (4, 4), (4, 4)
+    W = rng.standard_normal((16, 16))
+    cs = backend.tt_svd(W, m_dims, n_dims, (2,))
+    w = rng.random(16) + 0.1
+    comp = svd_residual(cs.arrays, m_dims, n_dims, W, 4,
+                        activation_weight=w)
+    x = rng.standard_normal(16)
+    y_apply = apply(comp, x, m_dims, n_dims)
+    y_dense = to_dense(comp, m_dims, n_dims) @ x
+    np.testing.assert_allclose(y_apply, y_dense, rtol=1e-4, atol=1e-4)
+
+
+def test_weighted_lipschitz_bound_is_sound(backend):
+    """The analytic bound must upper-bound the true operator norm of the
+    weighted-compensated layer (max_j|s_in_j| is the exact diagonal norm)."""
+    rng = np.random.default_rng(13)
+    m_dims, n_dims = (4, 4), (4, 4)
+    W = rng.standard_normal((16, 16))
+    cs = backend.tt_svd(W, m_dims, n_dims, (2,))
+    w = (rng.random(16) + 0.05) ** 2
+    comp = svd_residual(cs.arrays, m_dims, n_dims, W, 4,
+                        activation_weight=w)
+    L = lipschitz_bound(comp, m_dims, n_dims)
+    Wc = to_dense(comp, m_dims, n_dims)
+    tight = np.linalg.norm(Wc, 2)
+    assert L >= tight - 1e-6, f"bound {L} < tight {tight}"
+
+
+def test_weighted_scales_are_identity(backend):
+    """The weighted arm keeps s_in/s_out at identity (the weighting picks
+    WHICH rank-r' correction to add, it does not rescale the operator), so
+    the certificate is exactly ||TT|| + ||U|| ||V|| with no diagonal factors."""
+    rng = np.random.default_rng(14)
+    m_dims, n_dims = (4, 4), (4, 4)
+    W = rng.standard_normal((16, 16))
+    cs = backend.tt_svd(W, m_dims, n_dims, (2,))
+    w = (rng.random(16)) ** 6 + 1e-9
+    comp = svd_residual(cs.arrays, m_dims, n_dims, W, 2,
+                        activation_weight=w)
+    s_in = comp["s_in"]
+    assert np.all(s_in == 1.0)
+    assert np.all(comp["s_out"] == 1.0)
+    assert comp["activation_weighted"] is True
+    assert comp["residual_rank"] == 2
+
+
+def test_weighted_rejects_bad_weights(backend):
+    m_dims, n_dims = (4, 4), (4, 4)
+    W = np.eye(16)
+    cs = backend.tt_svd(W, m_dims, n_dims, (2,))
+    with pytest.raises(ValueError):
+        svd_residual(cs.arrays, m_dims, n_dims, W, 2,
+                     activation_weight=np.ones(15))   # wrong channel count
+    with pytest.raises(ValueError):
+        svd_residual(cs.arrays, m_dims, n_dims, W, 2,
+                     activation_weight=-np.ones(16))  # negative weight
