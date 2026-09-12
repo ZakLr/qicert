@@ -419,3 +419,18 @@ Review of the previous session's N2 prep found and fixed:
   fitting is the next lever, claim demotes to certificate+safety spine.
 - **Result:** *(running — log: results/logs/N2R-fullsplit-best.log)*
 - **Artifacts:** results/N2R/<run_id>/ + ledger.
+
+- **RESULT (15:15):** **2.86x -> eval acc 0.1529** (full split, 6,496
+  batches, 114,497 tokens; 168/168 certificates sound; wall 1449s).
+  Delta vs FT 0.4468 = **-0.2939** -> R1 bar (delta >= -0.05 at ratio >= 2x)
+  **NOT MET. Honest split-level NO-GO for the residual arm.**
+  - The batch-mode estimate 0.1667 (E-2026-09-12-02, demoted) was close to
+    the true 0.1529 — the qualitative ladder survives: uniform truncation
+    0.0000 -> +residual rank 8: 0.0000 -> rank 32: ~0.15. The residual
+    arm genuinely lifts the model off zero, but plateau ~0.15 is far from
+    the 0.3968 the R1 bar requires.
+  - THIS is now the honest compression-track number for the report:
+    TT+residual holds 0.153 at 2.86x with sound certificates, vs FT 0.447.
+  - Next lever (unchanged, now evidence-backed): activation-weighted
+    residual fitting + per-channel scales from calibration (GPTQ-intrinsic
+    style). Calibration collection is the immediate next job.
