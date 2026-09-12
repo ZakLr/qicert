@@ -348,3 +348,74 @@ Review of the previous session's N2 prep found and fixed:
    files supersede it.
 
 ---
+
+## E-2026-09-12-03 — Code audit + FT anchor (swap-path validation)
+
+- **Commit at launch:** `15df3ce`
+- **Audit findings (2026-09-12, full harness re-read):**
+  - **CRITICAL (comparability):** every N2/N2R point so far was scored on the
+    SINGLE sidecar batch (`eval_batch_seed0.pt` = 2 examples ~= 18 action
+    tokens) while the FT reference 0.4468 was measured over the FULL frozen
+    split (6,496 batches ~= 110k tokens). The deltas (-0.4468, -0.2801, ...)
+    are therefore NOT honest split-level comparisons: a perfect model can
+    score anywhere in ~0.1-0.8 on 18 tokens by luck. Qualitative findings
+    SURVIVE (0/18 is a genuine collapse; 3/18 > 0/18 shows the residual
+    helps), but no R1 claim can rest on those numbers. All scored points
+    from E-2026-09-12-01/02 are hereby DEMOTED to order-of-magnitude
+    evidence; the honest R1 test must re-run in full-split mode.
+  - **CRITICAL (mechanism):** the `load_state_dict` swap path was never
+    validated end-to-end (no proof that an unmodified FT dict through the
+    same path reproduces the sidecar reference).
+  - **Self-correction:** the previous turn's "environment blocked"
+    conclusion was WRONG - the calibration probe used the fork's RLDS
+    loader ("No registered data_dirs"), while every working run uses the
+    local NPZ bridge (`weights/libero_spatial_no_noops_npz`, present and
+    healthy). Wrong-loader artifact, not a missing dataset.
+  - **Latent:** harness restore snapshot captured BASE weights while the
+    comment claimed FT (harmless in practice - compressed dicts covered all
+    keys - but contradicted its own contract). Fixed via `adopt_reference()`.
+  - **Test bug found+fixed in passing:** `_record_n2_point` had an invalid
+    `sum(1 for *_, ok in ...)` expression in the eval_info rewrite (would
+    have been a SyntaxError at import; caught by py_compile).
+- **Fixes (commit 15df3ce):** full-split streaming eval mode
+  (`QICERT_N2_EVAL=full`, N1-identical `LocalEvalSplitStream` protocol,
+  per-200-batch ETA logging, Wilson CI per point); `--rows=ft-anchor` that
+  loads the UNMODIFIED FT dict through the exact swap path and evals the
+  full split; eval scope + correct/total + CI recorded in every point's
+  run.json; calibration CLI rewritten onto the local NPZ bridge over TRAIN
+  episodes only (honest calibration, never held-out data).
+- **Pre-registered expectation for the anchor:** full-split acc within
+  noise of the N1 sidecar 0.4468 (Wilson 95% CI overlap; the sidecar number
+  itself carries +/-0.0029). If the anchor misses materially, every harness
+  number is suspect and the protocol gets re-derived before any further
+  compression claim.
+- **Result:** *(running - log: results/logs/N2-ft-anchor.log; early running
+  acc at batch 200/6496 = 0.4347)*
+- **Artifacts:** results/N2/<run_id>/ft-anchor-seed0 (run.json + metrics).
+
+- **Anchor RESULT (14:48):** **PASS — exact.** Full-split acc **0.4468**
+  over 6,496 batches / 114,497 tokens, diff **+0.0000** vs the N1 sidecar.
+  The load_state_dict swap path is validated end-to-end and the harness's
+  full-split protocol is N1-identical. All future harness numbers are
+  anchored. (run: results/N2/<id>_ft-anchor-seed0, log:
+  results/logs/N2-ft-anchor.log, wall 824s.)
+
+---
+
+## E-2026-09-12-04 — N2R best point re-run, FULL-SPLIT (the honest R1 test)
+
+- **Commit at launch:** (this commit, post 15df3ce)
+- **Command:** N2R, plan 0.50 only, r'=32 only, `QICERT_N2_EVAL=full`,
+  seed 0, tt_split 0.6 — i.e. the best point from E-2026-09-12-02 re-scored
+  under the validated N1-identical protocol.
+- **Purpose:** the first split-level honest R1 evaluation of the residual
+  arm. The single-batch 0.1667 (E-2026-09-12-02 point 2) is demoted to
+  order-of-magnitude evidence; THIS number decides R1.
+- **Pre-registered reading:** R1 bar = delta >= -0.05 vs 0.4468 with Wilson
+  CI reported. Expected honest range: the batch-mode 0.1667 was ~3/18
+  tokens; split-level could land anywhere in 0.05-0.35. If it lands well
+  below the bar (likely per the diagnosis), the compression track's honest
+  conclusion stands: residual-only insufficient, activation-weighted
+  fitting is the next lever, claim demotes to certificate+safety spine.
+- **Result:** *(running — log: results/logs/N2R-fullsplit-best.log)*
+- **Artifacts:** results/N2R/<run_id>/ + ledger.
