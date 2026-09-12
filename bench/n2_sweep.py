@@ -57,6 +57,75 @@ def run(rows: str, out: list[str], ctx=None) -> None:
         _run_n2(out, ctx)
     if wants(rows, "recon-sweep", frozenset()):
         _run_recon_sweep(out, ctx)
+    if wants(rows, "ft-anchor", frozenset()):
+        _run_ft_anchor(out, ctx)
+
+
+# ==========================================================================
+# FT anchor — validate the eval-swap mechanism end to end.
+#
+# Loads the UNMODIFIED fine-tuned dict through exactly the same
+# load_state_dict path the N2/N2R points use, then evals the FULL frozen
+# split.  Result must reproduce the N1 sidecar reference (~0.4468 for
+# seed 0).  If it does not, every compressed-model number measured through
+# this harness is suspect and must be re-derived — this anchor is the
+# gate that makes the N2/N2R deltas meaningful.
+# ==========================================================================
+def _run_ft_anchor(out: list[str], ctx=None) -> None:
+    import time
+
+    import torch
+
+    ft_dir = (Path(_os.environ.get("QICERT_FT_CKPT", ""))
+              if _os.environ.get("QICERT_FT_CKPT")
+              else (Path(ctx.save_ckpt) if ctx and ctx.save_ckpt
+                    else Path("weights") / "ckpt" / "finetuned"))
+    seed = ctx.seed if ctx is not None else 0
+    ft_path = ft_dir / f"seed{seed}.pt"
+    if not ft_path.exists():
+        raise RuntimeError(f"no fine-tuned ckpt {ft_path}; run N1 --save-ckpt")
+
+    print(f"[FT-anchor seed={seed}] loading VLA + FT dict (swap-path "
+          f"validation)...", flush=True)
+    harness = _N2EvalHarness(seed, ft_dir, ctx)
+    merged = torch.load(str(ft_path), map_location="cpu", weights_only=True)[
+        "llm_backbone"]
+    harness.adopt_reference(merged)   # FT weights now live in the model
+    n1_ft = harness.n1_ft
+
+    t0 = time.perf_counter()
+    info = harness.eval_reference()
+    dt = time.perf_counter() - t0
+    acc = info["acc"]
+    diff = (acc - n1_ft) if n1_ft is not None else float("nan")
+    print(f"[FT-anchor seed={seed}] FULL-SPLIT acc={acc:.4f} "
+          f"({info['correct']}/{info['total']} tokens, {info['n_batches']} "
+          f"batches) vs N1 sidecar {n1_ft} -> diff {diff:+.4f} ({dt:.0f}s)",
+          flush=True)
+    out.append(f"| {seed} | anchor | - | {acc:.4f} | {diff:+.4f} | - | "
+               f"{info['scope']} | ({dt:.0f}s) |")
+
+    rec = start_run(ctx, exp_id=(ctx.exp_id if ctx and ctx.exp_id else "N2"),
+                    label=f"ft-anchor-seed{seed}",
+                    config={"experiment": "N2 FT anchor (swap-path validation)",
+                            "seed": seed, "ft_ckpt": str(ft_path),
+                            "eval": info["scope"],
+                            "n_eval_batches": info["n_batches"]})
+    if rec is not None:
+        finish_run(rec, status="completed",
+                   results={"seed": seed,
+                            "ft_anchor_acc": round(float(acc), 6),
+                            "correct": info["correct"], "total": info["total"],
+                            "ci_lo": info["ci"][0] if info["ci"] else None,
+                            "ci_hi": info["ci"][1] if info["ci"] else None,
+                            "n1_sidecar_ref": n1_ft,
+                            "diff_vs_sidecar": None if diff != diff else round(float(diff), 4),
+                            "eval_scope": info["scope"],
+                            "n_eval_batches": info["n_batches"],
+                            "wall_sec": round(float(dt), 2)})
+
+    del harness
+    torch.cuda.empty_cache()
 
 
 # ========================================================================
@@ -316,6 +385,7 @@ def _run_n2(out: list[str], ctx=None) -> None:
         # the same N1 eval batch (matched budget). This turns 36 model loads
         # (per point) into 3 (per seed) — the dominant wall-clock cost.
         harness = _N2EvalHarness(seed, ft_dir, ctx)
+        harness.adopt_reference(merged)  # FT weights live; swap path validated
         n1_ft = harness.n1_ft
         if not harness.batch_is_matched:
             out.append(f"* seed {seed}: N1 eval-batch sidecar missing — delta is "
@@ -363,6 +433,7 @@ def _run_n2(out: list[str], ctx=None) -> None:
                     n_sound = sum(1 for _, _, _, ok in cert_rows if ok)
 
                     acc = harness.eval(comp)
+                    ev = getattr(harness, "_last_eval", {})
                     delta = (acc - n1_ft) if n1_ft is not None and acc == acc \
                         else float("nan")
                     dt = time.perf_counter() - t0
@@ -370,14 +441,16 @@ def _run_n2(out: list[str], ctx=None) -> None:
                     print(f"  [N2 seed={seed} {bb} frac={frac:.2f}] DONE "
                           f"ratio={ratio:.2f}x acc={acc:.4f} "
                           f"delta={delta:+.4f} sound={n_sound}/{len(cert_rows)} "
-                          f"({dt:.0f}s) <- live", flush=True)
+                          f"eval={ev.get('scope', '?')} ({dt:.0f}s) <- live",
+                          flush=True)
                     out.append(f"| {seed} | {bb} | {frac:.3f} | {ratio:.2f}x | "
                                f"{acc:.4f} | {delta:+.4f} | {n_sound}/"
                                f"{len(cert_rows)} | {status} | ({dt:.0f}s) |")
 
                     _record_n2_point(ctx, seed, bb, frac, ratio, acc, delta,
                                      cert_rows, dt, layers_scope, ft_path,
-                                     matched_batch=harness.batch_is_matched)
+                                     matched_batch=harness.batch_is_matched,
+                                     eval_info=ev)
                 except Exception as exc:
                     import traceback
                     traceback.print_exc()
@@ -395,8 +468,10 @@ def _run_n2(out: list[str], ctx=None) -> None:
 
 
 def _record_n2_point(ctx, seed, bb, frac, ratio, acc, delta, cert_rows,
-                     dt, layers_scope, ft_path, matched_batch: bool = True) -> None:
+                     dt, layers_scope, ft_path, matched_batch: bool = True,
+                     eval_info: dict | None = None) -> None:
     """Record one Pareto point into the ledger via the run recorder."""
+    ev = eval_info or {}
     rec = start_run(ctx, exp_id=(ctx.exp_id if ctx and ctx.exp_id else "N2"),
                     label=f"pareto-{bb}-{frac:.3f}-seed{seed}",
                     config={
@@ -406,23 +481,39 @@ def _record_n2_point(ctx, seed, bb, frac, ratio, acc, delta, cert_rows,
                         "seed": seed, "ft_ckpt": str(ft_path),
                         "kernel": "tt_svd (reference; tt_cross = Q19)",
                         "ordering": "bit-reversed (N2' winner)",
-                        "eval": "N1 matched-budget protocol",
+                        "eval": ev.get("scope", "N1 matched-budget protocol"),
                         "matched_batch": matched_batch,
+                        "n_eval_tokens": ev.get("total"),
+                        "n_eval_batches": ev.get("n_batches"),
                     })
     if rec is None:
         return
     for layer_type, L, tight, ok in cert_rows:
         rec.metric(layer=layer_type, lipschitz=float(L),
                    tight_norm=float(tight), sound=bool(ok))
+    ci = ev.get("ci")
     finish_run(rec, status="completed" if acc == acc else "failed",
                results={"seed": seed, "backbone": bb, "plan_fraction": frac,
                         "ratio": round(float(ratio), 3),
                         "eval_acc": float(acc),
+                        "correct": ev.get("correct"), "total": ev.get("total"),
+                        "ci_lo": ci[0] if ci else None,
+                        "ci_hi": ci[1] if ci else None,
+                        "eval_scope": ev.get("scope"),
+                        "n_eval_batches": ev.get("n_batches"),
                         "delta_vs_n1_ft": None if delta != delta else round(float(delta), 4),
-                        "cert_sound_layers": sum(1 for *_, ok in cert_rows if ok),
+                        "cert_sound_layers": sum(1 for _, _, _, ok in cert_rows if ok),
                         "matched_batch": bool(matched_batch),
                         "wall_sec": round(float(dt), 2),
                         "note": "uniform-ratio bond plan (N5 baseline allocator)"})
+
+
+def _to_half_cuda(x):
+    """DinoSigLIP pixel_values is a dict {'dino':..,'siglip':..}; handle both."""
+    import torch
+    if isinstance(x, dict):
+        return {kk: vv.to(torch.float16).cuda() for kk, vv in x.items()}
+    return x.to(torch.float16).cuda()
 
 
 class _N2EvalHarness:
@@ -430,10 +521,22 @@ class _N2EvalHarness:
     number of compressed state dicts on that fixed batch (matched budget: the
     same inputs the N1 baseline row for this seed was measured on).
 
+    Eval protocol modes (audit 2026-09-12):
+    * QICERT_N2_EVAL=full  → stream the FROZEN eval split (LocalEvalSplitStream,
+      the N1 sidecar protocol: same episodes, same batching, same token-accuracy
+      rule).  This is the ONLY mode comparable to the N1 FT reference 0.4468.
+    * QICERT_N2_EVAL=batch (default, legacy) → the single saved sidecar batch
+      (~18 action tokens).  Fast, order-of-magnitude only; deltas vs 0.4468 are
+      NOT honest at this scale — recorded with matched_batch=true and n_tokens
+      so downstream tables can never mistake it for a split-level number.
+
     Falls back to drawing a fresh batch from the dataset only when the N1
     sidecar (eval_batch_seed{N}.pt) is missing, in which case the delta is
     flagged as approximate (different random batch, same slice/protocol).
     """
+
+    BATCH_MODE = "batch"
+    FULL_MODE = "full"
 
     def __init__(self, seed: int, ft_dir: Path, ctx=None):
         import sys
@@ -463,13 +566,42 @@ class _N2EvalHarness:
         vla = vla.to(dtype=torch.float16, device="cuda")
         vla.llm_backbone.eval()
         self.vla = vla
-        # FT reference weights, snapshotted to CPU at load time (BEFORE any
-        # compressed weights are ever loaded). Used by eval() to restore the
-        # exact FT state after every point.
-        self._ft_sd_cpu = {kk: vv.detach().to("cpu")
-                           for kk, vv in vla.llm_backbone.state_dict().items()}
+        # Snapshot of whatever is resident at load time (the BASE weights,
+        # since load_vla loads the base checkpoint).  This is the emergency
+        # restore target only; the real reference is installed explicitly via
+        # adopt_reference() with the FT sidecar dict.  (Audit finding D: the
+        # old comment claimed this was the FT state — it never was.)
+        self._resident_sd_cpu = {kk: vv.detach().to("cpu")
+                                 for kk, vv in vla.llm_backbone.state_dict().items()}
+        self._reference_installed = False
         self.num_patches = int(vla.vision_backbone.num_patches)
         self.action_tokenizer = ActionTokenizer(vla.llm_backbone.tokenizer)
+
+        # Full-split streaming protocol (N1-identical) when enabled.
+        self.eval_mode = _os.environ.get("QICERT_N2_EVAL", self.BATCH_MODE)
+        self._split_stream = None
+        self._n_split_batches = 0
+        if self.eval_mode == self.FULL_MODE:
+            from qicert.data.npz_loader import NpzEpisodeDataset
+            from qicert.data.vla_local import LocalEvalSplitStream, LocalVLABatcher
+            npz_root = (_os.environ.get("QICERT_NPZ_ROOT")
+                        or str(repo / "weights" / "libero_spatial_no_noops_npz"))
+            ep_ds = NpzEpisodeDataset(npz_root)
+            split_path = (_os.environ.get("QICERT_EVAL_SPLIT")
+                          or str(repo / "results" / "eval_split.json"))
+            split = json.loads(Path(split_path).read_text())
+            lb = LocalVLABatcher(vla)
+            self._split_eps = list(split["eval"])
+            self._split_stream = lambda: LocalEvalSplitStream(
+                ep_ds, lb, self._split_eps, batch_size=2)
+            import math as _math
+            from .compress import _eval_frame_total
+            self._n_split_batches = max(1, _math.ceil(
+                _eval_frame_total(ep_ds, self._split_eps) / 2))
+            print(f"[N2-harness] FULL-SPLIT eval mode: {len(self._split_eps)} "
+                  f"episodes -> {self._n_split_batches} batches (N1 protocol)",
+                  flush=True)
+
 
         # N1 handoff sidecars: exact eval batch + this seed's FT baseline acc.
         batch_path = ft_dir / f"eval_batch_seed{seed}.pt"
@@ -512,42 +644,104 @@ class _N2EvalHarness:
         dl = DataLoader(ds, batch_size=1, collate_fn=collator, num_workers=0)
         return next(iter(dl))
 
-    def eval(self, comp_llm_sd) -> float:
-        """Swap compressed weights in, score on the fixed eval batch, restore.
+    def adopt_reference(self, ft_sd: dict) -> None:
+        """Install the FT sidecar dict as the live reference + restore target.
 
-        The restore is a CORRECTNESS guarantee, not hygiene: callers build
-        `comp` as a shallow copy of the merged FT dict, so without an exact
-        restore the first eval would leave COMPRESSED weights resident in the
-        live model and every subsequent Pareto point would be measured on a
-        mixture of plans — silently corrupting the whole curve.
+        Must be called once after construction, BEFORE any compressed eval:
+        it loads the unmodified FT weights into the model (validating the
+        swap path with strict=False against the live key set), snapshots
+        them on CPU as the restore target, and remembers the key set so
+        every later compressed load is checked for coverage.
         """
         torch = self.torch
         vla = self.vla
+        vla.llm_backbone.load_state_dict(ft_sd, strict=False)
+        self._reference_sd_cpu = {kk: vv.detach().to("cpu")
+                                  for kk, vv in vla.llm_backbone.state_dict().items()}
+        self._reference_keys = set(self._reference_sd_cpu.keys())
+        self._reference_installed = True
+
+    def _restore_reference(self) -> None:
+        """Restore the exact FT reference state after a compressed eval."""
+        if not self._reference_installed:
+            return
+        self.vla.llm_backbone.load_state_dict(self._reference_sd_cpu,
+                                              strict=False)
+        self.torch.cuda.empty_cache()
+
+    def _score_batch(self, b) -> tuple[int, int]:
+        """Token-level action accuracy on one collated batch (N1 rule)."""
+        torch = self.torch
+        vla = self.vla
+        input_ids = b["input_ids"].cuda()
+        attention_mask = b["attention_mask"].cuda()
+        pixel_values = _to_half_cuda(b["pixel_values"])
+        labels = b["labels"].cuda()
+        with torch.inference_mode(), torch.autocast("cuda", dtype=torch.float16):
+            out_ = vla(input_ids=input_ids, attention_mask=attention_mask,
+                       pixel_values=pixel_values, labels=labels)
+        logits = out_.logits[:, self.num_patches:-1]
+        preds = logits.argmax(dim=-1)
+        gt = labels[:, 1:].to(preds.device)
+        mask = gt > self.action_tokenizer.action_token_begin_idx
+        if not mask.any():
+            return 0, 0
+        return (int((preds[mask] == gt[mask]).sum().item()),
+                int(mask.sum().item()))
+
+    def eval(self, comp_llm_sd) -> float:
+        """Swap compressed weights in, score, restore the FT reference.
+
+        Returns the token-level action accuracy.  In FULL-SPLIT mode this is
+        the N1-identical streamed protocol (thousands of batches); in BATCH
+        mode it is the single sidecar batch (order-of-magnitude only).  The
+        caller must call adopt_reference() first.
+        """
+        vla = self.vla
         try:
             vla.llm_backbone.load_state_dict(comp_llm_sd, strict=False)
-
-            def _to_half_cuda(x):
-                if isinstance(x, dict):
-                    return {kk: vv.to(torch.float16).cuda() for kk, vv in x.items()}
-                return x.to(torch.float16).cuda()
-
-            with torch.inference_mode():
-                b = self.batch
-                input_ids = b["input_ids"].cuda()
-                attention_mask = b["attention_mask"].cuda()
-                pixel_values = _to_half_cuda(b["pixel_values"])
-                labels = b["labels"].cuda()
-                with torch.autocast("cuda", dtype=torch.float16):
-                    out_ = vla(input_ids=input_ids, attention_mask=attention_mask,
-                               pixel_values=pixel_values, labels=labels)
-                logits = out_.logits[:, self.num_patches:-1]
-                preds = logits.argmax(dim=-1)
-                gt = labels[:, 1:].to(preds.device)
-                mask = gt > self.action_tokenizer.action_token_begin_idx
-                if not mask.any():
-                    return float("nan")
-                return float((preds[mask] == gt[mask]).float().mean().item())
+            self._last_eval = self._eval_current()
+            return self._last_eval["acc"]
         finally:
-            # Exact FT restore for the next point (see docstring).
-            vla.llm_backbone.load_state_dict(self._ft_sd_cpu, strict=False)
-            torch.cuda.empty_cache()
+            self._restore_reference()
+
+    def _eval_current(self) -> dict:
+        """Score the CURRENT resident weights; returns acc/correct/total/scope."""
+        if self.eval_mode == self.FULL_MODE:
+            return self._eval_full_split()
+        correct, total = self._score_batch(self.batch)
+        acc = float(correct / total) if total else float("nan")
+        return {"acc": acc, "correct": correct, "total": total,
+                "scope": f"single-batch (n={total} tokens)",
+                "n_batches": 1, "ci": None}
+
+    def eval_reference(self) -> dict:
+        """Score the FT reference itself (anchor check) without restoring."""
+        assert self._reference_installed, "adopt_reference() first"
+        return self._eval_current()
+
+    def _eval_full_split(self) -> dict:
+        """Stream the frozen split exactly like N1 (LocalEvalSplitStream)."""
+        import time
+        correct = total = 0
+        n = 0
+        t0 = time.perf_counter()
+        for b in self._split_stream():
+            c, t = self._score_batch(b)
+            correct += c
+            total += t
+            n += 1
+            if n % 200 == 0 or n == self._n_split_batches:
+                el = time.perf_counter() - t0
+                eta = el / n * (self._n_split_batches - n)
+                print(f"    [eval-full {n}/{self._n_split_batches}] "
+                      f"acc={correct/max(total,1):.4f} elapsed={el:.0f}s "
+                      f"ETA={eta:.0f}s", flush=True)
+        acc = float(correct / total) if total else float("nan")
+        ci = None
+        if total:
+            from .compress import _wilson
+            ci = _wilson(correct, total)
+        return {"acc": acc, "correct": correct, "total": total,
+                "scope": f"full-split ({n} batches, {total} tokens)",
+                "n_batches": n, "ci": ci}

@@ -113,3 +113,88 @@ def load_stats(path: Path) -> dict:
             out.setdefault(name, {})
             out[name]["count"] = int(z[key])
     return out
+
+
+# ---------------------------------------------------------------------------
+# CLI: collect calibration stats over the LOCAL NPZ bridge (train episodes).
+#
+# Audit finding C (2026-09-12): the first calibration attempt went through
+# the fork's RLDS pipeline and failed with "No registered data_dirs" — a
+# wrong-loader artifact, NOT a missing dataset.  Every working bench run
+# (N1/N2/N2R) uses qicert.data.npz_loader + vla_local (the local bridge).
+# Calibration must too.  Methodology: calibrate on TRAIN episodes from the
+# frozen split (never on the held-out eval episodes).
+# ---------------------------------------------------------------------------
+def _main() -> int:
+    import argparse
+    import sys
+    from pathlib import Path as _Path
+
+    repo = _Path(__file__).resolve().parents[2]
+    ap = argparse.ArgumentParser(description="collect per-channel calibration stats")
+    ap.add_argument("--ckpt", default=str(repo / "weights" / "ckpt" / "checkpoints"
+                                           / "step-122500-epoch-55-loss=0.0743.pt"))
+    ap.add_argument("--npz-root", default=str(repo / "weights"
+                                               / "libero_spatial_no_noops_npz"))
+    ap.add_argument("--split", default=str(repo / "results" / "eval_split.json"))
+    ap.add_argument("--out", default=str(repo / "results" / "N2R"
+                                         / "calib_seed0.npz"))
+    ap.add_argument("--batches", type=int, default=256,
+                    help="number of calibration batches (train side)")
+    ap.add_argument("--batch-size", type=int, default=2)
+    ap.add_argument("--seed", type=int, default=0)
+    args = ap.parse_args()
+
+    import json
+    import os
+    import torch
+
+    os.environ.setdefault("PRISMATIC_DATA_ROOT", str(repo / "weights" / "data"))
+    sys.path.insert(0, str(repo / "weights" / "code"))
+    from qicert.transformers5_compat import install
+    install()
+    from prismatic.models.load import load_vla
+
+    from qicert.data.npz_loader import NpzEpisodeDataset
+    from qicert.data.vla_local import LocalEvalSplitStream, LocalVLABatcher
+
+    print(f"[calibrate] loading VLA from {args.ckpt}", flush=True)
+    vla = load_vla(args.ckpt, hf_token=None, load_for_training=False)
+    vla = vla.to(dtype=torch.float16, device="cuda")
+    vla.llm_backbone.eval()
+
+    ep_ds = NpzEpisodeDataset(args.npz_root)
+    lb = LocalVLABatcher(vla)
+
+    # Train episodes only (honest calibration: never touch held-out data).
+    # The split file stores eval names + a train COUNT, so train = all files
+    # minus the eval set.  LocalEvalSplitStream is used (finite, ordered)
+    # rather than LocalEpisodeStream (infinite, all episodes incl. eval).
+    split = json.loads(_Path(args.split).read_text())
+    eval_set = set(split["eval"])
+    train_eps = [p.name for p in ep_ds.files if p.name not in eval_set]
+    print(f"[calibrate] {len(train_eps)} train episodes (all-minus-eval) -> "
+          f"{args.batches} batches of {args.batch_size}", flush=True)
+
+    import itertools
+    stream = itertools.islice(
+        LocalEvalSplitStream(ep_ds, lb, train_eps, batch_size=args.batch_size),
+        args.batches)
+    stats = collect_calibration_stats(vla, stream, max_batches=args.batches,
+                                      device="cuda", dtype=torch.float16)
+    save_stats(stats, _Path(args.out), meta={
+        "ckpt": args.ckpt,
+        "npz_root": args.npz_root,
+        "split": args.split,
+        "episodes_scope": "train (from results/eval_split.json)",
+        "n_batches": args.batches,
+        "batch_size": args.batch_size,
+        "seed": args.seed,
+        "n_layers": len(stats),
+    })
+    print(f"[calibrate] wrote {args.out} ({len(stats)} linear layers)", flush=True)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

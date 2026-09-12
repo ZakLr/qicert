@@ -124,6 +124,7 @@ def _run_n2r(out: list[str], ctx=None) -> None:
         ft_llm = torch.load(str(ft_path), map_location="cpu", weights_only=True)
         merged = ft_llm["llm_backbone"]
         harness = _N2EvalHarness(seed, ft_dir, ctx)
+        harness.adopt_reference(merged)  # FT weights live; swap path validated
         n1_ft = harness.n1_ft
 
         for frac in plans:
@@ -174,20 +175,22 @@ def _run_n2r(out: list[str], ctx=None) -> None:
 
                     ratio = total_dense_params / max(total_comp_params, 1)
                     acc = harness.eval(comp)
+                    ev = getattr(harness, "_last_eval", {})
                     delta = (acc - n1_ft) if n1_ft is not None and acc == acc \
                         else float("nan")
                     dt = time.perf_counter() - t0
                     status = "completed" if acc == acc else "failed"
                     print(f"  [N2R seed={seed} frac={frac:.2f} r'={rrank}] DONE "
                           f"ratio={ratio:.2f}x acc={acc:.4f} delta={delta:+.4f} "
-                          f"sound={n_sound}/{len(inventory)} ({dt:.0f}s) <- live",
+                          f"sound={n_sound}/{len(inventory)} "
+                          f"eval={ev.get('scope', '?')} ({dt:.0f}s) <- live",
                           flush=True)
                     out.append(f"| {seed} | {frac:.3f} | {rrank} | {ratio:.2f}x | "
                                f"{acc:.4f} | {delta:+.4f} | {n_sound}/"
                                f"{len(inventory)} | {status} |")
                     _record_n2r_point(ctx, seed, frac, rrank, ratio, acc, delta,
                                       n_sound, len(inventory), dt, layers_scope,
-                                      ft_path, harness.batch_is_matched)
+                                      ft_path, harness.batch_is_matched, ev)
                 except Exception as exc:
                     import traceback
                     traceback.print_exc()
@@ -214,8 +217,10 @@ def _dense_from_comp(comp_l: dict, m_dims, n_dims) -> np.ndarray:
 
 
 def _record_n2r_point(ctx, seed, frac, rrank, ratio, acc, delta, n_sound,
-                      n_layers, dt, layers_scope, ft_path, matched_batch):
+                      n_layers, dt, layers_scope, ft_path, matched_batch,
+                      eval_info: dict | None = None):
     """Record one N2R point (run.json + metrics + ledger row)."""
+    ev = eval_info or {}
     rec = start_run(ctx, exp_id=(ctx.exp_id if ctx and ctx.exp_id else "N2R"),
                     label=f"residual-TT-{frac:.3f}-rr{rrank}-seed{seed}",
                     config={
@@ -226,16 +231,24 @@ def _record_n2r_point(ctx, seed, frac, rrank, ratio, acc, delta, n_sound,
                         "seed": seed, "ft_ckpt": str(ft_path),
                         "kernel": "tt_svd + closed-form SVD residual (QuaSAR-style)",
                         "ordering": "bit-reversed (N2' winner)",
-                        "eval": "N1 matched-budget protocol",
+                        "eval": ev.get("scope", "N1 matched-budget protocol"),
                         "matched_batch": matched_batch,
+                        "n_eval_tokens": ev.get("total"),
+                        "n_eval_batches": ev.get("n_batches"),
                     })
     if rec is None:
         return
+    ci = ev.get("ci")
     finish_run(rec, status="completed" if acc == acc else "failed",
                results={"seed": seed, "backbone": "TT", "plan_fraction": frac,
                         "residual_rank_cap": rrank,
                         "ratio": round(float(ratio), 3),
                         "eval_acc": float(acc),
+                        "correct": ev.get("correct"), "total": ev.get("total"),
+                        "ci_lo": ci[0] if ci else None,
+                        "ci_hi": ci[1] if ci else None,
+                        "eval_scope": ev.get("scope"),
+                        "n_eval_batches": ev.get("n_batches"),
                         "delta_vs_n1_ft": None if delta != delta else round(float(delta), 4),
                         "cert_sound_layers": n_sound,
                         "n_layers_compressed": n_layers,
