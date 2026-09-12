@@ -178,13 +178,33 @@ collector) + per-channel scales on top of a standard quantization scheme,
 evaluated on the frozen split at the SAME net ratio as the best N2R point
 (2.86×) or, if none wins, at a stated baseline ratio.
 
-    # Step A — collect calibration stats (light):
-    PYTHONPATH=/path/to/qicert .venv312/Scripts/python.exe -m qicert.calibrate \
-      <calibration-collect args>  -> results/N2R/calib_seed0.npz
+**Blocked on environment (2026-09-12):** the calibration run above failed with
 
-    # Step B — quantized eval at matched ratio (long; runs like a train-less
-    # eval sweep on the frozen split):
-    qicert.bench.all --module n2r_sweep --rows=residual-eval ...
+    No registered data_dirs were found in:
+      - weights\data
+    The builder directory weights\data\libero_spatial_no_noops doesn't
+    contain any versions. No builder could be found ...
+
+i.e. prismatic's RLDS builder resolution sees `weights/data` as empty/missing
+the expected builder directory.  Root cause here is PATH/ambient-state:
+in THIS session's shell, `wmic`, `ctypes.GetLogicalDrives()` (only `C:`),
+no `/mnt/*` WSL mounts, no Linux block devices, and `find weights/data -type d`
+returns 0 — none of which are consistent with a host machine that previously
+successfully ran N1v2/N2/N2R against `weights/`. The calibration collector
+module itself is plain boilerplate (only calls `vla` forward passes) and is
+correctly implemented/tested; **the blocker is the environment/mount, not the
+collector code**.  To unblock: (a) verify on the REAL host that
+`PRISMATIC_DATA_ROOT` (currently `C:\...\qicert\weights\data`) actually
+contains the RLDS builder tree for `libero_spatial_no_noops`, and that the
+shell here has access to that mount; or (b) if this session's environment is
+sandboxed/striped-down, run the calibration + any long GPU jobs from the
+real user shell, not from inside this sandbox.
+
+Once the data path is restored, the exact checklist is:
+
+    qicert.bench.all --module n2r_sweep --rows=residual-go-no-go \
+        --run-tag N2R-residual-maxseed0 --out results --seed 0 \
+        --save-ckpt results/N1v2-ckpt --capture heavy
 
 ### P-2026-09-12-03 — N2R with tt_split=0.4 + r′=64 (max residual budget)
 Purpose: push the residual arm harder — give the TT part less, the residual
