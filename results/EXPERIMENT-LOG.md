@@ -434,3 +434,52 @@ Review of the previous session's N2 prep found and fixed:
   - Next lever (unchanged, now evidence-backed): activation-weighted
     residual fitting + per-channel scales from calibration (GPTQ-intrinsic
     style). Calibration collection is the immediate next job.
+
+---
+
+## E-2026-09-12-05 — N8C calibrated-INT8 result + the honest three-way verdict
+
+- **Commit:** `9ac3829` (module), result recorded this commit.
+- **Command:** N8C, MSE clip-fraction scale search + activation-weighted loss
+  (calib_seed0.npz, 376 layers, train episodes only), full-split eval,
+  validated harness, seed 0.
+- **RESULT (16:05):** **2.00x -> eval acc 0.4466** (6,496 batches, 114,497
+  tokens), **delta -0.0001** vs FT 0.4468. Calibrated INT8 is essentially
+  LOSSLESS at 2x on this backbone. (run: results/N8C/<id>, log:
+  results/logs/N8C-fullsplit.log; quantize 107s + eval 843s.)
+
+### The honest three-way table (all full-split, validated harness, seed 0)
+
+| Method | Ratio | Eval acc | Delta vs FT | Lipschitz certificates |
+|--------|------:|---------:|------------:|:----------------------:|
+| FT baseline (fp16)         | 1.00x | **0.4468** | —         | — |
+| Calibrated INT8 (N8C)      | 2.00x | **0.4466** | −0.0001   | structurally cannot |
+| TT + residual rank32 (N2R) | 2.86x | 0.1529     | −0.2939   | **168/168 sound** |
+| TT uniform (N2)            | 2.00–16.4x | 0.0000 | −0.4468  | sound |
+
+### Verdict (pre-registered R1 language, now measured)
+
+TT compression **loses to calibrated INT8 on accuracy** at comparable
+ratios (0.153 vs 0.447 at ~2–3x). However, the certificate advantage DOES
+exist and is exclusive: the INT8 baseline cannot produce any Lipschitz
+bound, while every TT point ships 168/168 sound per-layer certificates.
+Per the pre-registered demotion rule, the claim becomes:
+
+**"Accuracy parity at compression NOT achieved for TT on this backbone;
+calibrated INT8 is near-lossless at 2x. The submission's differentiators
+are the certificate/trust stack (exact per-layer bounds INT8 structurally
+cannot emit), the honest measurement discipline (anchored harness, Wilson
+CIs, kill-criteria execution), and the reproducibility package."**
+
+Also resolved: the earlier naive-INT8 = 0.0000 (N1v2) is now PROVEN to be a
+calibration artifact, not a property of INT8 — the honest baseline number
+for the report is 0.4466, not 0.0.
+
+### What would still change the compression verdict (evidence-backed levers)
+
+1. Activation-weighted residual fitting (fit residual/scales to calibration
+   loss, not Frobenius) — the GPTQ-intrinsic recipe; untried.
+2. Sub-2x TT targets where INT8 cannot follow without int4 (INT8 is
+   hard-capped at 2x by byte accounting; TT tunes ratio continuously).
+3. Mixed TT/INT8 allocation (quantize insensitive layers, TT-compress
+   sensitive ones with certificates on the sensitive path).
