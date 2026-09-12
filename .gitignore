@@ -30,7 +30,11 @@ build_cpp/
 results/*
 !results/N1v2-report.md
 !results/ledger.csv
-!results/N2/
+# N2 launch-prep deliverables (CPU-only, small, self-contained) are tracked.
+# The earlier Aug-16 layer-0 smoke point dirs are intentionally NOT re-added
+# here: they already exist on disk with full run.json provenance, and a future
+# reader can regenerate their numbers from the run command + handoff if needed.
+# Do NOT blanket-unignore results/N2/ — that would pull in the per-point dirs.
 scripts/n2_prepare.py
 
 # checkpoints (large, gitignored)

@@ -282,6 +282,15 @@ def _run_n2(out: list[str], ctx=None) -> None:
         plan_info[key] = {"layer_type": layer_type, "M": M, "N": N,
                           "dense_params": M * N, "dims": dims}
 
+    # The base checkpoint is loaded ONLY for the key inventory + shapes
+    # (compression reads the FT weights, not the base weights). 5.3 GB must
+    # NOT stay resident for the whole run — release it before the sweep
+    # (host-freeze lesson 2026-09-11: two parallel N1v2 runs + resident
+    # checkpoints locked the machine).
+    del base_sd, llm_sd
+    import gc as _gc
+    _gc.collect()
+
     out += table_header(
         f"N2 - {layers_scope} compression Pareto sweep "
         f"({len(inventory)} layers, plans={plans}, backbones={BACKBONES}, "
@@ -319,11 +328,17 @@ def _run_n2(out: list[str], ctx=None) -> None:
                     # Compress each layer: TT-SVD -> cores -> contract ->
                     # write the reconstruction into a fresh merged dict so
                     # every plan is independent (no mutation between plans).
+                    # NOTE: all.py prints the `out` table only at the END, so
+                    # all per-point progress MUST go through direct prints
+                    # (flush=True) to keep the log live during long runs.
+                    print(f"  [N2 seed={seed} {bb} frac={frac:.2f}] "
+                          f"compressing {len(inventory)} layers...",
+                          flush=True)
                     comp = dict(merged)
                     cert_rows = []
                     total_compressed_params = 0
                     total_dense_params = 0
-                    for layer_type, key in inventory:
+                    for i_layer, (layer_type, key) in enumerate(inventory):
                         W = merged[key].detach().float().cpu().numpy()
                         m_dims, n_dims = plan_info[key]["dims"][bb]
                         r = _rank_for_fraction(frac, m_dims, n_dims)
@@ -340,6 +355,10 @@ def _run_n2(out: list[str], ctx=None) -> None:
                             cs.arrays, m_dims, n_dims))
                         cert_rows.append((layer_type, L, tight,
                                           bool(L >= tight - 1e-9)))
+                        if (i_layer + 1) % 24 == 0 or i_layer + 1 == len(inventory):
+                            print(f"    layer {i_layer + 1}/{len(inventory)} "
+                                  f"({layer_type}) L={L:.3f} tight={tight:.3f} "
+                                  f"sound={L >= tight - 1e-9}", flush=True)
                     ratio = total_dense_params / max(total_compressed_params, 1)
                     n_sound = sum(1 for _, _, _, ok in cert_rows if ok)
 
@@ -348,6 +367,10 @@ def _run_n2(out: list[str], ctx=None) -> None:
                         else float("nan")
                     dt = time.perf_counter() - t0
                     status = "completed" if acc == acc else "failed"
+                    print(f"  [N2 seed={seed} {bb} frac={frac:.2f}] DONE "
+                          f"ratio={ratio:.2f}x acc={acc:.4f} "
+                          f"delta={delta:+.4f} sound={n_sound}/{len(cert_rows)} "
+                          f"({dt:.0f}s) <- live", flush=True)
                     out.append(f"| {seed} | {bb} | {frac:.3f} | {ratio:.2f}x | "
                                f"{acc:.4f} | {delta:+.4f} | {n_sound}/"
                                f"{len(cert_rows)} | {status} | ({dt:.0f}s) |")
@@ -358,6 +381,8 @@ def _run_n2(out: list[str], ctx=None) -> None:
                 except Exception as exc:
                     import traceback
                     traceback.print_exc()
+                    print(f"  [N2 seed={seed} {bb} frac={frac:.2f}] FAILED: "
+                          f"{type(exc).__name__}: {exc}", flush=True)
                     out.append(f"| {seed} | {bb} | {frac:.3f} | - | - | - | "
                                f"- | FAIL ({type(exc).__name__}: {exc}) |")
 
@@ -438,6 +463,11 @@ class _N2EvalHarness:
         vla = vla.to(dtype=torch.float16, device="cuda")
         vla.llm_backbone.eval()
         self.vla = vla
+        # FT reference weights, snapshotted to CPU at load time (BEFORE any
+        # compressed weights are ever loaded). Used by eval() to restore the
+        # exact FT state after every point.
+        self._ft_sd_cpu = {kk: vv.detach().to("cpu")
+                           for kk, vv in vla.llm_backbone.state_dict().items()}
         self.num_patches = int(vla.vision_backbone.num_patches)
         self.action_tokenizer = ActionTokenizer(vla.llm_backbone.tokenizer)
 
@@ -483,29 +513,41 @@ class _N2EvalHarness:
         return next(iter(dl))
 
     def eval(self, comp_llm_sd) -> float:
-        """Swap compressed weights in and score on the fixed eval batch."""
+        """Swap compressed weights in, score on the fixed eval batch, restore.
+
+        The restore is a CORRECTNESS guarantee, not hygiene: callers build
+        `comp` as a shallow copy of the merged FT dict, so without an exact
+        restore the first eval would leave COMPRESSED weights resident in the
+        live model and every subsequent Pareto point would be measured on a
+        mixture of plans — silently corrupting the whole curve.
+        """
         torch = self.torch
         vla = self.vla
-        vla.llm_backbone.load_state_dict(comp_llm_sd, strict=False)
+        try:
+            vla.llm_backbone.load_state_dict(comp_llm_sd, strict=False)
 
-        def _to_half_cuda(x):
-            if isinstance(x, dict):
-                return {kk: vv.to(torch.float16).cuda() for kk, vv in x.items()}
-            return x.to(torch.float16).cuda()
+            def _to_half_cuda(x):
+                if isinstance(x, dict):
+                    return {kk: vv.to(torch.float16).cuda() for kk, vv in x.items()}
+                return x.to(torch.float16).cuda()
 
-        with torch.inference_mode():
-            b = self.batch
-            input_ids = b["input_ids"].cuda()
-            attention_mask = b["attention_mask"].cuda()
-            pixel_values = _to_half_cuda(b["pixel_values"])
-            labels = b["labels"].cuda()
-            with torch.autocast("cuda", dtype=torch.float16):
-                out_ = vla(input_ids=input_ids, attention_mask=attention_mask,
-                           pixel_values=pixel_values, labels=labels)
-            logits = out_.logits[:, self.num_patches:-1]
-            preds = logits.argmax(dim=-1)
-            gt = labels[:, 1:].to(preds.device)
-            mask = gt > self.action_tokenizer.action_token_begin_idx
-            if not mask.any():
-                return float("nan")
-            return float((preds[mask] == gt[mask]).float().mean().item())
+            with torch.inference_mode():
+                b = self.batch
+                input_ids = b["input_ids"].cuda()
+                attention_mask = b["attention_mask"].cuda()
+                pixel_values = _to_half_cuda(b["pixel_values"])
+                labels = b["labels"].cuda()
+                with torch.autocast("cuda", dtype=torch.float16):
+                    out_ = vla(input_ids=input_ids, attention_mask=attention_mask,
+                               pixel_values=pixel_values, labels=labels)
+                logits = out_.logits[:, self.num_patches:-1]
+                preds = logits.argmax(dim=-1)
+                gt = labels[:, 1:].to(preds.device)
+                mask = gt > self.action_tokenizer.action_token_begin_idx
+                if not mask.any():
+                    return float("nan")
+                return float((preds[mask] == gt[mask]).float().mean().item())
+        finally:
+            # Exact FT restore for the next point (see docstring).
+            vla.llm_backbone.load_state_dict(self._ft_sd_cpu, strict=False)
+            torch.cuda.empty_cache()

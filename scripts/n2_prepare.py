@@ -121,7 +121,7 @@ def pre_launch_snapshot() -> dict:
     snap["n2_sweep_bond_plans"] = list(BOND_PLANS)
     snap["n2_sweep_layers_scope"] = LAYERS_SCOPE
     snap["n2_sweep_points_per_seed"] = POINTS_PER_SEED
-    snap["n2 Swipe_eval_protocol"] = (
+    snap["n2_sweep_eval_protocol"] = (
         "SAME eval batch as N1 (matched budget), on FINE-TUNED weights, "
         "per-point recorder artifacts + ledger row."
     )
@@ -176,11 +176,28 @@ def _docker_image_tag() -> str | None:
 
 
 def _prismatic_importable_on_host() -> bool:
+    """Prismatic importability check against the interpreter that actually runs
+    the benches (.venv312), not whatever Python the script itself is under —
+    the 2026-09-12 prep recorded `false` from system Python 3.14 while
+    .venv312 (the interpreter that successfully ran N1v2) imports it fine.
+    """
+    import subprocess
+    venv_py = REPO / ".venv312" / "Scripts" / "python.exe"
+    if not venv_py.exists():
+        return False
     try:
-        import sys
-        sys.path.insert(0, str(REPO / "weights" / "code"))
-        import prismatic  # noqa: F401
-        return True
+        probe = (
+            "import sys; sys.path.insert(0, r'%s'); "
+            "from qicert.transformers5_compat import install; install(); "
+            "import prismatic" % (REPO / "weights" / "code")
+        )
+        out = subprocess.run(
+            [str(venv_py), "-c", probe],
+            capture_output=True, text=True, timeout=180,
+            cwd=str(REPO),
+            env={**os.environ, "PRISMATIC_DATA_ROOT": str(REPO / "weights" / "data")},
+        )
+        return out.returncode == 0
     except Exception:
         return False
 
@@ -219,21 +236,20 @@ def blueprint_for_seed(seed: int) -> dict:
             # sub-window (e.g. "0.50,0.33") when you want a go/no-go on the
             # 2x point first, before the full 6-plan sweep.
         },
-        "command_host_venv_fallback": (
-            "cd /c/Users/zakil/Desktop/AQC/Quantum\\ Insider/challenge/qicert && "
+        "command_host_venv": (
+            "cd \"/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert\" && "
             "export PYTHONUNBUFFERED=1 && "
-            "export PRISMATIC_DATA_ROOT=$(pwd)/weights/data && "
-            "export QICERT_FORK=$(pwd)/weights/code && "
-            "export PYTHONPATH=$(pwd)/python:$(pwd)/weights/code && "
-            ".venv312/Scripts/python.exe -m qicert.bench.all --module n2_sweep --rows=compression-pareto "
-            "--out results --exp-id N2 --seed {seed} "
+            "export PRISMATIC_DATA_ROOT=\"$(pwd)/weights/data\" && "
+            "export QICERT_FORK=\"$(pwd)/weights/code\" && "
+            "export PYTHONPATH=\"$(pwd)/python\" && "
+            ".venv312/Scripts/python.exe -m qicert.bench.all --module n2_sweep "
+            "--rows=compression-pareto --out results --exp-id N2 --seed {seed} "
             "--run-tag N2-compression-pareto-seed{seed} "
-            "--save-ckpt results/N1v2-ckpt "
-            "--capture heavy "
+            "--save-ckpt results/N1v2-ckpt --capture heavy "
             "2>&1 | tee results/logs/N2-compression-pareto-seed{seed}.log"
         ).format(seed=seed),
-        "command_docker(self-contained)": (
-            "cd /c/Users/zakil/Desktop/AQC/Quantum\\ Insider/challenge/qicert && "
+        "command_docker": (
+            "cd \"/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert\" && "
             "MSYS_NO_PATHCONV=1 docker run --rm --gpus all "
             "-v \"$(pwd):/workspace\" "
             "-v \"$(pwd)/weights:/workspace/weights\" "
@@ -245,11 +261,11 @@ def blueprint_for_seed(seed: int) -> dict:
             "export PRISMATIC_DATA_ROOT=\"/workspace/weights/data\"\n"
             "export QICERT_FORK=\"/workspace/weights/code\"\n"
             "export QICERT_FT_CKPT=\"/workspace/results/N1v2-ckpt\"\n"
-            "python -m qicert.bench.all --module n2_sweep --rows=compression-pareto "
+            "export PYTHONPATH=\"/workspace/python\"\n"
+            "python3 -m qicert.bench.all --module n2_sweep --rows=compression-pareto "
             "--out results --exp-id N2 --seed {seed} "
             "--run-tag N2-compression-pareto-seed{seed} "
-            "--save-ckpt results/N1v2-ckpt "
-            "--capture heavy "
+            "--save-ckpt results/N1v2-ckpt --capture heavy "
             "2>&1 | tee results/logs/N2-compression-pareto-seed{seed}.log\n"
             "'"
         ).format(seed=seed),
@@ -309,19 +325,21 @@ def print_launch_command(seed: int, blueprint: dict) -> None:
           "first run N1v2 for this seed with --save-ckpt results/N1v2-ckpt.")
     print()
     if bb["handoff"]["clean_handoff"]:
-        print("Docker (preferred — CUDA-Q actually available here):")
+        print("Host venv (VERIFIED path — this is what ran N1v2; .venv312 imports "
+              "prismatic fine):")
         print()
-        print(bb["command_docker(self-contained)"])
+        print(bb["command_host_venv"])
         print()
-        print("Host venv fallback (only if prismatic importable on host):")
+        print("Docker (only after `docker build -t qicert-dev:cu13-cudaq -f "
+              "Dockerfile .` — image is NOT built on this machine as of "
+              "2026-09-12, and Docker Desktop was not running):")
         print()
-        print(bb["command_host_venv_fallback"])
+        print(bb["command_docker"])
         print()
-        print("Go/no-go variant (2x point first, smaller wall time):")
+        print("Go/no-go variant (2x point first, smaller wall time) — set "
+              "QICERT_N2_PLANS before the chosen command:")
         print()
         print("  export QICERT_N2_PLANS=\"0.50,0.33\"")
-        print("  " + bb["command_docker(self-contained)"].replace(
-            "--rows=compression-pareto", "--rows=compression-pareto"))
         print()
     print("Capture: --out results --exp-id N2 --seed {} --run-tag {} --capture heavy".format(
         seed, bb["run_tag"]))
