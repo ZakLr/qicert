@@ -56,3 +56,9 @@ kaggle-out/
 .venv*/
 results/*ckpt*/
 *.pt
+
+# LaTeX build artifacts
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.synctex.gz
