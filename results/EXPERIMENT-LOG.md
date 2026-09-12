@@ -483,3 +483,50 @@ for the report is 0.4466, not 0.0.
    hard-capped at 2x by byte accounting; TT tunes ratio continuously).
 3. Mixed TT/INT8 allocation (quantize insensitive layers, TT-compress
    sensitive ones with certificates on the sensitive path).
+
+---
+
+## 2026-09-12 (evening) — Build cycle: N2R-v2 + N5-v2 + live N6 (commit 4facb25)
+
+Code complete and tested (80 tests passing), experiments staged per
+`EXECUTION-PLAN.md` (repo root). Summary of what now EXISTS:
+
+- **N2R-v2** (`bench/n2r2_sweep.py`): activation-weighted residual fit
+  (GPTQ-style closed form in `compress_residual.svd_residual`; fit
+  minimizes ||(W - What - C) diag(sqrt(w))||_F with w = per-channel
+  calibration stats from TRAIN episodes) + mixed allocation arm
+  (q/k/v/o full-precision, honest dense accounting). Not yet run.
+- **N5-v2** (`bench/lyapunov_curve.py`): GPU leg measures token-level
+  action AGREEMENT vs compression ratio (+ exact per-layer spectral
+  deviation via power iteration); CPU leg fits the weight-space
+  predictor (LOO R^2, predicted vs measured safe ratio r*). Not yet run.
+- **N6 three-arm race: RAN (real numbers, not pending).** Demo oracle:
+  seeded heavy-tail margin, p_true = 1.37e-4 (rare-event regime),
+  per-seed deterministic (fixed: numpy seed-array semantics bug found by
+  the estimator tests). Results (median over seed 0; multi-seed queue
+  staged): IQAE-sim width 4.0e-5 with 630 queries; naive MC needs 1e6
+  queries for width 4.4e-5 (~1587x budget); GEV covers truth at 1e6.
+  All arms cover p_true at large budgets. Artifacts:
+  `results/safety/threearm_seed0.json`, conformal_seed0.json.
+  Scoping honesty: RESTART splitting needs trajectory access (unavailable
+  on seed->rho oracles) — C-strong is the GEV extreme-tail estimator;
+  IQAE amplification is simulated (true amplitude lives in the simulator
+  only; the estimator sees measurement counts, as on hardware).
+- **Conformal calibration RAN**: target 0.99/0.95/0.90 -> empirical
+  0.9894/0.9475/0.8943 on fresh seeds (all within finite-sample band).
+- **Scenario-opt (Campi-Garatti) computed**: d=2, 0 violations:
+  N=1e4 -> eps<=6.64e-4 (beta=0.01); N=1e6 -> eps<=6.6e-6. Table in bench.
+- **Guard demo (`scripts/demo_guard.py`)**: end-to-end — clean SERVE;
+  out-of-ball action REFUSE; tampered-cert REFUSE (hash mismatch, tamper
+  applied after manifest signing); NaN-bound REFUSE; no-manifest REFUSE.
+  Transcript: `results/guard-demo/transcript.json`.
+
+### Staged GPU queue (one at a time; exact commands in EXECUTION-PLAN.md sec 2)
+1. calib mean-abs top-up (~10 min, optional)
+2. N2R-v2 weighted go/no-go, full-split (R1 gate: delta >= -0.05 at >= 2x)
+3. N2R-v2 mixed-allocation point (only if 2 is NO-GO)
+4. N5-v2 degradation curve (plain + weighted passes) + CPU predictor
+5. N1v2 seeds 1-2 (overnight, one at a time)
+
+No result claims added for un-run experiments. Every number above has an
+artifact or a re-run command in this log.

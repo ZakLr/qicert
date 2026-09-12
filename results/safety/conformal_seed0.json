@@ -1,0 +1,28 @@
+{
+  "rows": [
+    {
+      "alpha": 0.01,
+      "target": 0.99,
+      "empirical": 0.98936,
+      "threshold": -0.09451320730248697,
+      "status": "completed"
+    },
+    {
+      "alpha": 0.05,
+      "target": 0.95,
+      "empirical": 0.94745,
+      "threshold": 0.4245746651281174,
+      "status": "completed"
+    },
+    {
+      "alpha": 0.1,
+      "target": 0.9,
+      "empirical": 0.8943,
+      "threshold": 0.6031763288941386,
+      "status": "completed"
+    }
+  ],
+  "n_cal": 10000,
+  "n_test": 100000,
+  "seed": 0
+}
