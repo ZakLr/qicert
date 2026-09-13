@@ -58,8 +58,9 @@ compression $\ge 2\times$ at accuracy $\ge 0.3968$, fixed before any run);
 we report that negative result with its mechanism (mode collapse: the model
 emits only the single most-frequent action token).
 Adding repair training (a low-rank adapter on the compressed model) clears the
-bar at $2.46\times$: accuracy $0.4535$ against the uncompressed
-reference's $0.4468$ (non-overlapping 95\% Wilson confidence intervals),
+bar at $2.46\times$: accuracy $0.4496 \pm 0.0137$ (3-seed mean $\pm$ std:
+0.4535, 0.4609, 0.4343) against the uncompressed
+reference's $0.4319 \pm 0.0303$ (seeds 0.4468, 0.3970, 0.4520),
 with certificates re-derived
 from the final deployed weights on all 168 layers and the guard enforcing the
 bound at runtime. The safety side is measured end to end --- and a third mechanism
@@ -236,7 +237,9 @@ mechanical read of run artifacts, not a judgement call.
 \begin{table}[t]
 \centering
 \caption{Measured compression routes on the frozen split
-(114{,}497 action tokens, seed 0). Accuracy is token-level action accuracy.
+(114{,}497 action tokens). Accuracy is token-level action accuracy,
+mean $\pm$ sample std over 3 seeds where replicated (single-seed rows are
+seed 0).
 ``Sound'' counts layers whose certificate check passed. INT8 admits no
 comparable certificate by construction (Sec.~\ref{sec:abl}). ``N9'' names
 the repair-training arm detailed below (compress, then train a small
@@ -246,12 +249,12 @@ adapter on the collapsed model, then re-evaluate).}
 \toprule
 Route & Ratio & Accuracy & Sound \\
 \midrule
-Reference (fine-tuned, fp16) & $1\times$      & 0.4468 & --- \\
+Reference (fine-tuned, fp16) & $1\times$      & 0.4319 $\pm$ 0.0303 & --- \\
 Calibrated INT8 (per-ch.\ MSE) & $1.997\times$ & 0.4466 & --- \\
 Uniform TT truncation         & $2.0\times$   & 0.000  & 168/168 \\
 TT + closed-form residual     & $2.54\times$  & 0.164  & 168/168 \\
 TT + closed-form residual     & $2.86\times$  & 0.164  & 168/168 \\
-TT + repair training (N9)     & $2.46\times$  & \textbf{0.4535} & 168/168 \\
+TT + repair training (N9)     & $2.46\times$  & \textbf{0.4496 $\pm$ 0.0137} & 168/168 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -277,11 +280,15 @@ repair lever: the same adapter budget that lifted the base model from 0.11
 to 0.4468, applied to the collapsed model. Repair training (a rank-8 adapter
 trained for 1{,}200 steps on train-split episodes only --- a contamination
 check excludes all 108 frozen eval episodes --- merged and evaluated on the
-full protocol) recovers the policy completely: \textbf{0.4535 at $2.46\times$}
-honest ratio (cores, residual, and adapter bytes counted), a Wilson-score
-95\% confidence interval (CI) of $[0.4506, 0.4564]$ that does not overlap
-the reference's $[0.4439, 0.4497]$. Under the pre-registered gate this is the first GO:
-both conditions hold --- ratio $\ge 2\times$ and accuracy above the bar ---
+full protocol) recovers the policy completely: \textbf{0.4496 $\pm$ 0.0137
+at $2.46\times$}, mean $\pm$ sample std over 3 seeds (0.4535, 0.4609,
+0.4343), honest ratio (cores, residual, and adapter bytes counted). Seed 0
+alone reads 0.4535 with Wilson-score 95\% confidence interval (CI)
+$[0.4506, 0.4564]$, non-overlapping above its reference's $[0.4439,
+0.4497]$; seed 1 is the hardest lift (0.3970 $\to$ 0.4609, $+$0.0639).
+Under the pre-registered gate this is a replicated GO:
+both conditions hold on every seed --- ratio $\ge 2\times$ and accuracy
+above the bar ---
 with certificates re-derived from the final deployed weights (exact dense
 spectral norms, 168/168 layers) and the adapter's contribution to the bound
 accounted. The repair cost (1{,}200 steps, $\sim$8 min) is charged to this
@@ -389,11 +396,11 @@ that makes an exact deployment certificate computable and enforceable.''
 \section{Limitations}
 \label{sec:limits}
 
-Six limitations are part of the result. (1) Most rows are single-seed; the
-challenge asks for mean $\pm$ standard deviation over three independent
-runs. Seed~1 of the baseline finished at $0.3970$ (vs.\ seed~0 $0.4468$ ---
-real seed variance, reported plainly), seed~2 is running, and no multi-seed
-number is claimed until all three land. (2) The training-free repaired TT route fails the
+Six limitations are part of the result. (1) Supporting rows (INT8,
+uniform, residual-only, compiler, monitor) are single-seed and labeled as
+such; the headline rows are 3-seed: baseline $0.4319 \pm 0.0303$ (seeds
+0.4468, 0.3970, 0.4520 --- real seed variance, reported plainly) and repair
+$0.4496 \pm 0.0137$ (seeds 0.4535, 0.4609, 0.4343). (2) The training-free repaired TT route fails the
 pre-registered accuracy bar at $2.5$--$2.9\times$: the configuration search
 (five candidates, all absmax-weighted) and its full-protocol confirmation
 measured a best point of $0.1640$ accuracy at $2.536\times$, against the

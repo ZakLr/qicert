@@ -1,6 +1,6 @@
 # Resource Declaration
 
-_Generated 2026-09-11T14:25:46+00:00_
+_Generated 2026-09-13T21:26:57+00:00_
 
 Per AGENTS.md: every claimed number must be traceable to a
 recorded run with its full resource cost. This table IS that
@@ -42,8 +42,49 @@ trace, regenerated from `results/ledger.csv`.
 | N2pre | c8b438f6fdaf | 0 | 6110.3 | 101.8 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-08-25 |
 | N1v2smoke | 6948757482b1 | 0 | 75.2 | 1.3 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-11 |
 | N1v2smoke | 96897acd2ab6 | 0 | 99.9 | 1.7 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-11 |
+| N1v2 | bf446e7ed683 | 0 | 2974.2 | 49.6 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-11 |
+| N1v2 | 75482ddaf556 | 0 | 3228.1 | 53.8 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-11 |
+| N2 | ca7a67ffe1d9 | 0 | 1.3 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2 | 7ef7ff4f9410 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2 | 8786c87f7f7c | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2 | 61a00561a521 | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2 | aadcd6c5da12 | 0 | 1.7 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N8C | 7d97bc0c8ae9 | 0 | 1.8 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2R2 | 9eb9c9803844 | 0 | 2.2 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2R2 | 791b255c576d | 0 | 1.3 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2R2 | 45a8d6f5e020 | 0 | 1.5 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-12 |
+| N2R2 | acbb86ac625e | 0 | 1.7 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 054f85eb3055 | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 5c2c27059323 | 0 | 1.3 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 7f919205059b | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 00bb9e788ca7 | 0 | 1.4 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | f8134c366e53 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | f283b015b766 | 0 | 1.2 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | ff824d8bb574 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 01344d7d1dd8 | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | d7f221a128fa | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | b8b643b05364 | 0 | 1.7 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | f779228c414d | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 06e4f5e522f7 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 5d38ade72a62 | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | e83a43b760f0 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 9d43ecbd5d9d | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | b186a64c7e93 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 852a409481ff | 0 | 1.1 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | af3bd16a532b | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | 71ac5fa91451 | 0 | 1.0 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N2R2 | b62c096dba55 | 0 | 1.5 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N5 | 78208474c5a9 | 0 | 1.4 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N5 | 00c41fd382f7 | 0 | 1.6 | 0.0 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N9 | 80fd4bcd0832 | 0 | 1387.3 | 23.1 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N9C | 5085c6d99434 | 0 | 1035.1 | 17.3 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N10MON | 09106f4bf034 | 0 | 7.5 | 0.1 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N9 | 20ff80df4b07 | 1 | 1524.8 | 25.4 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N9C | d2474aa428e7 | 1 | 1001.1 | 16.7 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N9 | a7fb3ae4fb58 | 2 | 1433.6 | 23.9 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| N9C | 798d32130bea | 2 | 1116.4 | 18.6 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
 
-**Total scored wall-clock: 6.37 GPU-h**
+**Total scored wall-clock: 10.19 GPU-h**
 
 ## Failed / aborted runs (excluded from claims, kept for provenance)
 

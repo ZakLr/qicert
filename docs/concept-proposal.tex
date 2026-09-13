@@ -108,16 +108,17 @@ plus an entropy gate flagging collapsed (single-token) streams.
 \textbf{Working prototype.} This is not a design on paper. The repository
 contains 84 passing tests, a benchmark harness, and measured results on a
 fine-tuned 0.5B VLA (LIBERO-spatial, 114{,}497 scored action tokens,
-hash-frozen split): reference accuracy 0.4468; calibrated INT8 at
+hash-frozen split): reference accuracy $0.4319 \pm 0.0303$ (seeds 0.4468,
+0.3970, 0.4520); calibrated INT8 at
 $1.997\times$ compression, 0.4466 (the honest classical comparator);
 tensor-compressed routes at $2.5$--$2.9\times$ with sound certificates on
 every one of 168 compressed layers across every configuration tested. The
 pre-registered capability gate (ratio $\ge 2\times$, accuracy $\ge 0.3968$,
 fixed pre-run) is answered: the training-free route misses it
 ($0.1640$ at $2.536\times$ via single-token mode collapse),
-and repair training on the compressed model (arm N9, below) clears it ($0.4535$ at
-$2.46\times$, non-overlapping confidence interval above the uncompressed
-reference, certificates re-derived from the final deployed weights). Both
+and repair training on the compressed model (arm N9, below) clears it
+($0.4496 \pm 0.0137$ at $2.46\times$, replicated across 3 seeds,
+certificates re-derived from the final deployed weights). Both
 verdicts, the negative one included, are reported in full in the technical
 report rather than hidden.
 
@@ -151,14 +152,15 @@ compression \emph{before} committing to full evaluation, turning post-hoc
 luck into engineering process.
 
 Quantitative targets, anchored to what already runs: the reference VLA at
-0.4468 accuracy and the INT8 comparator at $1.997\times$ define the bar the
-tensor route must clear; certificates already hold on every compressed layer
-at every tested ratio; the estimator layer already delivers the
+$0.4319 \pm 0.0303$ and the INT8 comparator at $1.997\times$ define the bar
+the tensor route must clear; certificates already hold on every compressed
+layer at every tested ratio; the estimator layer already delivers the
 $\sim$1{,}587$\times$ query reduction. The combined capability condition
 --- at or beyond $2\times$ compression, within the pre-registered accuracy
 band, certificate-sound with guard enforcement --- is already demonstrated
-once (N9: $2.46\times$, $0.4535$, GO). Phase 2 hardens it into an
-engineering result: multi-seed replication (mean $\pm$ standard deviation
+at mean $\pm$ std over 3 seeds (N9: $2.46\times$, $0.4496 \pm 0.0137$, GO).
+Phase 2 hardens it into an
+engineering result: larger backbones, closed-loop rollouts (mean $\pm$ standard deviation
 over 3 independent runs), activation-aware rank allocation to push the
 ratio higher at the same accuracy, backbone scale to widen the margin, and
 a collapse-boundary detector so the safe compression limit is predictable
@@ -181,16 +183,17 @@ the agreement-vs-compression curve is bimodal, not gradual). The
 trained-repair route is GO: a rank-8 adapter trained 1{,}200 steps on
 train-split episodes only (frozen eval episodes excluded and verified),
 merged into the compressed model, re-evaluated on the full protocol ---
-$0.4535$ at $2.46\times$ honest ratio, 95\% Wilson interval $[0.4506, 0.4564]$
-non-overlapping above the reference's $[0.4439, 0.4497]$, with
+$0.4496 \pm 0.0137$ at $2.46\times$ honest ratio over 3 seeds (0.4535,
+0.4609, 0.4343; seed 0 alone: 95\% Wilson interval $[0.4506, 0.4564]$,
+non-overlapping above its reference's $[0.4439, 0.4497]$), with
 certificates re-derived from the final deployed weights (168/168 exact) at
-a cost of one SVD per layer. Phase-2 replication targets mean $\pm$
-standard deviation over 3 independent seeds. Phase 2 escalates the remaining levers in cost
+a cost of one SVD per layer. Phase 2 escalates the remaining levers in cost
 order: activation-aware rank allocation, and backbone scale (a $1.5$--$7$B
 backbone, whose weights carry the redundancy a $0.5$B LoRA-tuned model
 lacks --- at $2.5\times$ a $3$B model retains more absolute capacity than
-the present model has in total). Metrics unchanged: pre-registered gate,
-mean $\pm$ standard deviation over 3 seeds (seed~1 $0.3970$, seed~2 running).
+the present model has in total). Metrics: pre-registered gate, already met
+at mean $\pm$ std over 3 seeds on both rows (baseline $0.4319 \pm 0.0303$,
+repair $0.4496 \pm 0.0137$).
 
 \textbf{Safety claim.} Metrics: certificate soundness (currently $168/168$
 across all configurations), guard refusal behavior (currently 1.0 on all four
