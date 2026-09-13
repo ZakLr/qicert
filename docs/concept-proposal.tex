@@ -68,7 +68,8 @@ broader.
 no quantum hardware required or assumed.} The statement's simulation clause
 covers us explicitly; we state resources honestly in Section~3.
 
-The pipeline wraps an existing VLA at four points. A fine-tuning stage
+The pipeline wraps an existing vision--language--action model (VLA) at four
+points. A fine-tuning stage
 establishes the reference policy and freezes a hash-verified evaluation split.
 The compression stage decomposes each linear layer of the language backbone
 into a tensor-train network (TT-SVD); a closed-form low-rank residual folds
@@ -83,7 +84,7 @@ refuses any action outside the certified ball.
 Three measured components complete the stack. First, a commuting-Pauli
 interaction compiler evaluates cross-modal interaction operators exactly over
 pruned families; its pruning predictions track measurement at median
-$r = 0.975$ over twelve independent operator tables, with compiler identity
+$r = 0.975$ over twelve independently generated operator test cases, with compiler identity
 verified to $2.3\times10^{-14}$ relative error. Second, a rare-event
 estimation layer races three estimators on a known-ground-truth problem
 ($p^{*}=1.37\times10^{-4}$): an iterated quantum amplitude estimation schedule
@@ -95,12 +96,14 @@ coverage lands inside the finite-sample band at all three tested levels
 ($\alpha = 0.01/0.05/0.10$).
 
 \textbf{Proof status.} The layer bound $\norm{W}_{2} \le \prod_k
-\norm{G^{(k)}}_{3}$ is exact algebra on the TT factorization; the certificate
+\norm{G^{(k)}}_{3}$ is exact algebra on the tensor-train (TT) factorization; the certificate
 chain and the guard's soundness/completeness properties are machine-checked
-by SMT falsification (Z3 finds no counterexample to accepting an out-of-ball
-action; key properties also proved in Lean~4). A guard demo transcript shows: clean load SERVE,
-out-of-ball action REFUSE, tampered-certificate REFUSE, NaN-bound REFUSE,
-missing-manifest REFUSE, plus an entropy gate flagging collapsed streams.
+by satisfiability-modulo-theories falsification (the Z3 solver finds no
+counterexample to accepting an out-of-ball action; key properties also
+proved in the Lean~4 proof assistant with no proof gaps). A guard demo
+transcript shows clean load SERVE, out-of-ball action REFUSE,
+tampered-certificate REFUSE, NaN-bound REFUSE, missing-manifest REFUSE,
+plus an entropy gate flagging collapsed (single-token) streams.
 
 \textbf{Working prototype.} This is not a design on paper. The repository
 contains 84 passing tests, a benchmark harness, and measured results on a
@@ -109,10 +112,10 @@ hash-frozen split): reference accuracy 0.4468; calibrated INT8 at
 $1.997\times$ compression, 0.4466 (the honest classical comparator);
 tensor-compressed routes at $2.5$--$2.9\times$ with sound certificates on
 every one of 168 compressed layers across every configuration tested. The
-pre-registered capability gate (ratio $\ge 2\times$ AND accuracy within
-$0.05$ of reference) is answered: the training-free route misses it
-($0.1640$ at $2.536\times$, failure mechanism identified --- mode collapse),
-and repair training on the compressed model clears it ($0.4535$ at
+pre-registered capability gate (ratio $\ge 2\times$, accuracy $\ge 0.3968$,
+fixed pre-run) is answered: the training-free route misses it
+($0.1640$ at $2.536\times$ via single-token mode collapse),
+and repair training on the compressed model (arm N9, below) clears it ($0.4535$ at
 $2.46\times$, non-overlapping confidence interval above the uncompressed
 reference, certificates re-derived from the final deployed weights). Both
 verdicts, the negative one included, are reported in full in the technical
@@ -176,12 +179,13 @@ tensor route is NO-GO: best certified point $0.1640$ at $2.536\times$, with
 the failure mechanism identified (mode collapse to the modal action token;
 the agreement-vs-compression curve is bimodal, not gradual). The
 trained-repair route is GO: a rank-8 adapter trained 1{,}200 steps on
-train-split episodes only (contamination-checked against the frozen split),
+train-split episodes only (frozen eval episodes excluded and verified),
 merged into the compressed model, re-evaluated on the full protocol ---
-$0.4535$ at $2.46\times$ honest ratio, Wilson 95\% CI $[0.4506, 0.4564]$
-non-overlapping above the uncompressed reference's $[0.4439, 0.4497]$, with
+$0.4535$ at $2.46\times$ honest ratio, 95\% Wilson interval $[0.4506, 0.4564]$
+non-overlapping above the reference's $[0.4439, 0.4497]$, with
 certificates re-derived from the final deployed weights (168/168 exact) at
-a cost of one SVD per layer. Phase 2 escalates the remaining levers in cost
+a cost of one SVD per layer. Phase-2 replication targets mean $\pm$
+standard deviation over 3 independent seeds. Phase 2 escalates the remaining levers in cost
 order: activation-aware rank allocation, and backbone scale (a $1.5$--$7$B
 backbone, whose weights carry the redundancy a $0.5$B LoRA-tuned model
 lacks --- at $2.5\times$ a $3$B model retains more absolute capacity than
@@ -237,14 +241,10 @@ fine-tuning harness, the tensor-compression kernel stack with its certificate
 algebra, the benchmark/ledger infrastructure with pre-registered gates, and
 the formal-methods integration --- evidenced by the public repository's
 measured results, 84-test suite, and reproducible artifact chain. Working
-practice follows the discipline the reviewers will look for: every reported
-number resolves to a run directory with environment snapshot; evaluation
-splits are frozen and hashed before experiments; negative results are
-reported first-class (the technical report's headline compression finding is
-an honest NO-GO under the pre-registered bar, with the failure characterized
-rather than framed). AI research agents were used as engineering leverage
-under the lead's direction; every claim is traceable to committed artifacts,
-and the experiment log records what was run, when, and why for every entry.
+practice: every number resolves to a run directory; eval splits frozen and
+hashed upfront; the training-free NO-GO reported first-class alongside the
+repair GO. AI agents leveraged under the lead's direction; all claims
+traceable to committed artifacts.
 
 % ---------------------------------------------------------------------------
 \section*{Enclosures}
@@ -252,7 +252,7 @@ and the experiment log records what was run, when, and why for every entry.
 \item \textbf{Public repository:} \url{https://github.com/ZakLr/qicert}
 --- README quickstart, pinned environment, 84-test suite, benchmark harness,
 experiment log, and every artifact behind the numbers above.
-\item \textbf{Technical report (7 pages):} \texttt{docs/technical-report-v2.pdf}
+\item \textbf{Technical report (8 pages):} \texttt{docs/technical-report-v2.pdf}
 in the repository --- method, theory, measured results incl.\ the negative
 capability result, ablation isolating the QI component, limitations, and a
 claim-to-artifact provenance map (Appendix~A) with seven artifact-generated

@@ -47,16 +47,20 @@ enough that an exact per-layer Lipschitz constant can be computed from the
 compressed weights themselves. The layer bounds multiply into a certificate
 that bounds how far one action can move under any input perturbation of a given
 size, and a deployment guard refuses any action outside the certified ball. We
-fine-tuned a 0.5B-parameter VLA on LIBERO-spatial to 0.4468 token-level action
-accuracy, then measured compression routes on a frozen 114{,}497-token
-evaluation split. Calibrated INT8 quantization is nearly lossless but plateaus
+fine-tuned a 0.5B-parameter vision--language--action model (VLA) on
+LIBERO-spatial to 0.4468 token-level action accuracy, then measured
+compression routes on a frozen 114{,}497-token evaluation split. Calibrated
+INT8 quantization is nearly lossless but plateaus
 at $1.997\times$ (0.4466) --- the ratio regime where its protection ends.
 TT compression with closed-form residual repair alone collapses at
-$2.5$--$2.9\times$ (0.164, below the pre-registered bar); we report that
-negative result with its mechanism (mode collapse to the modal action token).
+$2.5$--$2.9\times$ (0.164, below our pre-registered acceptance bar of
+compression $\ge 2\times$ at accuracy $\ge 0.3968$, fixed before any run);
+we report that negative result with its mechanism (mode collapse: the model
+emits only the single most-frequent action token).
 Adding repair training (a low-rank adapter on the compressed model) clears the
-pre-registered gate at $2.46\times$: accuracy $0.4535$ against the uncompressed
-reference's $0.4468$ (non-overlapping 95\% CIs), with certificates re-derived
+bar at $2.46\times$: accuracy $0.4535$ against the uncompressed
+reference's $0.4468$ (non-overlapping 95\% Wilson confidence intervals),
+with certificates re-derived
 from the final deployed weights on all 168 layers and the guard enforcing the
 bound at runtime. The safety side is measured end to end --- and a third mechanism
 watches the input stream itself: a shadow-syndrome monitor (classical-shadows
@@ -118,7 +122,8 @@ load time and, at each inference step, checks the predicted action against the
 certified ball, refusing to serve when the check fails.
 
 \subsection{Compression with an exact bound}
-Let $W \in \mathbb{R}^{M \times N}$ be a linear layer. TT-SVD~\cite{oseledets}
+Let $W \in \mathbb{R}^{M \times N}$ be a linear layer. Tensor-train SVD
+(TT-SVD)~\cite{oseledets}
 factorizes $W$ into cores $G_1,\dots,G_d$ along dimensional factorizations of
 $M$ and $N$, so that $W = \mathsf{TT}(G_1,\dots,G_d)$ exactly at full rank and
 approximately after truncating the singular values. Because
@@ -160,9 +165,9 @@ and completeness properties in SMT and asked Z3 to produce counterexamples;
 none exist, so the accept set of the guard is machine-checked against the
 specification rather than argued informally. The same properties plus the
 bound-composition step (Eq.~\eqref{eq:chain} chaining) are additionally
-proved in Lean~4 (`lean/`, `lake build` clean, zero `sorry`, foundation-only
-axioms) --- proof terms instead of solver queries, pinned to the same
-checker the deployment enforces.
+proved in Lean~4 (the Lean proof assistant; `lean/` builds with no errors
+and no proof gaps) --- proof terms instead of solver queries, pinned to the
+same checker the deployment enforces.
 
 \subsection{Statistical estimation stack}
 Bounded per-step behavior does not by itself bound the tail of a trajectory.
@@ -233,7 +238,9 @@ mechanical read of run artifacts, not a judgement call.
 \caption{Measured compression routes on the frozen split
 (114{,}497 action tokens, seed 0). Accuracy is token-level action accuracy.
 ``Sound'' counts layers whose certificate check passed. INT8 admits no
-comparable certificate by construction (Sec.~\ref{sec:abl}).}
+comparable certificate by construction (Sec.~\ref{sec:abl}). ``N9'' names
+the repair-training arm detailed below (compress, then train a small
+adapter on the collapsed model, then re-evaluate).}
 \label{tab:main}
 \begin{tabular}{@{}lccc@{}}
 \toprule
@@ -259,24 +266,27 @@ signal, not redundancy, on spectra whose participation ratios (40--845 across
 the 168 layers, Fig.~\ref{fig:spectra}, appendix) show no compressible tail
 at these ratios. The closed-form residual route recovers the policy only
 partially (0.164 at $2.5$--$2.9\times$): under the pre-registered gate of
-Section~3, the training-free route is a NO-GO, and the failure has a specific mechanism
---- the compressed models emit only the modal action token, matching the
-reference on exactly its modal-token frequency (584/1007 in the degradation
-probe; three distinct configurations scored the same 86/704 base rate), so
+Section~3, the training-free route is a NO-GO (our term for a gate verdict
+of ``fail''; GO means ``pass''), and the failure has a specific mechanism
+--- the compressed models emit only the modal (most frequent) action token,
+matching the reference on exactly its modal-token frequency (584 of 1007
+reference tokens in the small-sample degradation probe; three distinct
+configurations scored the same 86/704 base rate), so
 the agreement curve is bimodal, not gradual. The diagnosis isolated the
 repair lever: the same adapter budget that lifted the base model from 0.11
 to 0.4468, applied to the collapsed model. Repair training (a rank-8 adapter
 trained for 1{,}200 steps on train-split episodes only --- a contamination
 check excludes all 108 frozen eval episodes --- merged and evaluated on the
 full protocol) recovers the policy completely: \textbf{0.4535 at $2.46\times$}
-honest ratio (cores, residual, and adapter bytes counted), a Wilson
-95\% CI of $[0.4506, 0.4564]$ that does not overlap the reference's
-$[0.4439, 0.4497]$. Under the pre-registered gate this is the first GO:
+honest ratio (cores, residual, and adapter bytes counted), a Wilson-score
+95\% confidence interval (CI) of $[0.4506, 0.4564]$ that does not overlap
+the reference's $[0.4439, 0.4497]$. Under the pre-registered gate this is the first GO:
 both conditions hold --- ratio $\ge 2\times$ and accuracy above the bar ---
 with certificates re-derived from the final deployed weights (exact dense
 spectral norms, 168/168 layers) and the adapter's contribution to the bound
 accounted. The repair cost (1{,}200 steps, $\sim$8 min) is charged to this
-arm under the matched-budget rule. We report the training-free failure as a
+arm under the matched-budget rule (both arms compared at equal total
+compute, per the challenge's fair-comparison requirement). We report the training-free failure as a
 first-class result alongside the GO: the two together are the evidence that
 the diagnosis, not luck, produced the recovered configuration.
 
@@ -297,7 +307,7 @@ soundness check; the layer bound of Eq.~\eqref{eq:chain} is computed from
 cores alone and verified against a dense reference per layer. The
 commuting-Pauli interaction compiler, which prunes exactly-evaluable operator
 families, predicts pruning error that tracks measurement at median Pearson
-$r = 0.975$ over 12 independent operator tables, with compiler identity
+$r = 0.975$ over 12 independently generated operator test cases, with compiler identity
 verified to $2.3\times10^{-14}$ relative error.Per-layer contraction on the CPU edge profile costs $3.1$--$15.2\times$ the dense fp16 kernel time at
 these shapes (Fig.~\ref{fig:latency}, appendix) yet stays within the 100~ms
 per-step budget of the challenge's latency benchmark on every measured path;
@@ -306,7 +316,9 @@ route on this profile.
 
 The runtime monitor is the third safety mechanism, aimed at the input stream
 rather than the action. A classical-shadows sketch (64 random projections of
-the watched latent) feeds a median-of-means gate with a design false-alarm
+the watched latent) feeds a median-of-means gate (an estimator that splits
+samples into groups, averages within groups, then takes the median across
+groups for outlier robustness) with a design false-alarm
 rate of 0.01 backed by the concentration theorem; a syndrome check on the
 compiler's diagonal tables catches bit-flip corruption of the watched
 patterns. Measured on the edge profile: null false-alarm 0.0000 over
@@ -423,16 +435,16 @@ framing of the challenge statement is only partially realized.
 \label{sec:resources}
 
 All experiments ran on one NVIDIA RTX~5060 Laptop GPU (8~GB); per-run wall
-times, GPU name, and energy fields are recorded in
-\texttt{results/ledger.csv}, and the cumulative declaration is
-\texttt{docs/resource-declaration.md}. Software: PyTorch (CUDA), NumPy/SciPy,
+times, GPU name, and energy fields are recorded in the supplementary
+machine-readable run ledger, with the cumulative declaration alongside it.
+Software: PyTorch (CUDA), NumPy/SciPy,
 the in-repo TT kernels, Z3 for the SMT falsification, CUDA-Q for the
 amplification simulation; pinned versions ship in the repository. Every
-number in this report resolves to a run directory under \texttt{results/}
-via the map in Appendix~A, the experiment log
-(\texttt{results/EXPERIMENT-LOG.md}) records what was run and why for every
-entry, and the figures are regenerated from artifacts by a single script
-(\texttt{scripts/make\_report\_figures.py}). The evaluation split was frozen
+number in this report resolves to a run directory in the supplementary
+artifact bundle via the map in Appendix~A, a chronological experiment log
+records what was run and why for every
+entry, and the figures are regenerated from artifacts by a single
+reproduction script. The evaluation split was frozen
 and hashed before compression experiments began, so no result below was
 tuned on its own evaluation set; the pre-registered gates were committed
 before the runs they judge. A clean-environment path runs the full smoke
@@ -502,7 +514,11 @@ for Large-Scale Machine-Learning Models,'' \emph{Nature Communications},
 \section{Number-to-Artifact Map}
 \label{app:map}
 Every quantitative claim above resolves to files in the public repository.
-Reviewers can regenerate any row from its directory.
+Reviewers can regenerate any row from its directory. The short codes in
+paths name the experimental arm that produced them: N8C = calibrated-INT8
+reference, N2 = uniform tensor-train truncation, N2R2 = tensor-train plus
+closed-form residual repair, N9/N9C = repair-training prefix/full-confirm,
+N10MON = runtime monitor, E-comp/E6/E7 = compiler/latency/ablation fixtures.
 
 \begin{table}[h]
 \centering
@@ -549,9 +565,8 @@ Lean proofs (composition + guard, zero \texttt{sorry}) &
 \texttt{lean/QicertProofs/Qicert.lean} \\
 INT8 calibration ablation &
 \texttt{results/E7-int8-ablation/*/run.json} \\
-Pre-registered gate text &
-\texttt{N2R-SEARCH-CONFIG.md};\newline
-\texttt{scripts/run\_remaining\_experiments.py} \\
+Pre-registered gate text (search design + verdict rule) &
+supplementary design note and queue-runner source (same repo) \\
 \bottomrule
 \end{tabular}
 \end{table}
