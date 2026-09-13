@@ -144,6 +144,12 @@ def _main() -> int:
     ap = argparse.ArgumentParser(description="collect per-channel calibration stats")
     ap.add_argument("--ckpt", default=str(repo / "weights" / "ckpt" / "checkpoints"
                                            / "step-122500-epoch-55-loss=0.0743.pt"))
+    ap.add_argument("--ft-llm", default="",
+                    help="optional FT llm_backbone handoff (e.g. "
+                         "results/N1v2-ckpt/seed1.pt): installs its "
+                         "llm_backbone weights onto the base VLA before "
+                         "collecting, so stats reflect the fine-tuned model. "
+                         "Empty = base weights (seed-0 convention).")
     ap.add_argument("--npz-root", default=str(repo / "weights"
                                                / "libero_spatial_no_noops_npz"))
     ap.add_argument("--split", default=str(repo / "results" / "eval_split.json"))
@@ -171,6 +177,13 @@ def _main() -> int:
     print(f"[calibrate] loading VLA from {args.ckpt}", flush=True)
     vla = load_vla(args.ckpt, hf_token=None, load_for_training=False)
     vla = vla.to(dtype=torch.float16, device="cuda")
+    if args.ft_llm:
+        ft = torch.load(args.ft_llm, map_location="cpu", weights_only=True)
+        ft_llm = ft["llm_backbone"] if "llm_backbone" in ft else ft
+        vla.llm_backbone.load_state_dict(ft_llm, strict=False)
+        del ft, ft_llm
+        print(f"[calibrate] installed FT llm weights from {args.ft_llm}",
+              flush=True)
     vla.llm_backbone.eval()
 
     ep_ds = NpzEpisodeDataset(args.npz_root)
@@ -194,6 +207,7 @@ def _main() -> int:
                                       device="cuda", dtype=torch.float16)
     save_stats(stats, _Path(args.out), meta={
         "ckpt": args.ckpt,
+        "ft_llm": args.ft_llm or "base (no FT weights installed)",
         "npz_root": args.npz_root,
         "split": args.split,
         "episodes_scope": "train (from results/eval_split.json)",

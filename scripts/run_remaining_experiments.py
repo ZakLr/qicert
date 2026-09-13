@@ -43,7 +43,11 @@ superseding the stale Kaggle-T4 estimates):
  12 n9-confirm     N9 full-protocol confirm (~30 min; full 6496-batch eval
                     of saved merged weights + re-derived dense certs +
                     adapter-counted ratio; the REPORTABLE N9 row)
- 13 summary         collect every verdict into results/QUEUE-SUMMARY.json
+ 13 calib-s1/s2     per-seed activation stats from each seed's FT weights
+                    (~5 min each; N9 repair must NOT reuse seed-0 stats)
+ 14 n9-repair-s1/s2 N9 repair per seed (~100 min each; per-seed QICERT_CALIB)
+ 15 n9-confirm-s1/s2 N9 full confirm per seed (~30 min each)
+ 16 summary         collect every verdict into results/QUEUE-SUMMARY.json
 
 Every stage skips itself if its artifact already exists (so re-running the
 script after an interruption continues where it stopped, never repeating a
@@ -210,8 +214,8 @@ def n2r2_verdict() -> dict:
 
 # artifact-completion tests --------------------------------------------------
 
-def done_calib() -> bool:
-    if not CALIB.exists():
+def done_calib(path: Path = CALIB) -> bool:
+    if not path.exists():
         return False
     try:
         code = ("import sys; sys.path.insert(0, r'%s'); "
@@ -219,11 +223,39 @@ def done_calib() -> bool:
                 "s = load_stats(r'%s'); "
                 "v = s[next(iter(s))]; "
                 "print('MEAN_OK' if 'mean_abs' in v else 'MEAN_MISSING')"
-                % (REPO / "python", CALIB))
+                % (REPO / "python", path))
         out = subprocess.run([PY, "-c", code], capture_output=True, text=True)
         return "MEAN_OK" in out.stdout
     except Exception:
         return False
+
+
+def _calib_seed_path(s: int) -> Path:
+    return REPO / "results" / "N2R" / f"calib_seed{s}.npz"
+
+
+def _ft_seed_ok(s: int) -> bool:
+    """Seed-s FT checkpoint exists (n1v2 must have finished it)."""
+    p = FT_DIR / f"seed{s}.pt"
+    return p.exists()
+
+
+def _n9c_seed_done(s: int) -> bool:
+    """N9C full-split confirm completed for seed s."""
+    root = REPO / "results" / "N9C"
+    if not root.exists():
+        return False
+    for rj in root.glob("*/run.json"):
+        try:
+            r = json.loads(rj.read_text())
+        except Exception:
+            continue
+        res = r.get("results", {}) or {}
+        if (r.get("status") == "completed"
+                and res.get("seed") == s
+                and "full-split" in str(res.get("eval_scope", ""))):
+            return True
+    return False
 
 
 def done_n2r2_weighted() -> bool:
@@ -626,6 +658,88 @@ STAGES: list[dict] = [
              "QICERT_N2_EVAL": "full"}),
     },
     {
+        "name": "calib-s1",
+        # Per-seed activation stats from the seed-1 FT weights (~3 min GPU).
+        # N9 repair for seed 1 must NOT reuse seed-0 stats.
+        "expect_min": 5,
+        "allow": lambda a: ("calib-s1" not in a.exclude and _ft_seed_ok(1)),
+        "done": lambda: done_calib(_calib_seed_path(1)),
+        "cmd": lambda: (
+            [PY, "-m", "qicert.calibrate",
+             "--ft-llm", str(FT_DIR / "seed1.pt"),
+             "--out", str(_calib_seed_path(1)), "--seed", "1"],
+            ENV_BASE),
+    },
+    {
+        "name": "calib-s2",
+        "expect_min": 5,
+        "allow": lambda a: ("calib-s2" not in a.exclude and _ft_seed_ok(2)),
+        "done": lambda: done_calib(_calib_seed_path(2)),
+        "cmd": lambda: (
+            [PY, "-m", "qicert.calibrate",
+             "--ft-llm", str(FT_DIR / "seed2.pt"),
+             "--out", str(_calib_seed_path(2)), "--seed", "2"],
+            ENV_BASE),
+    },
+    {
+        "name": "n9-repair-s1",
+        "expect_min": 100,
+        "allow": lambda a: ("n9-repair-s1" not in a.exclude
+                            and done_calib(_calib_seed_path(1))),
+        "done": lambda: (REPO / "results" / "N9-repaired"
+                         / "repaired_seed1.pt").exists(),
+        "cmd": lambda: (
+            BENCH + ["--module", "n9_repair", "--rows", "repair",
+                     "--out", "results", "--exp-id", "N9", "--seed", "1",
+                     "--run-tag", "n9-repair-frac0.50-rr64-seed1"],
+            {**ENV_BASE, "QICERT_FT_CKPT": str(FT_DIR),
+             "QICERT_CALIB": str(_calib_seed_path(1)),
+             "QICERT_N2_EVAL": "full"}),
+    },
+    {
+        "name": "n9-confirm-s1",
+        "expect_min": 30,
+        "allow": lambda a: ("n9-confirm-s1" not in a.exclude
+                            and (REPO / "results" / "N9-repaired"
+                                 / "repaired_seed1.pt").exists()),
+        "done": lambda: _n9c_seed_done(1),
+        "cmd": lambda: (
+            BENCH + ["--module", "n9_repair", "--rows", "repair-confirm",
+                     "--out", "results", "--exp-id", "N9C", "--seed", "1",
+                     "--run-tag", "n9-confirm-seed1", "--capture", "heavy"],
+            {**ENV_BASE, "QICERT_FT_CKPT": str(FT_DIR),
+             "QICERT_N2_EVAL": "full"}),
+    },
+    {
+        "name": "n9-repair-s2",
+        "expect_min": 100,
+        "allow": lambda a: ("n9-repair-s2" not in a.exclude
+                            and done_calib(_calib_seed_path(2))),
+        "done": lambda: (REPO / "results" / "N9-repaired"
+                         / "repaired_seed2.pt").exists(),
+        "cmd": lambda: (
+            BENCH + ["--module", "n9_repair", "--rows", "repair",
+                     "--out", "results", "--exp-id", "N9", "--seed", "2",
+                     "--run-tag", "n9-repair-frac0.50-rr64-seed2"],
+            {**ENV_BASE, "QICERT_FT_CKPT": str(FT_DIR),
+             "QICERT_CALIB": str(_calib_seed_path(2)),
+             "QICERT_N2_EVAL": "full"}),
+    },
+    {
+        "name": "n9-confirm-s2",
+        "expect_min": 30,
+        "allow": lambda a: ("n9-confirm-s2" not in a.exclude
+                            and (REPO / "results" / "N9-repaired"
+                                 / "repaired_seed2.pt").exists()),
+        "done": lambda: _n9c_seed_done(2),
+        "cmd": lambda: (
+            BENCH + ["--module", "n9_repair", "--rows", "repair-confirm",
+                     "--out", "results", "--exp-id", "N9C", "--seed", "2",
+                     "--run-tag", "n9-confirm-seed2", "--capture", "heavy"],
+            {**ENV_BASE, "QICERT_FT_CKPT": str(FT_DIR),
+             "QICERT_N2_EVAL": "full"}),
+    },
+    {
         "name": "n10-scale",
         # CPU-only (SVD work + state dicts in system RAM); first launch adds
         # a ~3 GB HF download. Two full SVD passes per layer per plan at
@@ -645,7 +759,7 @@ STAGES: list[dict] = [
 def stage_preflight(stage: dict) -> None:
     """Per-stage code double-checks (compile + import)."""
     m = stage["name"]
-    if m in ("calib-topup",):
+    if m in ("calib-topup", "calib-s1", "calib-s2"):
         preflight_pycompile(["python/qicert/calibrate.py"])
         preflight_import("qicert.calibrate")
     elif m == "n2r2-search":
@@ -669,7 +783,8 @@ def stage_preflight(stage: dict) -> None:
     elif m == "n1v2":
         preflight_pycompile(["bench/compress.py", "bench/all.py"])
         preflight_import("bench.compress")
-    elif m in ("n9-repair", "n9-confirm"):
+    elif m in ("n9-repair", "n9-confirm", "n9-repair-s1", "n9-confirm-s1",
+               "n9-repair-s2", "n9-confirm-s2"):
         preflight_pycompile(["bench/n9_repair.py", "bench/n2_sweep.py",
                              "python/qicert/compress_residual.py"])
         preflight_import("bench.n9_repair")

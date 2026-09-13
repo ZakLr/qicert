@@ -202,9 +202,15 @@ never the chained ball as an operational number.
    requested) — small-sample agreement, fine for collapse detection, too
    small for precise partial-degradation estimates.
 3. **N1v2 baseline seeds 1 & 2** — challenge requires ≥3 independent runs, mean ± std.
-   Only seed 0 exists. Stage `n1v2` (~1–2 h on the 5060) trains seeds 1,2 (batch 2,
-   1200 steps). A prior bug (−-seeds never wired → seed1.pt was a byte-duplicate of
-   seed0.pt) is FIXED in code; the duplicate checkpoints are detected by hash and re-run.
+   **Seed 1 DONE 2026-09-13 ~19:33 UTC: 0.3970** (`results/N1v2-ckpt/seed1.pt`,
+   genuine weights — hash differs from seed 0; `baseline_seed1.json`). Below
+   seed 0's 0.4468 by 0.05 and a hair under the §9a 0.40 gate — report honestly,
+   do not hide; per-seed repair lift is the evidence that matters.
+   **Seed 2 INTERRUPTED:** the `--seeds 1,2` process died silently ~19:34 UTC
+   ~30 s into the seed-2 VLA reload (log ends mid-load, no traceback — external
+   kill/OOM/closed terminal, not a code error; the module already frees GPU
+   cache between seeds). GPU idle, nothing partial. Recovery: rerun seed 2
+   alone (`--seeds 2`; seed-1 artifacts already on disk).
 
 ## 3. How to run things (commands that WORK — validated 2026-09-13)
 
@@ -224,11 +230,14 @@ cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert"
 # pending - see below):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n9-repair
 
-# N9-CONFIRM (NEW, code+tests green, not yet run on GPU - ~30 min):
-#   full 6496-batch eval of results/N9-repaired/repaired_seed0.pt +
-#   re-derived dense certs (SVD/layer) + adapter-counted ratio + GO/NO-GO.
-#   THIS is the reportable N9 row.
+# N9-CONFIRM (RAN 2026-09-13 ~18:06 UTC: GO — 0.4535 @2.459× honest,
+# full-split seed 0, artifact results/N9C/5085c6d99434_repair-confirm-seed0/):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n9-confirm
+
+# Per-seed pipeline for seeds 1-2 (READY, gated on n1v2 + per-seed calib):
+#   calib-s1/s2 (per-seed stats via --ft-llm) -> n9-repair-s1/s2
+#   (per-seed QICERT_CALIB) -> n9-confirm-s1/s2. Run after n1v2 lands:
+.venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only calib-s1,calib-s2,n9-repair-s1,n9-confirm-s1,n9-repair-s2,n9-confirm-s2
 
 # N10 scale probe (NEW, validated, not yet run - ~1.5-2 h CPU, no GPU):
 #   Qwen2.5-1.5B backbone, same TT+residual machinery, recon/spectrum/
@@ -318,10 +327,14 @@ time — two concurrent GPU jobs froze this machine before.
 - `results/_archive_20260913_meansearch/` — pre-rerun archive (13 N2R2 dirs +
   5 empty N2R-search stubs + `MANIFEST.json`). Read-only; never feed back into
   the queue globs.
-- `results/logs/queue/manual-rerun-20260913.log` — live log of the fresh queue
-  (PID 792); per-stage logs in `results/logs/queue/<stage>.log`.
-- `results/lyapunov/degradation_seed0.json`, `predictor.json` — N5 outputs (do not
-  exist yet).
+- `results/logs/queue/<stage>.log` — per-stage logs (n9-confirm, n9-repair,
+  n1v2 currently live).
+- `results/lyapunov/degradation_seed0.json`, `predictor.json` — N5 outputs
+  (5 points, predictor vacuous — see §2 item 2).
+- `results/N9/`, `results/N9-repaired/`, `results/N9C/` — repair prefix run,
+  merged repaired ckpts, full-split confirms (seed 0 GO).
+- `results/N2R/calib_seed{s}.npz` — per-seed activation stats (seed 0 exists;
+  seeds 1–2 via `calib-s1/s2` stages using `calibrate.py --ft-llm`).
 - `results/EXPERIMENT-LOG.md` — chronological what/why/result per experiment. APPEND
   a dated entry for every new run; never put a number in a report without a run dir.
 - `results/ledger.csv` — every run's row (config_hash keyed).
@@ -352,11 +365,11 @@ at runtime by a guard that refuses out-of-ball actions (Z3-falsified checker, gu
 demo transcript). Sound on 168/168 layers in all compression runs. INT8 cannot state
 this kind of bound.
 
-**Claim 2 (measured, honest):** calibrated INT8 is ~lossless at 2× and WINS accuracy
-at that ratio; our TT+residual at 2.5–2.9× is certificate-sound but accuracy-collapsed
-in the first weighted configuration. We report that plainly (challenge §5.5 rewards
-honest characterization). The search/confirm decides whether any config closes the
-gap at >2×.
+**Claim 2 (measured, honest):** calibrated INT8 is ~lossless at 2×. The
+TRAINING-FREE TT+residual route collapses at 2.5–2.9× (kept as the honest
+middle of the arc). The TRAINED repair route (N9) reaches 0.4535 @2.459×
+honest ratio, seed-0 full-split GO — accuracy parity-plus WITH certificates.
+Multi-seed replication pending (§9a).
 
 **Claim 3 (design tool):** N5 degradation curve + predictor turns "post-hoc luck"
 into "predict the max safe compression from cheap probes" — pending the N5 stages.
