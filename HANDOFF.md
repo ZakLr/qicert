@@ -112,6 +112,17 @@ time — two concurrent GPU jobs froze this machine before.
    wired in `bench/all.py` (silent duplicate seeds); `lyapunov_curve._collect_preds`
    called `harness._split_stream` when None; `n2r2_sweep._record_n2r2_point` had a
    `ttsplit` NameError.
+7. **First search launch failed silently (2026-09-13 10:27)** — n2r_search's lazy
+   `from .compress_residual import ...` resolved against the *bench* package (that
+   module lives at `python/qicert/compress_residual.py`), so ALL 5 candidates died
+   with ModuleNotFoundError while the stage exited rc=0 and the queue reported
+   COMPLETE. Fixed: imports hoisted to module top level (preflight now catches),
+   `done()` for n2r2-search requires a selectable candidate, and main() hard-fails
+   the queue when the search produced none. ALSO: the ref-pred cache break counted
+   TOKENS (`total >= n_batches*2`) instead of batches — the "40-batch" cache held
+   89 tokens (~5 batches) and did not cover the candidate prefix; now counts
+   batches, matching `_score_candidate`. (`_split_stream` is a lambda building a
+   fresh stream per call, so repeated iteration across candidates is safe.)
 
 ## 5. Artifact map (where the evidence lives)
 

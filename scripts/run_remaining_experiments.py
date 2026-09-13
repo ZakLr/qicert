@@ -289,6 +289,18 @@ def _candidate_best_acc(dir_path: Path):
     return float(acc)
 
 
+def _search_has_completed_candidate() -> bool:
+    """Stage n2r2-search is done only if >=1 candidate recorded a usable run.
+
+    2026-09-13: the first search launch had every candidate FAIL at runtime
+    (ModuleNotFoundError) yet the stage exited rc=0 and wrote no candidate
+    dirs — the queue then 'completed' while achieving nothing.  done() now
+    requires a selectable candidate, and main() hard-fails the queue when
+    the search produced none (see the n2r2-search post-check).
+    """
+    return _confirmation_candidate() is not None
+
+
 def _confirmation_candidate():
     """Pick one searched configuration to confirm, with a deterministic tie-break.
 
@@ -389,7 +401,7 @@ STAGES: list[dict] = [
         "name": "n2r2-search",
         "expect_min": 60,  # ~12 min compress per candidate x 4-5 + seconds eval
         "allow": lambda a: "n2r2-search" not in a.exclude,
-        "done": lambda: (REPO / "results" / "N2R-search").exists(),
+        "done": lambda: _search_has_completed_candidate(),
         "cmd": lambda: (
             BENCH + ["--module", "n2r_search", "--rows=n2r-search",
                      "--out", "results", "--exp-id", "N2R2",
@@ -674,8 +686,15 @@ def main() -> int:
                 print(f"\n=== N2R-search CANDIDATE FOR CONFIRMATION:", flush=True)
                 print(json.dumps(cand, indent=2), flush=True)
             else:
-                print(f"\n=== N2R-search: no candidate selected (no search results)",
-                      flush=True)
+                # 2026-09-13: all candidates failed (or produced no usable
+                # rows) -> the queue must NOT report success.  The stage log
+                # has the per-candidate tracebacks.
+                ok = False
+                print(f"\n!!! n2r2-search produced NO usable candidate "
+                      f"(all candidates failed or empty). See "
+                      f"results/logs/queue/n2r2-search.log — queue marked "
+                      f"FAILED.", flush=True)
+                break
         if name == "n2r2-confirm":
             cand = _confirmation_candidate()
             print(f"\n=== N2R-confirm target: {cand}", flush=True)

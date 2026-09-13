@@ -91,6 +91,18 @@ from .n2r2_sweep import (
     _load_activation_weights,
     _record_n2r2_point,
 )
+from .n2r_sweep import _dense_from_comp
+# 2026-09-13: hoisted from function bodies.  The old lazy
+# `from .compress_residual import ...` resolved against the *bench* package
+# (bench.compress_residual -- nonexistent) and failed only at runtime, so
+# every search candidate died with ModuleNotFoundError while the stage
+# still exited rc=0.  A top-level import lets preflight import checks
+# catch any recurrence.
+from qicert.compress_residual import (
+    compressed_params,
+    layer_report,
+    svd_residual,
+)
 
 _DEFAULT_KEEP = "q_proj,k_proj,v_proj,o_proj"
 
@@ -170,9 +182,15 @@ def _compute_reference_preds(harness, n_batches: int) -> tuple[np.ndarray, int]:
     vla = harness.vla
     preds_all: list[np.ndarray] = []
     total = 0
+    n_seen = 0
     t0 = _time.perf_counter()
+    # 2026-09-13: break on BATCH count (n_seen), not tokens.  The old
+    # `total >= n_batches * 2` token heuristic stopped after ~5 batches at
+    # ~17.6 tokens/batch, so the "40-batch" ref cache held ~89 tokens and
+    # did not cover the candidate prefix.  Now identical in semantics to
+    # _score_candidate (which counts batches).
     for b in harness._split_stream():
-        if total >= n_batches * 2:
+        if n_seen >= n_batches:
             break
         input_ids = b["input_ids"].cuda()
         attention_mask = b["attention_mask"].cuda()
@@ -192,8 +210,7 @@ def _compute_reference_preds(harness, n_batches: int) -> tuple[np.ndarray, int]:
         if mask.any():
             preds_all.append(preds[mask].cpu().numpy().astype(np.int32))
             total += int(mask.sum().item())
-        if len(preds_all) >= n_batches:
-            break
+        n_seen += 1
     return (
         np.concatenate(preds_all) if preds_all else np.array([], np.int32),
         total,
@@ -398,8 +415,6 @@ def _run_search(out: list[str], ctx=None) -> None:
                     cap = max(0, budget - tt_params - info["M"] - info["N"])
                     r_eff = int(min(cfg["residual_rank_cap"], cap // (info["M"] + info["N"])))
                     w = act_w.get(key) if mode == "weighted" else None
-                    from .compress_residual import svd_residual
-                    from .n2r_sweep import _dense_from_comp
                     comp_l = svd_residual(
                         cs.arrays, info["m_dims"], info["n_dims"], W,
                         residual_rank=max(r_eff, 0),
@@ -408,11 +423,9 @@ def _run_search(out: list[str], ctx=None) -> None:
                     )
                     Wc = _dense_from_comp(comp_l, info["m_dims"], info["n_dims"])
                     comp[key] = torch.from_numpy(Wc.astype(np.float16))
-                    from .compress_residual import compressed_params
                     total_comp += compressed_params(comp_l)
                     total_dense += info["dense_params"]
                     n_compressed += 1
-                    from .compress_residual import layer_report
                     rep = layer_report(comp_l, W, info["m_dims"], info["n_dims"])
                     if rep["sound"]:
                         n_sound += 1
@@ -661,8 +674,6 @@ def _run_confirm(out: list[str], ctx=None) -> None:
             cap = max(0, budget - tt_params - info["M"] - info["N"])
             r_eff = int(min(rrank, cap // (info["M"] + info["N"])))
             w = act_w.get(key) if mode == "weighted" else None
-            from .compress_residual import svd_residual
-            from .n2r_sweep import _dense_from_comp
             comp_l = svd_residual(
                 cs.arrays, info["m_dims"], info["n_dims"], W,
                 residual_rank=max(r_eff, 0),
@@ -671,11 +682,9 @@ def _run_confirm(out: list[str], ctx=None) -> None:
             )
             Wc = _dense_from_comp(comp_l, info["m_dims"], info["n_dims"])
             comp[key] = torch.from_numpy(Wc.astype(np.float16))
-            from .compress_residual import compressed_params
             total_comp += compressed_params(comp_l)
             total_dense += info["dense_params"]
             n_compressed += 1
-            from .compress_residual import layer_report
             rep = layer_report(comp_l, W, info["m_dims"], info["n_dims"])
             if rep["sound"]:
                 n_sound += 1
