@@ -1,0 +1,3 @@
+cpp/build/
+cpp/qicert_cpp_selftest
+cpp/*.o
