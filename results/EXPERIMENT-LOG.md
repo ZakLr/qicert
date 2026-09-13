@@ -577,3 +577,47 @@ accuracy is far below the 0.3968 bar everywhere searched.
 weighted, mixed semantics REPAIRED so attention projections are actually
 kept full-precision — expect a lower true ratio than the invalid 4.07x
 search row) under the full 6496-batch protocol.
+
+---
+
+## 2026-09-13 (midday) — confirm attempt interrupted; stat=mean identified
+## as the accuracy collapse driver; no valid result invalidated
+
+**Run:** confirm stage launched with the search-selected config
+(frac 0.33, rr32, weighted, **stat=mean**, mixed now genuinely keeping
+attention projections — compression took ~8 min vs ~12, confirming ~72
+layers skipped). Interrupted by operator Ctrl+C at eval batch ~1400/6496
+(running acc ~0.04); KeyboardInterrupt hit the queue's log reader, not the
+bench. No run.json was written (recording happens post-eval), so there is
+no partial artifact and nothing to clean up.
+
+**Finding — calibration weighting is the dominant accuracy factor:**
+
+| config (all weighted, full-split) | stat | ratio | acc |
+|---|---|---|---|
+| frac 0.50, rr32 | absmax | ~2.9x | **0.1639** |
+| frac 0.50, rr64 | absmax | 2.54x | **0.1640** |
+| frac 0.50, rr32/64, frac0.33 arms | mean | 2.5–4.1x | 0.031–0.122 (search-prefix; full-split was heading to ~0.04) |
+
+Mean-weighted residuals dilute the correction budget evenly across
+channels; absmax concentrates it on the high-activation outlier channels
+that carry the signal (AWQ-style intuition). On this backbone that choice
+is worth roughly 4–5x in accuracy at matched compression. Decision:
+**absmax is the pre-registered weighting; mean stays in the record as a
+measured negative ablation.** The search-stage env had set STAT=mean —
+that was the configuration error, not the pipeline.
+
+**Runner changes (this commit):**
+1. Candidate selection now prefers a *completed absmax full-split point*
+   over any search-selected config — the queue will not re-confirm a
+   known-worse region. With current artifacts the confirm target is
+   frac0.50/rr32/absmax/weighted/no-mixed (run `9eb9c9803844`), which is
+   already complete, so `--only n2r2-search,n2r2-confirm` now no-ops
+   through both stages and exits clean.
+2. `_confirmation_done()` now also matches `calib_stat` (was blind to it).
+3. Queue prints the N2R2 GATE verdict right after the confirm stage.
+4. Search-stage env reverted to STAT=absmax with the evidence annotated
+   inline (a forced re-search would explore the right region).
+
+Nothing run before today is invalidated by this; the invalid rows are only
+the mixed-semantics ones flagged in the previous entry.

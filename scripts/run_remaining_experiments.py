@@ -326,6 +326,34 @@ def _confirmation_candidate():
       2. otherwise the highest-search-acc candidate overall
     If nothing was searched yet, return None.
     """
+    # 2026-09-13: absmax decisively beats mean on this backbone (search arms
+    # 0.031-0.122; full-split absmax 0.164; the interrupted mean-stat confirm
+    # was heading to ~0.04).  If a completed absmax full-split point exists,
+    # prefer it over the search-selected config instead of re-confirming a
+    # known-worse region of the grid.
+    root = REPO / "results" / "N2R2"
+    if root.exists():
+        for rj in sorted(root.glob("*/run.json"), reverse=True):
+            try:
+                r = json.loads(rj.read_text())
+            except Exception:
+                continue
+            res = r.get("results", {}) or {}
+            if (res.get("fit_mode") == "weighted"
+                    and (res.get("calib_stat") or "mean") == "absmax"
+                    and res.get("mixed_allocation") is not True
+                    and r.get("status") == "completed"
+                    and "full-split" in str(res.get("eval_scope", ""))
+                    and res.get("plan_fraction") is not None):
+                return {
+                    "plan": str(res.get("plan_fraction")),
+                    "rrank": str(res.get("residual_rank_cap")),
+                    "mode": "weighted",
+                    "mixed": False,
+                    "stat": "absmax",
+                    "tt_split": str(res.get("tt_split", 0.6)),
+                    "source_dir": str(rj.parent),
+                }
     dirs = _search_candidate_dirs()
     if not dirs:
         return None
@@ -366,6 +394,7 @@ def _confirmation_done():
             continue
         res = r.get("results", {}) or {}
         if (res.get("fit_mode") == _confirm_mode()
+                and (res.get("calib_stat") or "mean") == _confirm_stat()
                 and res.get("plan_fraction") == float(_confirm_plan())
                 and res.get("residual_rank_cap") == int(_confirm_rrank())
                 and bool(res.get("mixed_allocation")) == bool(_confirm_mixed())
@@ -424,7 +453,12 @@ STAGES: list[dict] = [
                      "--out", "results", "--exp-id", "N2R2",
                      "--run-tag", "N2R2-search"],
             {**ENV_BASE, "QICERT_N2_EVAL": "full",
-             "QICERT_N2R2_MODE": "weighted", "QICERT_N2R2_STAT": "mean",
+             # stat: absmax, NOT mean -- evidence 2026-09-13: every mean-stat
+             # arm measured erratic/bad (search 0.031-0.122; full-split
+             # confirm interrupted at acc~0.04) while the pre-registered
+             # absmax runs measured 0.164 full-split.  absmax concentrates
+             # residual correction on outlier channels; mean dilutes it.
+             "QICERT_N2R2_MODE": "weighted", "QICERT_N2R2_STAT": "absmax",
              "QICERT_N2R2_PLANS": "0.50,0.33",
              "QICERT_N2R2_RRANKS": "32,64",
              "QICERT_N2R2_MIXED": "1",              "QICERT_N2R_TTSPLIT": "0.6",
@@ -715,6 +749,10 @@ def main() -> int:
         if name == "n2r2-confirm":
             cand = _confirmation_candidate()
             print(f"\n=== N2R-confirm target: {cand}", flush=True)
+            v = n2r2_verdict()
+            print(f"\n=== N2R2 GATE after confirm: "
+                  f"{'GO' if v['go'] else 'NO-GO'} ({v['bar']}; "
+                  f"best={v['best']})", flush=True)
         if name == "n2r2-weighted":
             v = n2r2_verdict()
             print(f"\n=== N2R-v2 GATE: {'GO' if v['go'] else 'NO-GO'} "
