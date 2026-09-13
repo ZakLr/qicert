@@ -172,6 +172,63 @@ def test_manifest_missing_artifact_refused(tmp_path):
     assert "missing" in res["reason"]
 
 
+# --------------------------------------------------------------------------
+# 2. ActionDiversityMonitor — collapse/degeneracy flag (measured 2026-09-13:
+#    deep TT compression collapses the VLA to one modal token; a certificate
+#    on such a model is sound-but-vacuous, so the guard must flag it)
+# --------------------------------------------------------------------------
+
+def _diversity_monitor(*, window=8, min_entropy_bits=1.0):
+    from qicert.certify.guard import ActionDiversityMonitor
+    return ActionDiversityMonitor(window=window,
+                                  min_entropy_bits=min_entropy_bits)
+
+
+def test_diversity_collapsed_stream_warns():
+    """Eight identical tokens (the measured collapse signature) must warn."""
+    m = _diversity_monitor()
+    statuses = [m.update(151515)["status"] for _ in range(8)]
+    assert statuses[:-1] == ["ok"] * 7, statuses      # window filling
+    assert statuses[-1] == "warn", statuses           # full degenerate window
+    last = m.update(151515)
+    assert last["entropy_bits"] == pytest.approx(0.0)
+    assert last["n_unique"] == 1
+
+
+def test_diversity_varied_stream_ok():
+    """A healthy alternating stream stays ok with ~2 bits of entropy."""
+    m = _diversity_monitor()
+    r = None
+    for a in [1, 2, 3, 4, 1, 2, 3, 4]:
+        r = m.update(a)
+    assert r["status"] == "ok", r
+    assert r["entropy_bits"] == pytest.approx(2.0)
+    assert r["n_unique"] == 4
+
+
+def test_diversity_warn_is_flag_not_refuse():
+    """Degeneracy must never refuse: a robot holding position is correct."""
+    m = _diversity_monitor()
+    for _ in range(8):
+        r = m.update(7)
+    assert r["status"] == "warn", r
+    assert "degenerate" in r["reason"]
+
+
+def test_diversity_reset_and_validation():
+    from qicert.certify.guard import ActionDiversityMonitor
+    m = _diversity_monitor()
+    for _ in range(8):
+        m.update(3)
+    assert m.update(3)["status"] == "warn"
+    m.reset()
+    assert m.update(3)["status"] == "ok"              # window filling again
+    with pytest.raises(ValueError):
+        ActionDiversityMonitor(window=1)
+    with pytest.raises(ValueError):
+        ActionDiversityMonitor(min_entropy_bits=-0.5)
+
+
 if __name__ == "__main__":
     import sys
     sys.exit(pytest.main(["-q", __file__]))

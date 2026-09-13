@@ -19,6 +19,11 @@ build_cpp/
 *.a
 *.so
 
+# Lean proof project (commit sources + pins, never build outputs)
+lean/.lake/
+lean/.elan/
+lean/build/
+
 # Local artifacts
 *.log
 *.ipynb_checkpoints/

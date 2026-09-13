@@ -1,0 +1,11 @@
+name = "qicert-proofs"
+version = "0.1.0"
+defaultTargets = ["QicertProofs"]
+
+[[lean_lib]]
+name = "QicertProofs"
+
+[[require]]
+name = "batteries"
+git = "https://github.com/leanprover/std4"
+rev = "v4.21.0"

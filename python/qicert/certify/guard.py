@@ -94,6 +94,70 @@ def check_certs_before_serve(run_dir: Path) -> dict[str, Any]:
                       f"bounds finite"}
 
 
+class ActionDiversityMonitor:
+    """Entropy gate over a sliding window of served action tokens.
+
+    Motivation (measured 2026-09-13): deep TT compression collapses the VLA
+    to a single modal action token. A per-layer Lipschitz certificate on such
+    a model is sound-but-vacuous — the guard's ball check never fires because
+    the model only ever emits one action. This monitor closes that hole by
+    flagging degenerate output streams at deployment time.
+
+    Design note: low diversity is a WARN, never a refuse. A robot
+    holding position legitimately repeats one action token; refusing there
+    would break correct behavior. The flag tells the operator (or the
+    fallback controller) that the certificate currently attests to a
+    degenerate policy.
+    """
+
+    def __init__(self, window: int = 64, min_entropy_bits: float = 1.0):
+        if window < 2:
+            raise ValueError("window must be >= 2")
+        if min_entropy_bits < 0:
+            raise ValueError("min_entropy_bits must be >= 0")
+        self.window = int(window)
+        self.min_entropy_bits = float(min_entropy_bits)
+        self._hist: list[int] = []
+
+    def update(self, action: int) -> dict[str, Any]:
+        """Record one served action; warn on a full degenerate window."""
+        self._hist.append(int(action))
+        if len(self._hist) > self.window:
+            self._hist.pop(0)
+        if len(self._hist) < self.window:
+            return {"status": "ok", "reason": "window filling",
+                    "entropy_bits": None,
+                    "n_unique": len(set(self._hist)),
+                    "window": self.window}
+        ent = self.entropy_bits()
+        if ent < self.min_entropy_bits:
+            return {"status": "warn",
+                    "reason": "degenerate action stream: entropy "
+                              f"{ent:.3f} bits < {self.min_entropy_bits:.3f} "
+                              f"over last {self.window} actions",
+                    "entropy_bits": ent,
+                    "n_unique": len(set(self._hist)),
+                    "window": self.window}
+        return {"status": "ok", "reason": "action diversity sufficient",
+                "entropy_bits": ent,
+                "n_unique": len(set(self._hist)),
+                "window": self.window}
+
+    def entropy_bits(self) -> float:
+        """Shannon entropy (bits) of the current window's empirical distribution."""
+        n = len(self._hist)
+        if n == 0:
+            return 0.0
+        counts: dict[int, int] = {}
+        for a in self._hist:
+            counts[a] = counts.get(a, 0) + 1
+        return float(-sum((c / n) * math.log2(c / n) for c in counts.values()))
+
+    def reset(self) -> None:
+        """Clear the window (e.g. on episode boundary)."""
+        self._hist.clear()
+
+
 def action_in_certified_set(action: int, reference: int, margin: float,
                             n_actions: int) -> bool:
     """Per-step gate: |action - reference| <= margin (token-line metric).

@@ -1,5 +1,7 @@
 # qicert
 
+[![clean-env smoke](https://github.com/ZakLr/qicert/actions/workflows/ci.yml/badge.svg)](https://github.com/ZakLr/qicert/actions/workflows/ci.yml)
+
 **Certified quantum-inspired compression for VLAMs, with exact bounds, provable
 interaction pruning, and formal safety tails — everything reproducible from one
 `pip install`.**
@@ -8,6 +10,14 @@ interaction pruning, and formal safety tails — everything reproducible from on
 python -m qicert.bench.all     # reproduces every table in the report
 python -m qicert.bench.all --rows=smoke   # CI smoke set (tiny, fast)
 ```
+
+## Machine-checked core claims
+
+`lean/` holds Lean 4 proofs (`lake build` clean, zero `sorry`): bound
+composition (`prod_le_prod_of_pointwise`, the report's Eq. 1 chaining step)
+and guard soundness/completeness (`guard_sound`, `guard_complete`),
+mirroring the Z3 checks in `tests/test_certify_guard.py`. Scope boundary
+stated in `lean/README.md`.
 
 ## Session entry point
 
