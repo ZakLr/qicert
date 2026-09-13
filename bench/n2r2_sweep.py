@@ -72,6 +72,21 @@ def _keep_types() -> set[str]:
     return {t.strip() for t in env.split(",") if t.strip()}
 
 
+def _is_kept(layer_type: str, keep_types) -> bool:
+    """Mixed-allocation match by projection suffix.
+
+    Audit 2026-09-13: layer_type values from _llm_linear_keys are the full
+    dashed names ("self_attn-q_proj", "mlp-gate_proj") while keep_types
+    holds bare projection names ("q_proj", ...).  The old direct
+    membership test was therefore ALWAYS False and every 'mixed' run
+    silently kept zero layers, degenerating into a duplicate of the
+    non-mixed arm.  Matching on the suffix after the last '-' restores
+    the intended semantics for both bare and prefixed env values.
+    """
+    suffix = layer_type.rsplit("-", 1)[-1]
+    return suffix in {k.rsplit("-", 1)[-1] for k in keep_types}
+
+
 def _load_activation_weights(inventory, stat: str) -> dict[str, np.ndarray]:
     """Per-layer weight vector w_j from the calibration npz (train episodes).
 
@@ -216,7 +231,7 @@ def _run_n2r2(out: list[str], ctx=None) -> None:
                         info = plan_info[key]
                         W = merged[key].detach().float().cpu().numpy()
                         M, N = info["M"], info["N"]
-                        if mixed and layer_type in keep_types:
+                        if mixed and _is_kept(layer_type, keep_types):
                             # Mixed allocation: keep FULL-precision. Honest
                             # storage: the dense params count as compressed.
                             comp[key] = merged[key].clone()

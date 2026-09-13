@@ -88,6 +88,7 @@ from .n2r2_sweep import (
     _plans_from_env as _n2r2_plans_from_env,
     _rranks_from_env as _n2r2_rranks_from_env,
     _keep_types as _n2r2_keep_types,
+    _is_kept,
     _load_activation_weights,
     _record_n2r2_point,
 )
@@ -398,7 +399,7 @@ def _run_search(out: list[str], ctx=None) -> None:
                     info = plan_info[key]
                     W = merged[key].detach().float().cpu().numpy()
                     M, N = info["M"], info["N"]
-                    if cfg["mixed_allocation"] and layer_type in cfg["keep_types"]:
+                    if cfg["mixed_allocation"] and _is_kept(layer_type, cfg["keep_types"]):
                         comp[key] = merged[key].clone()
                         total_comp += info["dense_params"]
                         total_dense += info["dense_params"]
@@ -657,7 +658,7 @@ def _run_confirm(out: list[str], ctx=None) -> None:
             info = plan_info[key]
             W = merged[key].detach().float().cpu().numpy()
             M, N = info["M"], info["N"]
-            if mixed and layer_type in keep_types:
+            if mixed and _is_kept(layer_type, keep_types):
                 comp[key] = merged[key].clone()
                 total_comp += info["dense_params"]
                 total_dense += info["dense_params"]

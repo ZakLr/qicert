@@ -530,3 +530,50 @@ Code complete and tested (80 tests passing), experiments staged per
 
 No result claims added for un-run experiments. Every number above has an
 artifact or a re-run command in this log.
+
+---
+
+## 2026-09-13 (morning) — N2R-search run + two audit bugs found in it
+
+**Run:** `scripts/run_remaining_experiments.py --only n2r2-search,n2r2-confirm`
+(80/80 preflight tests pass; ref-pred cache fixed: 704 tokens over 40
+batches; all 5 candidates completed in 50.7 min; 840/840 compressed layers
+certificate-sound across the search.) Stage log:
+`results/logs/queue/n2r2-search.log`; rows in `results/N2R2/*search-*`.
+
+**Search rows (search-prefix eval, 40 batches / 704 tokens, NOT reportable):**
+
+| config | ratio | search acc | agreement | sound |
+|---|---|---|---|---|
+| weighted rr32 frac0.50 | 2.86x | 0.0312 | 0.129 | 168/168 |
+| weighted rr64 frac0.50 | 2.54x | 0.1151 | 0.533 | 168/168 |
+| "mixed" rr32 frac0.50 (INVALID, see below) | 2.86x | 0.0312 | 0.129 | 168/168 |
+| "mixed" rr64 frac0.33 (INVALID, see below) | 3.46x | 0.1222 | 0.582 | 168/168 |
+| "mixed" rr32 frac0.33 (INVALID, see below) | 4.07x | 0.1222 | 0.585 | 168/168 |
+
+No candidate reached the provisional GO bar (0.30).
+
+**Two audit bugs found the same morning (fixed, commit pending):**
+1. Mixed allocation was a silent no-op: `_llm_linear_keys` yields dashed
+   layer types (`self_attn-q_proj`) while `keep_types` holds bare names
+   (`q_proj`), so `layer_type in keep_types` was always False and every
+   "mixed" candidate kept 0 layers — the mixed rows above are duplicates of
+   the non-mixed arms at the same (frac, rr). Invalid as mixed evidence.
+   Retrospective flag: the earlier full-split run
+   `45a8d6f5...n2r2-weighted-mixed-0.500-rr32` has the same tell (ratio and
+   acc identical to its non-mixed twin) and is likewise invalid as mixed
+   evidence; its TT numbers remain valid as plain weighted points.
+2. Candidate selection scanned `results/N2R-search/` while rows were
+   recorded under `results/N2R2/` (stage shares --exp-id N2R2) — the queue
+   printed NO-candidate after a successful search. Selector now scans by
+   the `search_acc` marker field.
+
+**What the search legitimately shows:** residual budget is the accuracy
+lever (rr64 roughly 3.7x the accuracy of rr32 at frac 0.50 with mean
+weighting: 0.115 vs 0.031), all configs keep certificates sound, and
+accuracy is far below the 0.3968 bar everywhere searched.
+
+**Next:** confirm stage re-runs the selected config (frac 0.33, rr32,
+weighted, mixed semantics REPAIRED so attention projections are actually
+kept full-precision — expect a lower true ratio than the invalid 4.07x
+search row) under the full 6496-batch protocol.

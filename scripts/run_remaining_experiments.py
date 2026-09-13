@@ -263,10 +263,27 @@ import bench.n2r_search
 # ---- confirmation candidate selection (reads search results) --------------
 
 def _search_candidate_dirs():
-    root = REPO / "results" / "N2R-search"
-    if not root.exists():
-        return []
-    return sorted(root.glob("*"))
+    """Run dirs holding search rows.
+
+    Audit 2026-09-13: the search stage runs under --exp-id N2R2, so its
+    rows land in results/N2R2/ (the recorder keys dirs by experiment id),
+    NOT in results/N2R-search/.  Search rows are identified by carrying
+    results.search_acc (only _run_search writes that field); this also
+    keeps full-protocol confirm rows (no search_acc, full-split scope)
+    from being mistaken for candidates.
+    """
+    dirs: list[Path] = []
+    for root in (REPO / "results" / "N2R2", REPO / "results" / "N2R-search"):
+        if not root.exists():
+            continue
+        for rj in sorted(root.glob("*/run.json")):
+            try:
+                j = json.loads(rj.read_text())
+            except Exception:
+                continue
+            if "search_acc" in (j.get("results", {}) or {}):
+                dirs.append(rj.parent)
+    return sorted(set(dirs))
 
 
 def _candidate_provgo(dir_path: Path):
