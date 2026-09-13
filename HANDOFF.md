@@ -1,15 +1,17 @@
 # HANDOFF.md — read this first if you are a new model/session taking over
 
-**Last verified:** 2026-09-13 ~21:45 UTC — pipeline running, website plan locked.
-**HEADLINE — the capability gate is PASSED, now replicated:** N9 repair
-training (LoRA r=8, 1200 steps, train-split only) on the compressed model,
-then full-protocol confirms: seed 0 — **0.4535 @2.459×** (`results/N9C/
-5085c6d99434_repair-confirm-seed0/`, CI [0.4506, 0.4564], +0.0068 vs FT
-0.4468 [0.4439, 0.4497], 168/168 certs); seed 1 — **0.4609 @2.459×**
-(`results/N9C/d2474aa428e7_repair-confirm-seed1/`, CI [0.4580, 0.4638],
-+0.0639 vs its FT 0.3970, 168/168, hardest lift); seed 2 confirm running
-(~21:42 UTC start, expect ~22:05). Two-seed mean 0.4572, both GO over the
-0.3968 bar. Training-free route NO-GO (0.164 @2.536×, mode collapse) kept
+**Last verified:** 2026-09-13 ~22:10 UTC — pipeline COMPLETE, all 3 confirms GO.
+**HEADLINE — replicated GO at 3 seeds:** N9 repair (LoRA r=8, 1200 steps,
+train-split only) on the compressed model, full-protocol confirms @2.459×
+honest ratio, 168/168 re-derived certs each: seed 0 — **0.4535** (CI
+[0.4506, 0.4564], +0.0068 vs FT 0.4468); seed 1 — **0.4609** (CI [0.4580,
+0.4638], +0.0639 vs FT 0.3970, hardest lift); seed 2 — **0.4343** (−0.0177
+vs its FT 0.4520 — holds parity-ish below a strong baseline, still GO over
+the 0.3968 bar). Repair mean **0.4496 ± 0.0137** vs baseline mean **0.4319
+± 0.0303** (seeds 0.4468/0.3970/0.4520). Honest claim: match-or-beat with
+certificates, 2 of 3 above own baseline — NOT domination. Reports on
+`clean/docs-release` carry mean±std (8pp+3pp, 0 errors); resource ledger 66
+scored / 10.19 GPU-h. Training-free route NO-GO (0.164 @2.536×, mode collapse) kept
 as the honest middle. Both docs now tell this story: `docs/technical-
 report-v2.pdf` (8 pp) and `docs/concept-proposal.pdf` (3 pp) freshly
 scrubbed for cold readers (all IDs/terms defined on first use, appendix arm
@@ -202,7 +204,7 @@ chained ball.
    finished: 0.4468, 0.3970, 0.4520 → mean 0.4319 ±0.030 (sample std), all
    clear the 0.3968 gate. Per-seed calibrations present with `--ft-llm` fix
    (no reuse of seed-0 stats). N9 repairs: seed 1 GO 0.4609 already;
-   seed 2 confirm running (~21:42 UTC start).
+   seed 2 confirm DONE 22:00 UTC: 0.4343 GO (below own FT 0.4520, above bar).
 
 ## 3. How to run things (commands that WORK — validated 2026-09-13)
 
@@ -221,7 +223,7 @@ cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert"
 # N9 repair training (RAN seed 0: prefix 0.1586→0.4519, confirm GO 0.4535):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n9-repair
 
-# N9-CONFIRM (GO, now replicated: seed 0 0.4535, seed 1 0.4609, seed 2 running):
+# N9-CONFIRM (GO ×3: 0.4535 / 0.4609 / 0.4343 @2.459×, mean 0.4496±0.0137):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n9-confirm
 
 # Per-seed pipeline for seeds 1-2 (RUNNING — calib-s1/s2 done, repair-s1 done,
@@ -321,7 +323,7 @@ time — two concurrent GPU jobs froze this machine before.
 - `results/lyapunov/degradation_seed0.json`, `predictor.json` — N5 outputs
   (5 points, predictor vacuous — see §2 item 2).
 - `results/N9/`, `results/N9-repaired/`, `results/N9C/` — repair prefix runs,
-  merged repaired ckpts, full-split confirms (seeds 0–1 GO, seed 2 running).
+  merged repaired ckpts, full-split confirms (3/3 GO: 0.4535/0.4609/0.4343).
 - `results/N2R/calib_seed{s}.npz` — per-seed activation stats (seed 0 exists;
   seeds 1–2 via `calib-s1/s2` stages using `calibrate.py --ft-llm`).
 - `results/EXPERIMENT-LOG.md` — chronological what/why/result per experiment. APPEND
