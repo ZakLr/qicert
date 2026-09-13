@@ -52,9 +52,9 @@ sound on every compressed layer.
    crashed on launch last session; the crash (`harness._split_stream` NoneType +
    `dense_params` KeyError) is now fixed, but **no N5 results exist yet**.
 3. **N1v2 baseline seeds 1 & 2** — challenge requires ≥3 independent runs, mean ± std.
-   Only seed 0 exists. Stage `n1v2` (~20 h) trains seeds 1,2 (batch 2, 1200 steps).
-   A prior bug (−-seeds never wired → seed1.pt was a byte-duplicate of seed0.pt) is
-   FIXED in code; the duplicate checkpoints are detected by hash and re-run.
+   Only seed 0 exists. Stage `n1v2` (~1–2 h on the 5060) trains seeds 1,2 (batch 2,
+   1200 steps). A prior bug (−-seeds never wired → seed1.pt was a byte-duplicate of
+   seed0.pt) is FIXED in code; the duplicate checkpoints are detected by hash and re-run.
 
 ## 3. How to run things (commands that WORK — validated 2026-09-13)
 
@@ -79,9 +79,10 @@ GPU-busy check; per-stage compile+import double-check; live timestamped logs in
 `results/logs/queue/<stage>.log`; **auto-resume — completed stages skip on re-run**;
 gates: `n2r2-confirm` only runs if search picked a candidate; `n2r2-weighted`/`mixed`
 fallback stages only run if no search results exist; writes
-`results/QUEUE-SUMMARY.json` at the end. Expect **~4 h** for search+confirm,
-**~3 h** for the two N5 stages, **~20 h** for baseline seeds (run overnight).
-Run one thing at a time — two concurrent GPU jobs froze this machine before.
+`results/QUEUE-SUMMARY.json` at the end. Times MEASURED on the RTX 5060 (supersede
+the stale T4 estimates): search+confirm ~1.5 h total, both N5 stages ~1.5 h, baseline
+seeds 1+2 ~1–2 h (train ~8.5 min + full eval ~20.5 min per seed). Run one thing at a
+time — two concurrent GPU jobs froze this machine before.
 
 ## 4. Bugs fixed in this session (do not re-introduce)
 
@@ -91,16 +92,23 @@ Run one thing at a time — two concurrent GPU jobs froze this machine before.
    `k` undefined; both called `k.tt_svd(...)`. Both now use
    `from qicert.kernels import get_backend; k = get_backend()` like every sibling
    module.
-3. **Pixel device mismatch** — eval loops guarded pixel conversion with
+3. **Pixel device mismatch (THREE files)** — eval loops guarded pixel conversion with
    `hasattr(harness, "_to_half_cuda")`, but `_to_half_cuda` is a MODULE-level function
-   in `n2_sweep.py`, not a harness method → guard always False → CPU pixels to CUDA
-   model. Now calls the imported `_to_half_cuda(...)` directly.
+   in `n2_sweep.py`, not a harness method → guard always False → CPU/None pixels to
+   CUDA model. Fixed in `n2r_search.py` (both eval loops) AND `lyapunov_curve.py`
+   (N5 — this was the latent twin of the N2R bug, would have crashed n5-plain's
+   ref-pred collection). Also removed a duplicated `ref_cache` assignment in N5.
 4. **Verdict/resume helpers read phantom `run.json["config"]`** — RunRecorder schema is:
    config lives in sibling `config.json` (`{"config": {...}}`) and its fields are
    MIRRORED inside `run.json["results"]` (e.g. `results.fit_mode`, `results.ratio`,
    `results.eval_acc`). `run.json` has NO top-level `config`. This is why
    QUEUE-SUMMARY showed `best: null` despite three completed runs.
-5. Earlier session (already committed at `6b47326`): `--seeds` was parsed but never
+5. **Stale stage time estimates** — all `expect_min` values assumed Kaggle T4s; on the
+   5060 the real numbers (from your queue logs) are 3–8× smaller: calib ~3 min,
+   one full N2R2 point ~27 min (11.5 compress + 15 eval), search ~1 h (4–5 compress
+   passes + seconds-eval each), N5-plain ~45 min (3 plans), N5-weighted ~30 min
+   (2 plans), n1v2 seeds 1+2 ~1–2 h. Updated in the runner docstring + STAGES.
+6. Earlier session (already committed at `6b47326`): `--seeds` was parsed but never
    wired in `bench/all.py` (silent duplicate seeds); `lyapunov_curve._collect_preds`
    called `harness._split_stream` when None; `n2r2_sweep._record_n2r2_point` had a
    `ttsplit` NameError.

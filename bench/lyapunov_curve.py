@@ -210,7 +210,7 @@ def _run_degradation(out: list[str], ctx=None) -> None:
         return
 
     from .n2_sweep import _N2EvalHarness, _factor_dims, _llm_linear_keys, \
-        _rank_for_fraction
+        _rank_for_fraction, _to_half_cuda
     from .compress import CKPT
 
     base_sd = torch.load(str(CKPT), map_location="cpu", weights_only=True)
@@ -244,9 +244,6 @@ def _run_degradation(out: list[str], ctx=None) -> None:
         ["Seed", "Plan", "Rr", "Ratio", "Agreement", "n tokens",
          "Mean |dW| (spectral)", "Status"])
 
-    # ---- reference logits/agreement cache (measured once) ------------------
-    ref_cache = Path("results") / "lyapunov" / f"refpred_seed{seed}.npz"
-
     # ---- reference preds cache (measured once) -------------------------
     ref_cache = Path("results") / "lyapunov" / f"refpred_seed{seed}.npz"
 
@@ -273,8 +270,10 @@ def _run_degradation(out: list[str], ctx=None) -> None:
                     break
                 input_ids = b["input_ids"].cuda()
                 attention_mask = b["attention_mask"].cuda()
-                pixel_values = harness._to_half_cuda(b["pixel_values"]) \
-                    if hasattr(harness, "_to_half_cuda") else None
+                # _to_half_cuda is module-level (handles the DinoSigLIP dict);
+                # audit 2026-09-13: the old hasattr(harness, ...) guard was
+                # always False and passed pixel_values=None (device crash).
+                pixel_values = _to_half_cuda(b["pixel_values"])
                 labels = b["labels"].cuda()
                 with torch_.inference_mode(), \
                         torch_.autocast("cuda", dtype=torch_.float16):

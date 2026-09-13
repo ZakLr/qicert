@@ -18,20 +18,23 @@ Useful flags:
     --allow-busy-gpu    don't abort GPU stages when the GPU looks occupied
     --with-tests / --no-tests   full pytest before starting (default: on)
 
-Stages (in order; gates explained inline):
-  0 preflight       compile+import every touched module, full pytest
-  1 calib-topup     re-collect calibration stats (adds mean|activation|) ~10 min
-  2 n2r2-weighted   N2R-v2 activation-weighted residual, FULL-SPLIT (R1 gate)
-                    ~1.5-3 h   GATE: GO if some point ratio>=2x and acc>=0.3968
-                    (the pre-registered bar delta>=-0.05 vs FT 0.4468)
-  3 n2r2-mixed      mixed allocation point (q/k/v/o full precision) ~1 h
-                    ONLY runs if stage 2 is NO-GO
-  4 n5-plain        degradation curve, uniform truncation plans ~1.5-2 h
-  5 n5-weighted     degradation curve, weighted plans ~1 h
-  6 n5-predictor    CPU-only predictor fit (seconds) - needs >=5 points total
-  7 n1v2            baseline seeds 1 and 2 (18-24 h; runs both in one process,
+Stages (in order; gates explained inline; times measured on RTX 5060,
+superseding the stale Kaggle-T4 estimates):
+  0 preflight       compile+import every touched module, full pytest (~4 min)
+  1 calib-topup     re-collect calibration stats (adds mean|activation|) ~3 min
+  2 n2r2-search     cheap 40-batch-eval config search over 4-5 candidates ~1 h
+  3 n2r2-confirm    full-protocol run of the search-selected config ~30 min
+                    GATE (the pre-registered accuracy bar):
+                    GO if some full-split point ratio>=2x and acc>=0.3968
+                    (delta>=-0.05 vs FT 0.4468)
+  4 n2r2-weighted   fallback: two full points (only if no search artifacts)
+  5 n2r2-mixed      fallback: one mixed point (only if no search artifacts)
+  6 n5-plain        degradation curve, uniform truncation plans ~45 min
+  7 n5-weighted     degradation curve, weighted plans ~30 min
+  8 n5-predictor    CPU-only predictor fit (seconds) - needs >=3 points total
+  9 n1v2            baseline seeds 1 and 2 (~1-2 h; runs both in one process,
                     the bench loop clears GPU cache between seeds)
-  8 summary         collect every verdict into results/QUEUE-SUMMARY.json
+ 10 summary         collect every verdict into results/QUEUE-SUMMARY.json
 
 Every stage skips itself if its artifact already exists (so re-running the
 script after an interruption continues where it stopped, never repeating a
@@ -375,16 +378,16 @@ STAGES: list[dict] = [
         "allow": lambda a: True,
         "done": lambda: False,
         "cmd": lambda: None,          # handled specially
-    },
-    {
+    },    {
         "name": "calib-topup",
-        "expect_min": 10,
+        "expect_min": 3,   # measured 2.6 min on RTX 5060 (2026-09-12 queue log)
         "allow": lambda a: "calib" not in a.exclude,
         "done": lambda: done_calib(),
         "cmd": lambda: ([PY, "-m", "qicert.calibrate"], ENV_BASE),
-    },    {
+    },
+    {
         "name": "n2r2-search",
-        "expect_min": 40,
+        "expect_min": 60,  # ~12 min compress per candidate x 4-5 + seconds eval
         "allow": lambda a: "n2r2-search" not in a.exclude,
         "done": lambda: (REPO / "results" / "N2R-search").exists(),
         "cmd": lambda: (
@@ -402,7 +405,7 @@ STAGES: list[dict] = [
     },
     {
         "name": "n2r2-confirm",
-        "expect_min": 180,
+        "expect_min": 30,  # measured full point ~27 min (11.5 compress + 15 eval)
         "allow": lambda a: ("n2r2-confirm" not in a.exclude
                             and _confirmation_candidate() is not None),
         "done": lambda: _confirmation_done(),
@@ -421,7 +424,7 @@ STAGES: list[dict] = [
     },
     {
         "name": "n2r2-weighted",
-        "expect_min": 180,
+        "expect_min": 60,  # fallback: 2 full points x ~27 min (stale T4 est. was 180)
         "allow": lambda a: ("n2r2-weighted" not in a.exclude
                             and not (REPO / "results" / "N2R-search").exists()
                             and not _confirmation_candidate()),
@@ -437,7 +440,7 @@ STAGES: list[dict] = [
     },
     {
         "name": "n2r2-mixed",
-        "expect_min": 60,
+        "expect_min": 30,  # fallback: 1 full point ~27 min
         "allow": lambda a: ("n2r2-mixed" not in a.exclude
                             and not _confirmation_candidate()
                             and not n2r2_verdict()["go"]),
@@ -453,7 +456,7 @@ STAGES: list[dict] = [
     },
     {
         "name": "n5-plain",
-        "expect_min": 110,
+        "expect_min": 45,  # 3 plans x (~12 min compress + ~2 min 500-batch preds)
         "allow": lambda a: "n5-plain" not in a.exclude,
         "done": lambda: done_n5_points(3),
         "cmd": lambda: (
@@ -468,7 +471,7 @@ STAGES: list[dict] = [
     },
     {
         "name": "n5-weighted",
-        "expect_min": 70,
+        "expect_min": 30,  # 2 plans, ref cache reused
         "allow": lambda a: "n5-weighted" not in a.exclude,
         "done": lambda: done_n5_points(5),
         "cmd": lambda: (
@@ -494,7 +497,9 @@ STAGES: list[dict] = [
     },
     {
         "name": "n1v2",
-        "expect_min": 1200,
+        # Measured on 5060 (N1v2 seed-0 log): ~8.5 min train + ~20.5 min full eval
+        # per seed -> ~1-2 h for seeds 1+2 (stale T4 est. was 1200 min).
+        "expect_min": 120,
         "allow": lambda a: "n1v2" not in a.exclude,
         "done": lambda: done_n1v2_seeds(),
         "cmd": lambda: (
