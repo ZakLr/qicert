@@ -54,17 +54,21 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-PY = str(REPO / ".venv312" / "Scripts" / "python.exe")
+import sys as _sys
+PY = str(_sys.executable)
+sys.path.insert(0, str(REPO))
 LOGDIR = REPO / "results" / "logs" / "queue"
 FT_DIR = REPO / "results" / "N1v2-ckpt"
 CALIB = REPO / "results" / "N2R" / "calib_seed0.npz"
 
-ENV_BASE = {
-    **os.environ,
-    "PRISMATIC_DATA_ROOT": str(REPO / "weights" / "data"),
-    "PYTHONPATH": str(REPO / "python") + os.pathsep + str(REPO),
-    "PYTHONUNBUFFERED": "1",
-}
+_ENV = dict(os.environ)
+if "PYTHONPATH" in _ENV:
+    _ENV["PYTHONPATH"] = str(REPO / "python") + os.pathsep + str(REPO) + os.pathsep + _ENV["PYTHONPATH"]
+else:
+    _ENV["PYTHONPATH"] = str(REPO / "python") + os.pathsep + str(REPO)
+_ENV["PRISMATIC_DATA_ROOT"] = str(REPO / "weights" / "data")
+_ENV["PYTHONUNBUFFERED"] = "1"
+ENV_BASE = _ENV
 
 
 def sha256_file(p: Path) -> str:
@@ -244,6 +248,110 @@ def done_n1v2_seeds() -> bool:
 
 
 BENCH = [PY, "-m", "bench.all"]
+import bench.n2r_search
+
+# ---- confirmation candidate selection (reads search results) --------------
+
+def _search_candidate_dirs():
+    root = REPO / "results" / "N2R-search"
+    if not root.exists():
+        return []
+    return sorted(root.glob("*"))
+
+
+def _candidate_provgo(dir_path: Path):
+    try:
+        j = json.loads((dir_path / "run.json").read_text())
+    except Exception:
+        return False
+    r = j.get("results", {})
+    return bool(r.get("provisional_go"))
+
+
+def _candidate_best_acc(dir_path: Path):
+    try:
+        j = json.loads((dir_path / "run.json").read_text())
+    except Exception:
+        return None
+    r = j.get("results", {})
+    return r.get("search_acc")
+
+
+def _confirmation_candidate():
+    """Pick one searched configuration to confirm, with a deterministic tie-break.
+
+    Preference order:
+      1. a provisional-GO candidate with the highest search acc
+      2. otherwise the highest-search-acc candidate overall
+    If nothing was searched yet, return None.
+    """
+    dirs = _search_candidate_dirs()
+    if not dirs:
+        return None
+    go = [d for d in dirs if _candidate_provgo(d)]
+    pool = go if go else dirs
+    best = max(pool, key=_candidate_best_acc)
+    try:
+        j = json.loads((best / "run.json").read_text())
+    except Exception:
+        return None
+    cfg = j.get("config", {})
+    return {
+        "plan": str(cfg.get("plan_fraction")),
+        "rrank": str(cfg.get("residual_rank_cap")),
+        "mode": str(cfg.get("fit_mode", "weighted")),
+        "mixed": str(cfg.get("mixed_allocation", False)),
+        "stat": str(cfg.get("calib_stat", "mean") or "mean"),
+        "tt_split": str(cfg.get("tt_split", 0.6)),
+        "source_dir": str(best),
+    }
+
+
+def _confirmation_done():
+    root = REPO / "results" / "N2R2"
+    if not root.exists():
+        return False
+    for rj in sorted(root.glob("*/run.json"), reverse=True):
+        try:
+            r = json.loads(rj.read_text())
+        except Exception:
+            continue
+        cfg = r.get("config", {})
+        res = r.get("results", {})
+        if (cfg.get("fit_mode") == _confirm_mode()
+                and cfg.get("plan_fraction") == float(_confirm_plan())
+                and cfg.get("residual_rank_cap") == int(_confirm_rrank())
+                and cfg.get("mixed_allocation") == (_confirm_mixed() == "1")
+                and r.get("status") == "completed"
+                and "full-split" in str(res.get("eval_scope", ""))):
+            return True
+    return False
+
+
+def _confirm_mode():
+    c = _confirmation_candidate()
+    return c["mode"] if c else "weighted"
+
+
+def _confirm_stat():
+    c = _confirmation_candidate()
+    return c["stat"]
+
+
+def _confirm_plan():
+    c = _confirmation_candidate()
+    return c["plan"]
+
+
+def _confirm_rrank():
+    c = _confirmation_candidate()
+    return c["rrank"]
+
+
+def _confirm_mixed():
+    c = _confirmation_candidate()
+    return c["mixed"]
+
 
 STAGES: list[dict] = [
     {
@@ -259,11 +367,49 @@ STAGES: list[dict] = [
         "allow": lambda a: "calib" not in a.exclude,
         "done": lambda: done_calib(),
         "cmd": lambda: ([PY, "-m", "qicert.calibrate"], ENV_BASE),
+    },    {
+        "name": "n2r2-search",
+        "expect_min": 40,
+        "allow": lambda a: "n2r2-search" not in a.exclude,
+        "done": lambda: (REPO / "results" / "N2R-search").exists(),
+        "cmd": lambda: (
+            BENCH + ["--module", "n2r_search", "--rows=n2r-search",
+                     "--out", "results", "--exp-id", "N2R2",
+                     "--run-tag", "N2R2-search"],
+            {**ENV_BASE, "QICERT_N2_EVAL": "full",
+             "QICERT_N2R2_MODE": "weighted", "QICERT_N2R2_STAT": "mean",
+             "QICERT_N2R2_PLANS": "0.50,0.33",
+             "QICERT_N2R2_RRANKS": "32,64",
+             "QICERT_N2R2_MIXED": "1",              "QICERT_N2R_TTSPLIT": "0.6",
+             "QICERT_N2R_SEARCH_BATCHES": "40",
+             "QICERT_N2R_SEARCH_GO": "0.30",
+             "QICERT_FT_CKPT": str(FT_DIR)}),
+    },
+    {
+        "name": "n2r2-confirm",
+        "expect_min": 180,
+        "allow": lambda a: ("n2r2-confirm" not in a.exclude
+                            and _confirmation_candidate() is not None),
+        "done": lambda: _confirmation_done(),
+        "cmd": lambda: (
+            BENCH + ["--module", "n2r_search", "--rows=n2r-confirm",
+                     "--out", "results", "--exp-id", "N2R2",
+                     "--run-tag", "N2R2-confirm"],
+            {**ENV_BASE, "QICERT_N2_EVAL": "full",
+             "QICERT_N2R2_MODE": _confirm_mode(),
+             "QICERT_N2R2_STAT": _confirm_stat(),
+             "QICERT_N2R2_PLANS": _confirm_plan(),
+             "QICERT_N2R2_RRANKS": _confirm_rrank(),
+             "QICERT_N2R2_MIXED": "1" if _confirm_mixed() else "0",
+             "QICERT_N2R_TTSPLIT": "0.6",
+             "QICERT_FT_CKPT": str(FT_DIR)}),
     },
     {
         "name": "n2r2-weighted",
         "expect_min": 180,
-        "allow": lambda a: "n2r2-weighted" not in a.exclude,
+        "allow": lambda a: ("n2r2-weighted" not in a.exclude
+                            and not (REPO / "results" / "N2R-search").exists()
+                            and not _confirmation_candidate()),
         "done": lambda: done_n2r2_weighted(),
         "cmd": lambda: (
             BENCH + ["--module", "n2r2_sweep", "--rows=n2r2-go-no-go",
@@ -278,6 +424,7 @@ STAGES: list[dict] = [
         "name": "n2r2-mixed",
         "expect_min": 60,
         "allow": lambda a: ("n2r2-mixed" not in a.exclude
+                            and not _confirmation_candidate()
                             and not n2r2_verdict()["go"]),
         "done": lambda: done_n2r2_mixed(),
         "cmd": lambda: (
@@ -300,7 +447,9 @@ STAGES: list[dict] = [
                      "--run-tag", "N5-degradation-plain", "--capture", "heavy"],
             {**ENV_BASE, "QICERT_N5_PLANS": "0.50,0.33,0.25",
              "QICERT_N5_RRANKS": "32", "QICERT_N5_MODE": "plain",
-             "QICERT_N5_BATCHES": "500", "QICERT_FT_CKPT": str(FT_DIR)}),
+             "QICERT_N5_BATCHES": "500",
+             "QICERT_N2_EVAL": "full",
+             "QICERT_FT_CKPT": str(FT_DIR)}),
     },
     {
         "name": "n5-weighted",
@@ -313,7 +462,9 @@ STAGES: list[dict] = [
                      "--run-tag", "N5-degradation-weighted", "--capture", "heavy"],
             {**ENV_BASE, "QICERT_N5_PLANS": "0.50,0.33",
              "QICERT_N5_RRANKS": "32", "QICERT_N5_MODE": "weighted",
-             "QICERT_N5_BATCHES": "500", "QICERT_FT_CKPT": str(FT_DIR)}),
+             "QICERT_N5_BATCHES": "500",
+             "QICERT_N2_EVAL": "full",
+             "QICERT_FT_CKPT": str(FT_DIR)}),
     },
     {
         "name": "n5-predictor",
@@ -348,6 +499,16 @@ def stage_preflight(stage: dict) -> None:
     if m in ("calib-topup",):
         preflight_pycompile(["python/qicert/calibrate.py"])
         preflight_import("qicert.calibrate")
+    elif m == "n2r2-search":
+        preflight_pycompile(["bench/n2r_search.py", "bench/n2r2_sweep.py",
+                             "bench/n2_sweep.py",
+                             "python/qicert/compress_residual.py"])
+        preflight_import("bench.n2r_search")
+    elif m == "n2r2-confirm":
+        preflight_pycompile(["bench/n2r_search.py", "bench/n2r2_sweep.py",
+                             "bench/n2_sweep.py",
+                             "python/qicert/compress_residual.py"])
+        preflight_import("bench.n2r_search")
     elif m in ("n2r2-weighted", "n2r2-mixed"):
         preflight_pycompile(["bench/n2r2_sweep.py", "bench/n2_sweep.py",
                              "python/qicert/compress_residual.py"])
@@ -369,10 +530,12 @@ def run_preflight(args) -> bool:
     print("=== PREFLIGHT: compile + import all touched modules", flush=True)
     mods = ["python/qicert/calibrate.py", "python/qicert/compress_residual.py",
             "python/qicert/safety.py", "bench/n2r2_sweep.py",
-            "bench/lyapunov_curve.py", "bench/safety.py", "bench/compiler.py",
-            "bench/monitor.py", "bench/latency.py", "bench/all.py"]
+            "bench/n2r_search.py", "bench/lyapunov_curve.py", "bench/safety.py",
+            "bench/compiler.py", "bench/monitor.py", "bench/latency.py",
+            "bench/all.py"]
     preflight_pycompile(mods)
-    for mod in ("bench.n2r2_sweep", "bench.lyapunov_curve", "bench.safety",
+    for mod in ("bench.n2r2_sweep", "bench.n2r_search",
+                "bench.lyapunov_curve", "bench.safety",
                 "bench.compiler", "bench.monitor", "bench.latency"):
         preflight_import(mod)
     print("    compile+import OK", flush=True)
@@ -446,6 +609,20 @@ def main() -> int:
     if not run_preflight(args):
         return 2
 
+    # ---- search config summary before the search stage starts ---------------
+    print("\n--- N2R-search configuration plan", flush=True)
+    for cfg in bench.n2r_search._search_grid():
+        print("    candidate:", json.dumps(cfg, indent=2), flush=True)
+    print("    search budget:",
+          ENV_BASE.get("QICERT_N2R_SEARCH_BATCHES", "40 (stage default)"),
+          "batches", flush=True)
+    print("    provisional GO bar:",
+          ENV_BASE.get("QICERT_N2R_SEARCH_GO", "0.30 (stage default)"),
+          "search acc", flush=True)
+    print("    rules:",
+          "fixed budget, cached ref preds, conservative early stopping,",
+          "search != reported number", flush=True)
+
     ok = True
     for stage in STAGES:
         name = stage["name"]
@@ -471,6 +648,17 @@ def main() -> int:
                   f"Fix, then re-run this script — finished stages auto-skip.",
                   flush=True)
             break
+        if name == "n2r2-search":
+            cand = _confirmation_candidate()
+            if cand:
+                print(f"\n=== N2R-search CANDIDATE FOR CONFIRMATION:", flush=True)
+                print(json.dumps(cand, indent=2), flush=True)
+            else:
+                print(f"\n=== N2R-search: no candidate selected (no search results)",
+                      flush=True)
+        if name == "n2r2-confirm":
+            cand = _confirmation_candidate()
+            print(f"\n=== N2R-confirm target: {cand}", flush=True)
         if name == "n2r2-weighted":
             v = n2r2_verdict()
             print(f"\n=== N2R-v2 GATE: {'GO' if v['go'] else 'NO-GO'} "

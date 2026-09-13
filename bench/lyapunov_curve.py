@@ -221,7 +221,8 @@ def _run_degradation(out: list[str], ctx=None) -> None:
         W = llm_sd[key].detach().float().cpu().numpy()
         M, N = W.shape
         shapes[key] = {"layer_type": _lt, "M": M, "N": N,
-                       "m_dims": _factor_dims(M, d), "n_dims": _factor_dims(N, d)}
+                       "m_dims": _factor_dims(M, d), "n_dims": _factor_dims(N, d),
+                       "dense_params": M * N}
     del base_sd, llm_sd
     import gc as _gc
     _gc.collect()
@@ -246,7 +247,10 @@ def _run_degradation(out: list[str], ctx=None) -> None:
     # ---- reference logits/agreement cache (measured once) ------------------
     ref_cache = Path("results") / "lyapunov" / f"refpred_seed{seed}.npz"
 
-    def _collect_preds(comp_sd: dict | None) -> tuple[np.ndarray, int]:
+    # ---- reference preds cache (measured once) -------------------------
+    ref_cache = Path("results") / "lyapunov" / f"refpred_seed{seed}.npz"
+
+    def _collect_preds(harness, n_batches, comp_sd):
         """Token-level argmax preds over the first n_batches split batches.
 
         comp_sd None => the resident (reference) weights are scored.
@@ -254,40 +258,44 @@ def _run_degradation(out: list[str], ctx=None) -> None:
         Token ORDER is deterministic (fixed split prefix), so two calls are
         directly comparable element-wise.
         """
-        preds_all: list[np.ndarray] = []
-        total = 0
-        n = 0
-        t0 = time.perf_counter()
-        for b in harness._split_stream():
-            if n >= n_batches:
-                break
-            torch_ = harness.torch
-            vla = harness.vla
-            if comp_sd is not None:
-                vla.llm_backbone.load_state_dict(comp_sd, strict=False)
-            input_ids = b["input_ids"].cuda()
-            attention_mask = b["attention_mask"].cuda()
-            pixel_values = harness._to_half_cuda(b["pixel_values"]) \
-                if hasattr(harness, "_to_half_cuda") else None
-            labels = b["labels"].cuda()
-            with torch_.inference_mode(), \
-                    torch_.autocast("cuda", dtype=torch_.float16):
-                out_ = vla(input_ids=input_ids,
-                           attention_mask=attention_mask,
-                           pixel_values=pixel_values, labels=labels)
-            logits = out_.logits[:, harness.num_patches:-1]
-            preds = logits.argmax(dim=-1)
-            gt = labels[:, 1:].to(preds.device)
-            mask = gt > harness.action_tokenizer.action_token_begin_idx
-            if mask.any():
-                preds_all.append(preds[mask].cpu().numpy().astype(np.int32))
-                total += int(mask.sum().item())
-            n += 1
-            if n % 100 == 0 or n == n_batches:
-                el = time.perf_counter() - t0
-                print(f"    [preds {n}/{n_batches}] tokens={total} "
-                      f"elapsed={el:.0f}s", flush=True)
-        return np.concatenate(preds_all) if preds_all else np.array([], np.int32), total
+        torch_ = harness.torch
+        vla = harness.vla
+        if comp_sd is not None:
+            vla.llm_backbone.load_state_dict(comp_sd, strict=False)
+        try:
+            preds_all: list[np.ndarray] = []
+            total = 0
+            t0 = time.perf_counter()
+            for b in harness._split_stream():
+                if total >= n_batches * 2:
+                    # loose bound: stop once we have enough tokens (batches vary
+                    # in token count); ref/comp must use the SAME n_batches param
+                    break
+                input_ids = b["input_ids"].cuda()
+                attention_mask = b["attention_mask"].cuda()
+                pixel_values = harness._to_half_cuda(b["pixel_values"]) \
+                    if hasattr(harness, "_to_half_cuda") else None
+                labels = b["labels"].cuda()
+                with torch_.inference_mode(), \
+                        torch_.autocast("cuda", dtype=torch_.float16):
+                    out_ = vla(input_ids=input_ids,
+                               attention_mask=attention_mask,
+                               pixel_values=pixel_values, labels=labels)
+                logits = out_.logits[:, harness.num_patches:-1]
+                preds = logits.argmax(dim=-1)
+                gt = labels[:, 1:].to(preds.device)
+                mask = gt > harness.action_tokenizer.action_token_begin_idx
+                if mask.any():
+                    preds_all.append(preds[mask].cpu().numpy().astype(np.int32))
+                    total += int(mask.sum().item())
+                if total >= n_batches * 2 and len(preds_all) >= n_batches:
+                    break
+                if len(preds_all) >= n_batches:
+                    break
+            return np.concatenate(preds_all) if preds_all else np.array([], np.int32), total
+        finally:
+            # restore reference so the next call starts clean
+            harness._restore_reference()
 
     points: list[dict] = []
     rec_rows: list[dict] = []
@@ -300,11 +308,9 @@ def _run_degradation(out: list[str], ctx=None) -> None:
     else:
         print("[N5] measuring reference predictions (resident FT weights)...",
               flush=True)
-        ref_preds, ref_total = _collect_preds(None)
+        ref_preds, ref_total = _collect_preds(harness, n_batches, None)
         ref_cache.parent.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(ref_cache, preds=ref_preds, total=ref_total)
-        # restore the reference state explicitly (we never swapped, but the
-        # load path above with comp_sd=None left weights untouched)
     if ref_total == 0:
         out.append(f"| {seed} | - | - | - | FAIL (no scored tokens) |")
         return
@@ -344,7 +350,7 @@ def _run_degradation(out: list[str], ctx=None) -> None:
                         print(f"    layer {i_layer + 1}/{len(inventory)} "
                               f"mean|dW|={float(np.mean(devs)):.4f}", flush=True)
                 ratio = tot_d / max(tot_c, 1)
-                comp_preds, comp_total = _collect_preds(comp)
+                comp_preds, comp_total = _collect_preds(harness, n_batches, comp)
                 if comp_total != ref_total:
                     print(f"    WARNING: token count mismatch "
                           f"({comp_total} vs {ref_total}); using min",

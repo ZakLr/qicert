@@ -273,7 +273,7 @@ def _run_n2r2(out: list[str], ctx=None) -> None:
                                f"{acc:.4f} | {delta:+.4f} | {n_sound}/"
                                f"{n_compressed} | {status} |")
                     _record_n2r2_point(ctx, seed, frac, rrank, mode, mixed,
-                                       stat, ratio, acc, delta, n_sound,
+                                       stat, ttsplit, ratio, acc, delta, n_sound,
                                        n_compressed, n_kept, dt, layers_scope,
                                        eval_mode, ft_path,
                                        harness.batch_is_matched, ev)
@@ -298,7 +298,7 @@ def _run_n2r2(out: list[str], ctx=None) -> None:
                "R1 bar: some point at ratio >= 2x with delta >= -0.05.")
 
 
-def _record_n2r2_point(ctx, seed, frac, rrank, mode, mixed, stat, ratio, acc,
+def _record_n2r2_point(ctx, seed, frac, rrank, mode, mixed, stat, ttsplit, ratio, acc,
                        delta, n_sound, n_compressed, n_kept, dt, layers_scope,
                        eval_mode, ft_path, matched_batch, eval_info=None):
     """Record one N2R-v2 point (run.json + metrics + ledger row)."""
