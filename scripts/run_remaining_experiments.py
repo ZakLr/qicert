@@ -34,6 +34,12 @@ superseding the stale Kaggle-T4 estimates):
   8 n5-predictor    CPU-only predictor fit (seconds) - needs >=3 points total
   9 n1v2            baseline seeds 1 and 2 (~1-2 h; runs both in one process,
                     the bench loop clears GPU cache between seeds)
+ 10 n9-repair      post-compression LoRA repair training (~1.5 h; N2R2
+                    confirmed config, then r=8 LoRA x 1200 steps on
+                    train-only episodes; prefix evals + cert bookkeeping)
+ 11 n10-scale      Qwen2.5-1.5B backbone compression probe (~1-1.5 h +
+                    ~3 GB HF download; CPU-only weight-space measurement,
+                    no task-accuracy claim - see PHASE2-CASE.md)
  10 summary         collect every verdict into results/QUEUE-SUMMARY.json
 
 Every stage skips itself if its artifact already exists (so re-running the
@@ -247,6 +253,19 @@ def done_n5_points(min_points: int) -> bool:
         return len(pts) >= min_points
     except Exception:
         return False
+
+
+def _exp_complete(exp_id: str) -> bool:
+    """True once any run dir for this exp-id holds a completed run.json."""
+    import glob as _glob
+    import json as _json
+    for rj in _glob.glob(str(REPO / "results" / exp_id / "*" / "run.json")):
+        try:
+            if _json.loads(Path(rj).read_text()).get("status") == "completed":
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def done_n1v2_seeds() -> bool:
@@ -569,8 +588,36 @@ STAGES: list[dict] = [
             BENCH + ["--module", "compress", "--rows", "baseline-int8",
                      "--out", "results", "--exp-id", "N1v2",
                      "--seeds", "1,2", "--steps-per-seed", "1200",
-                     "--batch", "2", "--save-ckpt", str(FT_DIR),
+                     "--batch", "2",                     "--save-ckpt", str(FT_DIR),
                      "--run-tag", "host-seeds12"],
+            ENV_BASE),
+    },
+    {
+        "name": "n9-repair",
+        # Measured components on 5060: compress ~11.5 min + 2 prefix evals
+        # (~3 min at 600 batches) + 1200 LoRA steps (~55-70 min) + save.
+        "expect_min": 100,
+        "allow": lambda a: "n9-repair" not in a.exclude,
+        "done": lambda: _exp_complete("N9"),
+        "cmd": lambda: (
+            BENCH + ["--module", "n9_repair", "--rows", "repair",
+                     "--out", "results", "--exp-id", "N9",
+                     "--run-tag", "n9-repair-frac0.50-rr64"],
+            {**ENV_BASE, "QICERT_FT_CKPT": str(FT_DIR),
+             "QICERT_N2_EVAL": "full"}),
+    },
+    {
+        "name": "n10-scale",
+        # CPU-only (SVD work + state dicts in system RAM); first launch adds
+        # a ~3 GB HF download. Two full SVD passes per layer per plan at
+        # 1.5B shapes (~15 s/layer) -> ~1.5-2 h for 196 layers x 2 plans.
+        "expect_min": 110,
+        "allow": lambda a: "n10-scale" not in a.exclude,
+        "done": lambda: _exp_complete("N10"),
+        "cmd": lambda: (
+            BENCH + ["--module", "n10_scale", "--rows", "scale-probe",
+                     "--out", "results", "--exp-id", "N10",
+                     "--run-tag", "n10-qwen25-1_5b"],
             ENV_BASE),
     },
 ]

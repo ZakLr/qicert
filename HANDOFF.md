@@ -1,6 +1,20 @@
 # HANDOFF.md — read this first if you are a new model/session taking over
 
-**Last verified:** 2026-09-13 ~13:07 UTC, commit `40519a4` on `main`.
+**Last verified:** 2026-09-13 ~17:30 UTC, commit after `56169dc` on `main`.
+**Docs current as of this date:** `docs/technical-report-v2.pdf` (8 pp, 0 errors,
+0 overfull; search verdict + mode-collapse diagnosis folded into Limitations &
+Expected Impact) and `docs/concept-proposal.pdf` (3 pp, validation plan updated:
+Phase-1 capability experiment completed NO-GO, design-tool claim re-scoped to a
+Phase-2 collapse-boundary detector). `PHASE2-CASE.md` (new) holds the full
+failure analysis: how the pre-registered bar was set (FT 0.4468 − 0.05), the
+three untested levers, the costed arm ladder, and the certificate-impact of
+repair training (re-derived from final weights, one SVD/layer, ~2% ratio cost).
+**Final remaining GPU experiment:** baseline seeds 1–2 (`--only n1v2`, ~1–2 h).
+**New experiments ready (added this session, validated by compile+tests only —
+not yet run on GPU):** `n9-repair` (post-compression LoRA repair training on the
+already-compressed seed-0 model, ~1.5 h) and `n10-scale` (Qwen2.5-1.5B
+LLM-backbone compression scale probe, ~3–4 h, first launch downloads ~3 GB
+weights from HF). See §3 for commands and `PHASE2-CASE.md` §4 for the design.
 **Session rule:** update this file at the end of every work session (and mention
 it in `README.md`) so the next model/session starts here, not from chat history.
 **Live now:** user ran the full queue solo 13:22–15:10 UTC — COMPLETE.
@@ -144,8 +158,20 @@ cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert"
 # Dry run (no GPU work):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py --no-tests --dry-run
 
-# JUST the N2R2 search + confirm (user's current focus, ~4 h):
+# JUST the N2R2 search + confirm (COMPLETED 2026-09-13 - kept for reference):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n2r2-search,n2r2-confirm
+
+# N9 repair training (NEW, validated, not yet run - ~1.5 h GPU):
+#   compress (N2R2-confirmed frac0.50/rr64/absmax) -> LoRA r=8 x 1200 steps
+#   on TRAIN-ONLY episodes -> prefix evals -> saved repaired checkpoint.
+#   Smoke first (~10 min): --only n9-smoke
+.venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n9-repair
+
+# N10 scale probe (NEW, validated, not yet run - ~1.5-2 h CPU, no GPU):
+#   Qwen2.5-1.5B backbone, same TT+residual machinery, recon/spectrum/
+#   certificates at Phase-1 ratios; first launch downloads ~3 GB from HF.
+#   Smoke first (one ratio, 8 layers): --only n10-smoke
+.venv312/Scripts/python.exe scripts/run_remaining_experiments.py --only n10-scale
 
 # Everything remaining, sequential, resumable (overnight):
 .venv312/Scripts/python.exe scripts/run_remaining_experiments.py
@@ -292,3 +318,18 @@ in `results/` (AGENTS.md rules).
    the challenge statement (the organizer docs, NOT the `submission/` folder drafts,
    which are our own old planning docs — user said to ignore those as references).
 7. User instruction: never attribute commits to Codebuff (no Co-Authored-By footer).
+8. **N9 design (2026-09-13):** compresses the seed-0 FT weights (NOT the base
+   checkpoint - N2R2 convention) with the confirmed config, evals the collapsed
+   model on a fixed 600-batch prefix, trains LoRA r=8 on train-only episodes
+   (`LocalEpisodeStream(episode_ids=...)` filter added to vla_local.py,
+   backward-compatible), MERGES the adapter before the post-eval, and saves
+   `results/N9-repaired/repaired_seed0.pt` for a full-protocol confirm.
+   Pre/post numbers are PREFIX evidence, never reportable as final.
+9. **N10 design (2026-09-13):** NO pretrained 1.5B VLA checkpoint exists
+   publicly (verified by web search 2026-09-13) - N10 is therefore an honest
+   WEIGHT-SPACE probe of the bare Qwen2.5-1.5B backbone (uniform weighting,
+   no activations exist), measuring recon error / spectral decay / cert
+   soundness at the Phase-1 ratios. Its result supports or refutes the scale
+   lever (PHASE2-CASE.md L3) but supports NO task-accuracy claim. Bare-HF
+   state dicts need `_bare_llm_linear_keys` (n10_scale.py), not
+   `_llm_linear_keys` (which requires the `llm.` prism prefix).

@@ -99,21 +99,26 @@ class LocalEpisodeStream:
     """
 
     def __init__(self, dataset, batcher: LocalVLABatcher, batch_size: int,
-                 seed: int = 0):
+                 seed: int = 0, episode_ids: list[int] | None = None):
         self.ds = dataset
         self.batcher = batcher
         self.bs = batch_size
         self.rng = np.random.default_rng(seed)
-        self._order = self.rng.permutation(len(self.ds))
+        # episode_ids: optional allow-list of episode indices (train-only
+        # filtering for N9 repair training — keeps eval episodes out of the
+        # optimizer). None = all episodes (legacy behavior).
+        self._episode_ids = (list(episode_ids) if episode_ids is not None
+                             else list(range(len(dataset.files))))
+        self._order = self.rng.permutation(len(self._episode_ids))
         self._ep_pos = 0          # pointer into _order
         self._frames = self._acts = self._lang = None
         self._t = 0
 
     def _advance_episode(self) -> None:
         if self._ep_pos >= len(self._order):
-            self._order = self.rng.permutation(len(self.ds))
+            self._order = self.rng.permutation(len(self._episode_ids))
             self._ep_pos = 0
-        ei = int(self._order[self._ep_pos])
+        ei = self._episode_ids[int(self._order[self._ep_pos])]
         self._ep_pos += 1
         self._frames, self._acts, self._lang = self.ds[ei]
         self._t = 0

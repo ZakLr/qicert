@@ -36,6 +36,8 @@ MODULES = [
     "n2r2_sweep",        # N2R-v2 (activation-weighted residual + mixed allocation)
     "n8c_int8",          # N8C (calibrated-INT8 honest comparator)
     "lyapunov_curve",    # N5-v2 (degradation curve + predictor, Layer 2b)
+    "n9_repair",         # N9 (post-compression LoRA repair training)
+    "n10_scale",         # N10 (1.5B LLM-backbone compression scale probe)
     "certify_layers12",  # N4, N5
     "safety",            # N6
     "compiler",          # N7
