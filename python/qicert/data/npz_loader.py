@@ -6,13 +6,14 @@ Serves episodes materialized by scripts/materialize_npz.py:
     model resolution) and actions (T, 7) float32.
 
 Design note: pixel NORMALIZATION is deliberately left to the consumer via
-the fork's own ``vision_backbone.get_image_transform()`` (as
+the upstream model's own ``vision_backbone.get_image_transform()`` (as
 predict_action does) — duplicating normalization constants here would risk
-a second convention drifting from the fork (AGENTS.md rule).
+a second convention drifting from upstream.
 
-Self-check (gate E8): ``python -m qicert.data.npz_loader --check`` recomputes
+Self-check: ``python -m qicert.data.npz_loader --check`` recomputes
 per-dimension action mean/std from the NPZ files and compares them against
-the tfds-captured references in results/npz_bridge_check.json (<= 1e-4).
+the independently captured references in results/npz_bridge_check.json
+(tolerance 1e-4).
 """
 from __future__ import annotations
 

@@ -5,8 +5,8 @@
 - N3  : Layer-1 exact Lipschitz table
 
 These thin wrappers delegate to the active kernel backend (``qicert.kernels``),
-so the same function serves the Python reference, the C++/CUDA-Q port (Q19),
-and any future backend — the math is the conformance spec.
+so the same function serves the Python reference and any future backend —
+the math is the conformance spec.
 """
 from __future__ import annotations
 

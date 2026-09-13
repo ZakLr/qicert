@@ -1,14 +1,17 @@
-"""Compression + Layer-1 certificates: N1 (baseline), N2, N2', N3 (submission/08)."""
+"""Baseline fine-tune + bit-ordering study + layer certificate table.
+
+See docs/ for the experiment register this module implements."""
 from __future__ import annotations
 
 from pathlib import Path
 
 from ._base import finish_run, pending_row, start_run, table_header, wants
 
-# Real MiniVLA checkpoint (same source as N2'); layers come from the LLM
-# backbone state dict (flat dotted keys, see bench/step0.py + n2prime.py).
-# Env overrides (QICERT_CKPT / QICERT_DATA_ROOT) let the Kaggle kernel point
-# at its own /kaggle/working layout instead of the repo-relative default.
+# Real MiniVLA checkpoint (same source as the bit-ordering study); layers
+# come from the LLM backbone state dict (flat dotted keys, see
+# bench/step0.py + n2prime.py).
+# Env overrides (QICERT_CKPT / QICERT_DATA_ROOT) point at a custom
+# checkpoint or dataset layout instead of the repo-relative default.
 import os as _os
 CKPT = Path(_os.environ.get("QICERT_CKPT", "")) if _os.environ.get("QICERT_CKPT") else \
     Path(__file__).resolve().parents[1] / "weights" / "ckpt" / "checkpoints" / \

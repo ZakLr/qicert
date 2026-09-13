@@ -1,7 +1,9 @@
-"""Layer-3 safety suite: N6 - STL + IQAE vs GEV-tail vs MC, closed by
-scenario-optimization bounds and empirical interval calibration.
+"""Statistical safety suite: signal-temporal-logic (STL) tail estimation —
+iterative quantum amplitude estimation (IQAE) vs extreme-value (GEV) tail
+fit vs Monte Carlo (MC), closed by scenario-optimization bounds and
+empirical interval calibration.
 
-2026-09-12: the three-arm race RAN (was [pending] rows). Demo oracle:
+The three-arm race below runs on a demo oracle:
 seeded heavy-tailed margin with ANALYTIC failure probability, so every
 arm is scored against ground truth (coverage + interval width at matched
 query budget).  Race conclusion is printed from the measured table.

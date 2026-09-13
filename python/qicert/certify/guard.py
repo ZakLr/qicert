@@ -1,4 +1,4 @@
-"""B14h: runtime guard — load-time certificate enforcement + per-step action gate.
+"""Runtime guard — load-time certificate enforcement + per-step action gate.
 
 Load time (`check_certs_before_serve`):
   1. load manifest.json and RE-VERIFY its self-hash (a tampered manifest is

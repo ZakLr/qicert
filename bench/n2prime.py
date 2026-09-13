@@ -18,7 +18,8 @@ way of grouping the row/column index digits into the fused TT modes):
 
 All three reconstruct the SAME matrix W; only the mode grouping differs.
 Reconstruction error at rank 8 decides. This is a scored-but-tiny
-experiment: the winner becomes N2's bit-ordering default (Q20).
+experiment: the winner becomes the compression sweep's bit-ordering default
+(a pre-registered method decision).
 
 Run (container, weights mounted):
     python -m qicert.bench.all --module n2prime --rows=bit-ordering --out results \

@@ -1,10 +1,11 @@
-"""Syndrome-shadow runtime monitor (N10).
+"""Syndrome-shadow runtime monitor.
 
-Layer 1: PDU hygiene on the Pauli manifold — syndrome state change between
-         inference steps = syndromic interrupt (gray-list).
-Layer 2: classical-shadows median-of-means statistics on continuous latents,
-         theorem-budgeted false alarms (Huang-Kueng-Preskill).
-Fused: T8 HD/VSA cleanup codes + T7 conformal alarm gate + Layer-1 safe fallback.
+Layer 1: protocol-data hygiene on the Pauli manifold — syndrome state
+         change between inference steps = syndromic interrupt (gray-list).
+Layer 2: classical-shadows median-of-means statistics on continuous
+         latents, theorem-budgeted false alarms (Huang-Kueng-Preskill).
+Fused: associative-cleanup codes + conformal alarm gate + Lipschitz-safe
+fallback.
 """
 from __future__ import annotations
 

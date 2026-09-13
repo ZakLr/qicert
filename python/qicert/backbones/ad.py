@@ -1,7 +1,7 @@
 """Autonomous-driving backbone adapter (N1, N13-AD).
 
-Reference: Alpamayo-R1-adjacent action head on LLaVA/AD backbone, justified
-per challenge Sec. 5.4. QLoRA fine-tune runs on Kaggle 2xT4.
+Reference: reasoning-style action head on a vision-language backbone for
+autonomous driving. Fine-tune via QLoRA (quantized low-rank adaptation).
 """
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ class ADBackbone:
         self.qlora = qlora
 
     def load(self):
-        raise NotImplementedError("AD backbone download + license verify (Q11/Q19).")
+        raise NotImplementedError("Autonomous-driving backbone download + license check.")
 
     def fine_tune(self):
-        raise NotImplementedError("N1 — QLoRA fine-tune, 3 seeds, ~8 GPU-h.")
+        raise NotImplementedError("QLoRA fine-tune, 3 seeds.")

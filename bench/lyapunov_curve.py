@@ -7,10 +7,10 @@
 #
 # Form (honest scoping, 2026-09-12):
 #   survival(r) := token-level action AGREEMENT between the compressed model
-#   and the FT reference on a fixed prefix of the frozen eval split — the
-#   empirical degradation curve.  (The original Lyapunov V-decrease form
-#   needs closed-loop rollouts; agreement is the open-loop proxy we can
-#   measure with the validated harness today, and it is what the
+#   and the fine-tuned reference on a fixed prefix of the frozen eval
+#   split — the empirical degradation curve.  (The classical Lyapunov
+#   V-decrease form needs closed-loop rollouts; agreement is the open-loop
+#   proxy measurable with the validated harness, and it is what the
 #   accuracy metric itself is made of.)
 #
 #   Predictor: least-squares fit from weight-space features (computable at
@@ -19,9 +19,9 @@
 #   >= threshold) vs measured — the sentence the report promises.
 #
 #   Certified side-log: per-layer spectral deviation ||W_comp - W_ref||_2
-#   (exact, power iteration) — the Layer-1 per-layer object for the
-#   compressed-vs-reference pair.  The end-to-end deviation chain through
-#   attention/softmax is Layer-2a (SOS) territory and is NOT claimed here.
+#   (exact, power iteration) for the compressed-vs-reference pair.  The
+#   end-to-end deviation chain through attention/softmax belongs to the
+#   sum-of-squares certificate layer and is NOT claimed here.
 #
 # Two legs:
 #   GPU  --rows=lyapunov-degradation : measures agreement per compression

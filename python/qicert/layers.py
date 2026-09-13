@@ -22,12 +22,13 @@ class TTLinear(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.bond_dim = bond_dim
-        # Core shapes are assigned by the safety-budgeted bond allocator (07).
+        # Core shapes are assigned by the safety-budgeted bond allocator
+        # (compression budget follows certified margins, not heuristics).
         self.cores: nn.ParameterList = nn.ParameterList()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         raise NotImplementedError(
-            "TTLinear.forward lands with the tt_cross kernel (Q19 env pin)."
+            "TTLinear.forward needs the tt_cross kernel (pending pinned GPU env)."
         )
 
 
@@ -46,5 +47,5 @@ class FamilyAttention(nn.Module):
     def forward(self, vision: torch.Tensor, language: torch.Tensor,
                 goal: torch.Tensor | None = None) -> torch.Tensor:
         raise NotImplementedError(
-            "FamilyAttention.forward lands with the pauli_family kernel (N7)."
+            "FamilyAttention.forward needs the commuting-Pauli kernel (compiler stage)."
         )

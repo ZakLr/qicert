@@ -1,4 +1,5 @@
-"""Training engine: N11 (ALS/DMRG-native fine-tune), N12 (safety-critical last pass)."""
+"""Training engine: tensor-native fine-tune (alternating-least-squares /
+density-matrix-renormalization-group style) plus a safety-critical final pass."""
 from __future__ import annotations
 
 from ._base import pending_row, table_header, wants

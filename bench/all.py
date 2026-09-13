@@ -1,15 +1,23 @@
-"""qicert.bench.all   reproduce every report table from a clean env.
+"""qicert.bench.all — reproduce every report table from a clean env.
+
+Stage-name glossary (used across this package): baseline = fine-tuned
+reference model; bit-ordering = tensor-layout sensitivity study;
+compression = uniform tensor-train sweep; residual-repair = closed-form
+residual compensation sweep; int8-ref = calibrated INT8 reference;
+degradation = agreement-vs-compression curve; repair = post-compression
+LoRA repair training; scale-probe = larger-backbone weight-space probe;
+compiler/monitor/safety/latency = certificate, guard, estimator, timing.
 
 Usage:
     python -m qicert.bench.all                     # every table (default)
     python -m qicert.bench.all --rows=smoke        # CI smoke set (tiny, fast)
     python -m qicert.bench.all --rows=compression-pareto   # one table
-    python -m qicert.bench.all --backend=cpp       # C++/CUDA-Q kernels (Q19)
-    python -m qicert.bench.all --sos-backend=julia # Layer-2a SOS (Q22 bridge)
+    python -m qicert.bench.all --backend=cpp       # C++ kernels (needs pinned env)
+    python -m qicert.bench.all --sos-backend=julia # sum-of-squares bridge (needs Julia)
 
-Capture (Decision 2026-08-16 — record EVERYTHING, never re-run for data):
+Capture (every run records full artifacts; never re-run just for data):
     python -m qicert.bench.all --rows=smoke --out results \
-        --exp-id N2prime --seed 0 --run-tag smoke-test
+        --exp-id bit-ordering --seed 0 --run-tag smoke-test
     # writes results/<EXP_ID>/<RUN_ID>/run.json + config.json + system.json
     # + env.json + metrics.jsonl, and appends results/ledger.csv
 """
@@ -30,21 +38,21 @@ if hasattr(sys.stdout, "reconfigure"):
         pass
 
 MODULES = [
-    "compress",          # N1, N2', N3
-    "n2_sweep",          # N2 (compression Pareto sweep)
-    "n2r_sweep",         # N2R (residual-compensated compression, N2'' repair)
-    "n2r2_sweep",        # N2R-v2 (activation-weighted residual + mixed allocation)
-    "n8c_int8",          # N8C (calibrated-INT8 honest comparator)
-    "lyapunov_curve",    # N5-v2 (degradation curve + predictor, Layer 2b)
-    "n9_repair",         # N9 (post-compression LoRA repair training)
-    "n10_scale",         # N10 (1.5B LLM-backbone compression scale probe)
-    "certify_layers12",  # N4, N5
-    "safety",            # N6
-    "compiler",          # N7
-    "monitor",           # N10 (monitor metrics; exp-id N10MON to avoid collision with the N10 scale probe)
-    "training",          # N11, N12
-    "cross_track",       # N13
-    "latency",           # <=100 ms profile
+    "compress",          # baseline fine-tune + bit-ordering + certificate table
+    "n2_sweep",          # uniform compression Pareto sweep
+    "n2r_sweep",         # residual-compensated compression sweep
+    "n2r2_sweep",        # activation-weighted residual + mixed allocation
+    "n8c_int8",          # calibrated-INT8 reference
+    "lyapunov_curve",    # degradation curve + weight-space predictor
+    "n9_repair",         # post-compression LoRA repair training + confirm
+    "n10_scale",         # 1.5B backbone compression scale probe
+    "certify_layers12",  # layer certificate tables
+    "safety",            # rare-event estimator comparison
+    "compiler",          # commuting-Pauli compiler acceptance
+    "monitor",           # runtime monitor metrics
+    "training",          # tensor-native training engine
+    "cross_track",       # cross-backbone generalization
+    "latency",           # <=100 ms edge-profile timing
 ]
 
 

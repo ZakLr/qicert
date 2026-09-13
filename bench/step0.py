@@ -8,10 +8,10 @@ the MiniVLA checkpoint and push it through the qicert kernel pipeline:
     3. INT8 (torch.quantization-style) + SVD at matched ratio (baselines)
     4. compiler identity on one interaction block (commuting-Pauli families)
 
-This is a *toolchain* smoke, NOT a scored experiment (AGENTS.md: noiseless
+This is a *toolchain* smoke, NOT a scored experiment (a noiseless
 sanity check — "is the pipeline right", not "does it win"). Scored tables
-are N1/N2/N3; this row exists to catch kernel/wiring bugs on a real layer
-before any GPU-h is spent. No seed variance is claimed; results are for
+are the baseline/compression/certificate tables; this row exists to catch
+kernel/wiring bugs on a real layer before any GPU-h is spent. No seed variance is claimed; results are for
 pipeline validation only.
 
 Run (torch present; container):

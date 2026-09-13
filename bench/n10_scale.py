@@ -4,23 +4,23 @@
 # Why this exists (PHASE2-CASE.md L3): the Phase-1 collapse at 2.5x happened
 # on a 0.5B LoRA-tuned LLM whose weight spectra are flat — every parameter
 # carries unique signal, the worst case for low-rank compression. Larger
-# backbones are typically more overparameterized with lower-NP spectra, so
+# backbones are typically more overparameterized with lower-rank spectra, so
 # the SAME compression math should reconstruct better at the SAME ratio.
-# This probe measures exactly that: compress Qwen2.5-1.5B (the ~1B-param
-# scale point the user's RTX 5060 can actually hold) with the identical
-# TT-SVD + absmax-weighted-residual machinery at the Phase-1 operating
-# ratios, and compare reconstruction quality, certificate soundness, and
-# rank sensitivity against the 0.5B numbers already in the ledger.
+# This probe measures exactly that: compress Qwen2.5-1.5B with the identical
+# TT-SVD + absmax-weighted-residual machinery at the operating ratios, and
+# compare reconstruction quality, certificate soundness, and rank
+# sensitivity against the 0.5B numbers already in the ledger.
 #
 # What this is NOT (honest scope):
-#   * NOT a full VLA — no pretrained prism-qwen25-1.5B VLA checkpoint exists
-#     publicly (verified 2026-09-13), so there is no fine-tuned 1.5B action
-#     model to evaluate task accuracy on. This probe measures the WEIGHT-
-#     SPACE quantity that our Phase-1 diagnosis identifies as the collapse
-#     predictor (recon error / spectrum), not task accuracy. Any task-
-#     accuracy claim requires the Phase-2 full-VLA scale-up.
+#   * NOT a full VLA — no pretrained 1.5B vision-language-action checkpoint
+#     exists publicly, so there is no fine-tuned 1.5B action model to
+#     evaluate task accuracy on. This probe measures the WEIGHT-SPACE
+#     quantity that our collapse diagnosis identifies as the predictor
+#     (recon error / spectrum), not task accuracy. Any task-accuracy claim
+#     requires a full-VLA scale-up as follow-up work.
 #   * NOT noiseless hand-waving — every number is measured from the real
-#     downloaded weights, same kernels, same cert machinery as N2R2/N9.
+#     downloaded weights, same kernels, same cert machinery as the
+#     residual-repair and repair-training arms.
 #
 # What is measured (per ratio r in {0.50, 0.33}):
 #   * per-layer relative reconstruction error of TT+residual vs dense

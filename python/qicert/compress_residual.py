@@ -1,10 +1,11 @@
 """Residual compensation for TT-compressed linear layers (N2'' repair arm).
 
 Why this exists (2026-09-12, post go/no-go): uniform-ratio TT-SVD truncation
-at 2x/3x compression measured eval acc 0.000 (down from FT ref 0.447) — the
-uniform allocator removes signal, not redundancy, on this backbone's flat
-spectra.  The pre-registered repair is closed-form residual compensation
-(QuaSAR-style, arXiv:2608.14149, adopted per lit-swarm L1/L5 findings):
+at 2x/3x compression measured eval acc 0.000 (down from the 0.447 fine-tuned
+reference) — the uniform allocator removes signal, not redundancy, on this
+backbone's flat spectra.  The pre-registered repair is closed-form residual
+compensation (low-rank correction of the truncation residual, in the style
+of recent quantized-plus-low-rank literature):
 
     keep the TT reconstruction  What = TT(W)
     compute what was lost       R = W - What

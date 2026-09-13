@@ -1,15 +1,15 @@
 # ============================================================================
-# N9 - post-compression LoRA repair training (the "trained repair" lever)
+# Post-compression LoRA repair training (the "trained repair" lever)
 # ============================================================================
-# Purpose (PHASE2-CASE.md L1/L2): the closed-form residual is a one-shot
-# algebraic fit — it reconstructs the ORIGINAL weight matrix (recon err
-# 0.6-0.8 at 2.5x) rather than task performance. A small trained adapter on
-# the ALREADY-COMPRESSED model can spend the same parameter budget on the
+# Purpose: the closed-form residual is a one-shot algebraic fit — it
+# reconstructs the ORIGINAL weight matrix (recon err 0.6-0.8 at 2.5x)
+# rather than task performance. A small trained adapter on the
+# ALREADY-COMPRESSED model can spend the same parameter budget on the
 # task instead. This is the literature-standard post-compression recovery
-# step and was never run in Phase 1 purely for compute cost.
+# step.
 #
 # Pipeline (one bench module, one process):
-#   1. compress the seed-0 FINE-TUNED weights once (TT-SVD + absmax-weighted
+#   1. compress the seed's FINE-TUNED weights once (TT-SVD + absmax-weighted
 #      residual, frac=0.50, rr=64 — the exact N2R2-confirmed config,
 #      ratio ~2.54x, full-split acc 0.1640) — same source and math as N2R2;
 #   2. load the VLA, install the COMPRESSED weights;

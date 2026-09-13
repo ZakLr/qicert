@@ -12,19 +12,21 @@
 #     x dense params. This is the uniform-ratio allocator that N5 compares
 #     its safety-budgeted allocator against — the correct baseline.
 #   * Kernel: tt_svd (deterministic reference). tt_cross is the
-#     query-based approximation for the hardware story (Q19); it crashed on
-#     deep splits (fixed in this commit) and is validated separately in
-#     Step 0. Documented substitution, not a silent one (AGENTS.md).
+#     query-based approximation for the hardware story; deep-split crashes
+#     are fixed and it is validated separately in Step 0. Any substitution
+#     is logged in run metadata, never silent.
 #   * Both backbones use the N2' winner (bit-reversed) bit ordering:
 #     TT = d=2 near-square factors, QTT = d=4, factors descending
 #     (least-significant-first semantics).
 #   * Compression targets: all linear projections of the LLM transformer
 #     (24 layers x q/k/v/o/gate/up/down). The action head is excluded in v1
 #     (tiny; the Q17 ordering puts it first — future work).
-#   * Eval: the SAME held-out batch and action-accuracy protocol as N1
-#     (matched budget), on the FINE-TUNED weights (N1 --save-ckpt).
+#   * Eval: the SAME held-out batch and action-accuracy protocol as the
+#     baseline (matched budget), on the FINE-TUNED weights
+#     (baseline --save-ckpt).
 #   * Certificate per point: per-layer exact Lipschitz product L and tight
-#     operator norm (power iteration); sound iff L >= tight (N3 machinery).
+#     operator norm (power iteration); sound iff L >= tight (same machinery
+#     as the certificate-table module).
 """N2 - {TT, QTT} compression Pareto sweep (bench module).
 
 Usage:
@@ -35,8 +37,8 @@ Usage:
 from __future__ import annotations
 
 # Target param fractions of the compressed layers, spanning 2x..50x
-# compression and including the 50% (2x) point where R1's kill criterion
-# ("accuracy drop >5% at 2x") is evaluated.
+# compression and including the 50% (2x) point where the accuracy-drop fail
+# criterion ("accuracy drop >5% at 2x") is evaluated.
 BOND_PLANS = (0.02, 0.04, 0.08, 0.16, 0.33, 0.50)
 BACKBONES = ("TT", "QTT")  # d=2 vs d=4, both bit-reversed
 

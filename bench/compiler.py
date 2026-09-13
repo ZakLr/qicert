@@ -1,19 +1,19 @@
-"""Commuting-Pauli compiler: N7 - exactness, pruning certs, latency, hardware table.
+"""Commuting-Pauli compiler: exactness, pruning certificates, latency, hardware table.
 
-2026-09-12: rows are now MEASURED against the real kernel objects on the
+All rows below are MEASURED against the real kernel objects on the
 stated CPU edge profile (same operator construction as bench.latency):
 
-  E-comp-1  compiler identity exactness: relative error of the compiled
-            full-partition evaluation vs the dense operator, gate <= 1e-6
-  E-comp-2  per-family pruning certificates: predicted = ||sum_{a in F_j} c_a||_1
+  Check 1   compiler identity exactness: relative error of the compiled
+            full-partition evaluation vs the dense operator, bar <= 1e-6
+  Check 2   per-family pruning certificates: predicted = ||sum_{a in F_j} c_a||_1
             (the kernel's pruning_cost); measured = ||T_j||_2 = max_l |d_j(l)|
             (exact for a diagonalized family).  Triangle inequality makes
             predicted >= measured PROVABLE; the scored statistic is their
             correlation across families (>= 0.95 = the certificate is
             informative, not just sound).
-  E-comp-3  full-table latency on the CPU edge profile (<= 100 ms)
-  E-comp-4  hardware-table vs noise-sweep self-consistency: honestly out of
-            scope until a noise simulator is pinned (no fake number).
+  Check 3   full-table latency on the CPU edge profile (<= 100 ms)
+  Check 4   hardware-table vs noise-sweep self-consistency: honestly out of
+            scope until a noise simulator is pinned (no placeholder number).
 """
 from __future__ import annotations
 

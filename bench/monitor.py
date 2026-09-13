@@ -1,6 +1,6 @@
-"""Syndrome-shadow monitor: N10 - false-alarm vs theorem, detection, latency.
+"""Syndrome-shadow monitor: false-alarm rate vs theorem budget, detection, latency.
 
-2026-09-12: rows are now MEASURED with the real kernel objects
+All rows below are MEASURED with the real kernel objects
 (qicert.kernels shadow_statistics / shadow_syndrome), on the stated
 CPU edge profile:
 

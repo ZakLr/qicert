@@ -1,4 +1,4 @@
-"""Cross-track mirror: N13 - same pipeline on the second backbone."""
+"""Cross-track mirror: the same compression + certificate pipeline on the second backbone."""
 from __future__ import annotations
 
 from ._base import pending_row, table_header, wants

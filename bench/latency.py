@@ -1,6 +1,6 @@
 """Latency profile: the <=100 ms budget on a stated CPU edge profile.
 
-2026-09-12: rows are now MEASURED (were [pending]).  The challenge accepts a
+All rows below are MEASURED.  The challenge accepts a
 "CPU-only edge device" as a stated profile, so this module times the REAL
 kernel objects (qicert.kernels python backend) on the host CPU:
 

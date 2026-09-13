@@ -1,15 +1,15 @@
 """Calibration-activation collection for the calibrated-INT8 comparator.
 
-The honest comparator for N2/N2'' is CALIBRATED INT8 (per-channel weight
+The honest classical comparator is CALIBRATED INT8 (per-channel weight
 scales derived from real activation statistics), NOT the naive weight-only
-INT8 that measured 0.000 on the FT model (see N1v2).  This module collects
-per-linear-layer input activations over the frozen eval slice and stores
-compact per-channel stats (absmax / mean|.| / count) to disk for the
-quantizer and for provenance.
+INT8 that scored 0.000 on the fine-tuned model (a calibration artifact).
+This module collects per-linear-layer input activations over train episodes
+and stores compact per-channel stats (absmax / mean|.| / count) to disk
+for the quantizer and for provenance.
 
 CPU/GPU-light: hooks the model, streams batches, accumulates running
-per-channel absmax + count, then saves one .npz per call.  Designed to run
-AFTER the queue's GPU lane is free (a few minutes of forward passes).
+per-channel absmax + count, then saves one .npz per call (a few minutes of
+forward passes; run while no training job holds the GPU).
 """
 from __future__ import annotations
 

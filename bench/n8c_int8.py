@@ -19,9 +19,10 @@
 #       --out results --exp-id N8C --seed 0 --run-tag N8C-fullsplit \
 #       --save-ckpt results/N1v2-ckpt --capture heavy
 #
-# Env: QICERT_FT_CKPT (handoff dir), QICERT_CALIB (calib npz path),
-#      QICERT_N8C_SCALE ("absmax"|"mse", default mse), QICERT_N2_EVAL=full.
-"""N8C — calibrated INT8 reference arm (bench module)."""
+# Env: QICERT_FT_CKPT (fine-tuned checkpoint dir), QICERT_CALIB (calib npz
+#      path), QICERT_N8C_SCALE ("absmax"|"mse", default mse),
+#      QICERT_N2_EVAL=full.
+"""Calibrated INT8 reference arm (bench module)."""
 from __future__ import annotations
 
 SMOKE = frozenset()  # needs the N1v2 handoff + calibration npz

@@ -1,9 +1,9 @@
 # ===========================================================================
-# N2R — TT-SVD + closed-form residual compensation (the N2'' repair arm)
+# Residual-compensated compression: TT-SVD + closed-form residual repair
 # ===========================================================================
-# Built 2026-09-12 directly on the E-2026-09-12-01 NO-GO result: uniform
-# TT/QTT truncation collapsed the FT model (eval acc 0.4468 -> 0.0000 at
-# every ratio >= 2x, certificates sound).  The pre-registered repair keeps
+# Built directly on the uniform-truncation NO-GO result: uniform
+# TT/QTT truncation collapsed the fine-tuned model (eval acc 0.4468 -> 0.0000
+# at every ratio >= 2x, certificates sound).  The pre-registered repair keeps
 # the TT reconstruction and folds back the best rank-r' approximation of the
 # residual (Eckart-Young), with honest ratio accounting that INCLUDES the
 # residual factors, and a per-layer sound Lipschitz bound for the repaired
@@ -14,12 +14,13 @@
 #       --out results --exp-id N2R --seed 0 --run-tag N2R-go-no-go-seed0 \
 #       --save-ckpt results/N1v2-ckpt --capture heavy
 #
-# Env: QICERT_FT_CKPT (handoff dir), QICERT_N2R_PLANS ("0.50,0.33"),
-#      QICERT_N2R_RRANKS ("8,32"), QICERT_N2_LAYERS (all|layer0).
-"""N2R — residual-compensated compression sweep (bench module)."""
+# Env: QICERT_FT_CKPT (fine-tuned checkpoint dir), QICERT_N2R_PLANS
+#      ("0.50,0.33"), QICERT_N2R_RRANKS ("8,32"), QICERT_N2_LAYERS
+#      (all|layer0).
+"""Residual-compensated compression sweep (bench module)."""
 from __future__ import annotations
 
-# Not part of the no-weights smoke set (needs the N1v2 handoff + checkpoint).
+# Not part of the no-weights smoke set (needs fine-tuned weights + checkpoint).
 SMOKE = frozenset()
 
 import os as _os

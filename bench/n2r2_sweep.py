@@ -9,7 +9,7 @@
 # where the model ACTUALLY computes: weight the fit by per-input-channel
 # activation statistics collected on TRAIN episodes (never held-out data).
 #
-# Second lever (pre-registered as B6 in the plan): MIXED ALLOCATION —
+# Second lever (pre-registered design option): MIXED ALLOCATION —
 # attention q/k/v/o projections stay FULL-precision (their per-layer
 # reconstruction error was the dominant outlier driver in the layer
 # spectra), everything else is compressed.  Honest accounting: kept layers
@@ -27,11 +27,11 @@
 #      QICERT_N2R2_KEEP ("q_proj,k_proj,v_proj,o_proj"),
 #      QICERT_N2R2_STAT ("mean"|"absmax"), QICERT_CALIB (path to npz),
 #      QICERT_N2_LAYERS (all|layer0), QICERT_N2_EVAL (batch|full),
-#      QICERT_FT_CKPT (handoff dir).
-"""N2R-v2 — activation-weighted residual sweep (bench module)."""
+#      QICERT_FT_CKPT (fine-tuned checkpoint dir).
+"""Activation-weighted residual sweep (bench module)."""
 from __future__ import annotations
 
-# Not part of the no-weights smoke set (needs the N1v2 handoff + checkpoint).
+# Not part of the no-weights smoke set (needs fine-tuned weights + checkpoint).
 SMOKE = frozenset()
 
 import os as _os

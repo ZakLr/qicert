@@ -7,7 +7,7 @@ vs C-naive (Monte-Carlo counting + Clopper-Pearson). Closed by
 Campi-Garatti scenario-optimization bounds and empirical interval
 calibration (split-conformal form).
 
-Race design (2026-09-12): the demo oracle has an ANALYTIC failure
+Race design: the demo oracle has an ANALYTIC failure
 probability in the RARE-EVENT regime (p ~ 1e-4, heavy Student-t tail),
 so all three arms are scored against ground truth -- coverage and
 interval width at matched query budget are the honest race metrics.
