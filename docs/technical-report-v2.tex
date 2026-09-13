@@ -58,7 +58,13 @@ Adding repair training (a low-rank adapter on the compressed model) clears the
 pre-registered gate at $2.46\times$: accuracy $0.4535$ against the uncompressed
 reference's $0.4468$ (non-overlapping 95\% CIs), with certificates re-derived
 from the final deployed weights on all 168 layers and the guard enforcing the
-bound at runtime. The safety side is measured end to end: certificate soundness, a compiler whose
+bound at runtime. The safety side is measured end to end --- and a third mechanism
+watches the input stream itself: a shadow-syndrome monitor (classical-shadows
+sketch of the watched latent, median-of-means gate, plus a syndrome check on
+the compiled diagonal tables) whose empirical false-alarm rate over 4{,}000
+null trials is 0.0000 against the 0.01 design budget, whose bit-flip
+detection is 1.000 over 500 injected corruptions, and whose added cost is
+0.35~ms per step. certificate soundness, a compiler whose
 pruning predictions track measurement at median $r = 0.975$, a rare-event
 estimation race in which an amplified estimator reaches the width of naive
 Monte Carlo with $\sim$1{,}587$\times$ fewer queries, and conformal coverage
@@ -288,12 +294,24 @@ cores alone and verified against a dense reference per layer. The
 commuting-Pauli interaction compiler, which prunes exactly-evaluable operator
 families, predicts pruning error that tracks measurement at median Pearson
 $r = 0.975$ over 12 independent operator tables, with compiler identity
-verified to $2.3\times10^{-14}$ relative error. Per-layer contraction on the
-CPU edge profile costs $3.1$--$15.2\times$ the dense fp16 kernel time at
+verified to $2.3\times10^{-14}$ relative error.Per-layer contraction on the CPU edge profile costs $3.1$--$15.2\times$ the dense fp16 kernel time at
 these shapes (Fig.~\ref{fig:latency}, appendix) yet stays within the 100~ms
 per-step budget of the challenge's latency benchmark on every measured path;
 we report the slowdown explicitly because it is the honest price of the TT
 route on this profile.
+
+The runtime monitor is the third safety mechanism, aimed at the input stream
+rather than the action. A classical-shadows sketch (64 random projections of
+the watched latent) feeds a median-of-means gate with a design false-alarm
+rate of 0.01 backed by the concentration theorem; a syndrome check on the
+compiler's diagonal tables catches bit-flip corruption of the watched
+patterns. Measured on the edge profile: null false-alarm 0.0000 over
+4{,}000 trials (within the theorem's $2\times$ budget), bit-flip detection
+1.000 over 500 injections, common-mode drift detection 0.23/1.00 at
+$1\sigma$/$2\sigma$, added latency 0.35~ms per step. The documented blind
+spot --- zero-mean random-sign drifts, invisible to any median test --- is
+by construction the regime the conformal alarm gate and the certified ball
+cover, so the three mechanisms compose rather than repeat.
 
 \subsection{Estimation stack}
 Fig.~\ref{fig:race} shows the rare-event race at matched budget. Naive Monte
@@ -514,6 +532,8 @@ Conformal coverage table &
 \texttt{results/safety/conformal\_seed0.json} \\
 Guard demo (SERVE/REFUSE transcript) &
 \texttt{results/guard-demo/transcript.json} \\
+Shadow-syndrome monitor (FPR, detection, 0.35 ms/step) &
+\texttt{results/N10MON/*/run.json}, \texttt{bench/monitor.py} \\
 INT8 calibration ablation &
 \texttt{results/E7-int8-ablation/*/run.json} \\
 Pre-registered gate text &

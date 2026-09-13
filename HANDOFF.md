@@ -27,6 +27,25 @@ combination — exact per-layer bounds from compressed cores + refusing guard
 VLA benchmark — remains unclaimed. Do not overstate: "novel combination", not
 "novel field". `PHASE2-CASE.md` holds the full failure analysis
 (bar rationale, levers, costed ladder, certificate impact of repair).
+**N10MON (shadow-syndrome monitor) RESCUED 2026-09-13 ~20:30 UTC:** the
+monitor (`bench/monitor.py` + `qicert.kernels.shadow_statistics/shadow_syndrome`)
+was found BUILT-BUT-NEVER-RUN (zero ledger rows; report v2 had 0 mentions
+vs 28 in v1 — it silently fell out of the story during the doc rewrite).
+First recorded run (CPU-only, 2 min, exp-id N10MON to avoid the collision
+with the N10 scale probe): null FPR 0.0000/4000 trials (budget ≤0.02) PASS;
+bit-flip detection 1.000/500 PASS; common-mode drift 0.002/0.230/1.000 at
+0.5/1/2σ; random-sign drift 0.000 BY DESIGN (median-test blind spot = the
+documented complement of the conformal gate + certified ball — three
+mechanisms compose); added latency 0.35 ms/step PASS. REPORTABLE. Folded
+into report v2 (abstract + safety section + Appendix A). Old-plan items
+mined from `submission/*.md` + `research/open-questions.md`: SOS local
+certificates (Julia CLI, watch-list), Lyapunov-margin survival regression
+(superseded by N5's collapse diagnosis), RESTART as 4th race arm (future),
+falsification-loop training (future), QTT bit-ordering choice (N2' —
+unexplored, Phase 2), C++ port (skeleton done), SSM/linear-attention
+replacement (Phase 2 — would invalidate the frozen-protocol rows).
+**Attention/SSM replacement stays Phase 2.** Only the compression machinery
+touches the backbone in Phase 1.
 **Package-improvement plan (decided 2026-09-13, see §9):**
 - **Lean 4 (do it — high value, low cost):** machine-checked proof of the
   TT spectral-norm bound Eq. (1) + the guard's soundness theorem, verified
@@ -429,7 +448,9 @@ honest partial over the padded whole.
 | Item | Verdict | Why / cost |
 |---|---|---|
 | **Lean 4 proof artifact** | DO (Phase-1 bonus, ~1 day) | Machine-check the core theorem: spectral-norm bound of a TT chain = product of core norms (the report's Eq. 1), plus the guard soundness statement ("an action accepted by the checker lies within the certified ball"). One file in `lean/`, `lake build` clean, link from report + README. Weakest-link algebra is elementary (operator-norm submultiplicativity); do NOT attempt a whole-network bound — that would overclaim. Adds "machine-checked core claim" to the judge-facing story at near-zero risk. |
+| **Shadow-syndrome runtime monitor (N10MON)** | DONE — rescued 2026-09-13 | Found built-but-never-run; first recorded run passes all budgets (FPR 0.0000/4000, bit-flip 1.000/500, 0.35 ms/step); folded into report v2. |
 | **C++ port** | SKELETON ONLY (user decision 2026-09-13) | `cpp/` now holds a compiling, self-tested skeleton: `include/qicert/tt_matvec.hpp` (interface contract matching the Python core layout), `src/tt_matvec.cpp` (identity-core property implemented + tested; general contraction explicitly TODO so nobody benchmarks an unimplemented path), self-test main, CMakeLists (plain-g++ fallback verified: `g++ -std=c++17 -O2 -Icpp/include cpp/src/*.cpp -o cpp/qicert_cpp_selftest`). README states the honest scope and the Phase-2 acceptance gates (TT matvec ≤1.5× dense; cert re-derivation ≤30 s; guard step <100 µs — all meaningless until measured via bench/latency_microbench.py). Phase-1 report keeps the one-sentence pointer. |
+| **SSM/linear-attention backbone replacement** | PHASE 2 ONLY (confirmed with user) | Touching the backbone invalidates every frozen-protocol row. Listed in the proposal's Phase-2 section; never in the Phase-1 pipeline. |
 | **CUDA-Q expansion** | DO NOT expand | Already used for the IQAE amplification simulation (declared, pinned). Reusing it decoratively invites judge questions with no return. |
 | **Output-diversity check in the guard** | DO (small, high-value) | Our own mode-collapse finding showed a certificate on a collapsed model is sound-but-vacuous. Add to `qicert/python/qicert/certify/guard.py`: refuse (or flag) when the action stream's empirical entropy over a window falls below a threshold. Directly motivated by our data; turns the biggest negative result into a deployed mechanism. ~30 lines + test. |
 | **Shadow-syndrome runtime monitor (N11)** | DO, scoped (user asked; strongest new idea) | From the old plan (`submission/06-monitor.md`), rewritten to what we can actually build: Layer 1 = syndrome hygiene on the commuting-Pauli compiler tables (syndrome signature change between consecutive steps -> gray-list the input; catches sensor dropout / bit-flip corruption); Layer 2 = classical-shadows statistics (Huang–Kueng–Preskill sketch, M random projections, median-of-means) for continuous OOD detection with a theorem-backed false-alarm budget; Layer 3 = the EXISTING conformal gate (already measured) as the alarm decision. Prior-art check found 0 hits for shadows+anomaly-detection. More visibly quantum-inspired than the TT route — strengthens the 'working QI component' criterion. Scope: M=32 projections, perturbation suite as fixture, pre-registered detection metrics. OTOC/scrambling part stays watch-list (kill if costly). |

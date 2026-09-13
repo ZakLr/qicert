@@ -41,7 +41,7 @@ MODULES = [
     "certify_layers12",  # N4, N5
     "safety",            # N6
     "compiler",          # N7
-    "monitor",           # N10
+    "monitor",           # N10 (monitor metrics; exp-id N10MON to avoid collision with the N10 scale probe)
     "training",          # N11, N12
     "cross_track",       # N13
     "latency",           # <=100 ms profile

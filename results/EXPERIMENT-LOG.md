@@ -672,3 +672,16 @@ Evidence:
 report N5 as curve + collapse analysis; add mode-collapse diagnostic to
 future-work and mention as post-hoc analysis. HANDOFF audit flag (b) is
 RESOLVED by this entry (not a ref-cache coincidence).
+
+---
+
+## E-2026-09-13-19 — N10MON: shadow-syndrome monitor, first recorded run
+
+- **Command:** `python -m bench.all --module monitor --rows monitor-alarms --out results --exp-id N10MON --run-tag monitor-alarms` (CPU-only, ~2 min)
+- **Purpose:** the syndrome-shadow runtime monitor (`bench/monitor.py` + `qicert.kernels.shadow_statistics/shadow_syndrome`) was built in an earlier session but had NEVER been run — zero ledger rows, and the current report v2 did not mention it. This run closes that gap.
+- **Result (all measured, kernel objects, M=64 shadows, d=32, design FPR=0.01):**
+  null false-alarm 0.0000 over 4,000 trials (budget ≤2× design) PASS;
+  syndrome bit-flip detection 1.000 over 500 injections PASS;
+  common-mode drift detection 0.002/0.230/1.000 at 0.5/1/2σ; random-sign drift 0.000 by design (median-test blind spot — the documented complement of the conformal gate + certified ball);
+  added latency 0.35 ms/step PASS (<5 ms budget).
+- **Status:** REPORTABLE. Folded into report v2 (abstract + safety section + Appendix A provenance row). Exp-id N10MON to avoid collision with the N10 1.5B scale probe.
