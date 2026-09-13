@@ -158,7 +158,11 @@ otherwise returns a refuse-to-serve sentinel and logs the event. The checker
 logic is small enough to interrogate mechanically: we encoded its soundness
 and completeness properties in SMT and asked Z3 to produce counterexamples;
 none exist, so the accept set of the guard is machine-checked against the
-specification rather than argued informally.
+specification rather than argued informally. The same properties plus the
+bound-composition step (Eq.~\eqref{eq:chain} chaining) are additionally
+proved in Lean~4 (`lean/`, `lake build` clean, zero `sorry`, foundation-only
+axioms) --- proof terms instead of solver queries, pinned to the same
+checker the deployment enforces.
 
 \subsection{Statistical estimation stack}
 Bounded per-step behavior does not by itself bound the tail of a trajectory.
@@ -375,8 +379,9 @@ that makes an exact deployment certificate computable and enforceable.''
 
 Six limitations are part of the result. (1) Most rows are single-seed; the
 challenge asks for mean $\pm$ standard deviation over three independent
-runs, the remaining baseline seeds are queued, and no multi-seed number is
-claimed here. (2) The training-free repaired TT route fails the
+runs. Seed~1 of the baseline finished at $0.3970$ (vs.\ seed~0 $0.4468$ ---
+real seed variance, reported plainly), seed~2 is running, and no multi-seed
+number is claimed until all three land. (2) The training-free repaired TT route fails the
 pre-registered accuracy bar at $2.5$--$2.9\times$: the configuration search
 (five candidates, all absmax-weighted) and its full-protocol confirmation
 measured a best point of $0.1640$ accuracy at $2.536\times$, against the
@@ -387,7 +392,10 @@ action token, matching the reference on exactly its modal-token frequency
 scored the same $86/704$ base rate). A certificate on a collapsed model is
 sound but vacuous --- the guard never refuses because the model never strays
 --- so structural certification must be paired with an output-diversity
-check, a requirement this Phase-1 work surfaced and Phase 2 adopts. The
+check. That check is built and tested in this Phase-1 work: an
+entropy gate over a sliding window of served actions flags degenerate
+streams (warn, never refuse --- a robot holding position is correct),
+with unit tests covering the measured collapse signature. The
 trained-repair route (N9) clears the gate at $2.46\times$ but carries its
 own caveats: it is single-seed; the repair cost (1{,}200 adapter steps) is
 charged to the arm but the adapter is an additional trained component; and
@@ -534,6 +542,11 @@ Guard demo (SERVE/REFUSE transcript) &
 \texttt{results/guard-demo/transcript.json} \\
 Shadow-syndrome monitor (FPR, detection, 0.35 ms/step) &
 \texttt{results/N10MON/*/run.json}, \texttt{bench/monitor.py} \\
+Output-diversity gate (collapse signature tests) &
+\texttt{certify/guard.py} (\texttt{ActionDiversityMonitor}),
+\texttt{test\_certify\_guard.py} \\
+Lean proofs (composition + guard, zero \texttt{sorry}) &
+\texttt{lean/QicertProofs/Qicert.lean} \\
 INT8 calibration ablation &
 \texttt{results/E7-int8-ablation/*/run.json} \\
 Pre-registered gate text &

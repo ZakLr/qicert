@@ -98,11 +98,12 @@ coverage lands inside the finite-sample band at all three tested levels
 \norm{G^{(k)}}_{3}$ is exact algebra on the TT factorization; the certificate
 chain and the guard's soundness/completeness properties are machine-checked
 by SMT falsification (Z3 finds no counterexample to accepting an out-of-ball
-action). A guard demo transcript shows: clean load SERVE, out-of-ball action
-REFUSE, tampered-certificate REFUSE, NaN-bound REFUSE, missing-manifest REFUSE.
+action; key properties also proved in Lean~4). A guard demo transcript shows: clean load SERVE,
+out-of-ball action REFUSE, tampered-certificate REFUSE, NaN-bound REFUSE,
+missing-manifest REFUSE, plus an entropy gate flagging collapsed streams.
 
 \textbf{Working prototype.} This is not a design on paper. The repository
-contains 80 passing tests, a benchmark harness, and measured results on a
+contains 84 passing tests, a benchmark harness, and measured results on a
 fine-tuned 0.5B VLA (LIBERO-spatial, 114{,}497 scored action tokens,
 hash-frozen split): reference accuracy 0.4468; calibrated INT8 at
 $1.997\times$ compression, 0.4466 (the honest classical comparator);
@@ -185,8 +186,7 @@ order: activation-aware rank allocation, and backbone scale (a $1.5$--$7$B
 backbone, whose weights carry the redundancy a $0.5$B LoRA-tuned model
 lacks --- at $2.5\times$ a $3$B model retains more absolute capacity than
 the present model has in total). Metrics unchanged: pre-registered gate,
-mean $\pm$ standard deviation over 3 independent seeds (seeds 1--2 queued
-at submission time; seed 0 measured).
+mean $\pm$ standard deviation over 3 seeds (seed~1 $0.3970$, seed~2 running).
 
 \textbf{Safety claim.} Metrics: certificate soundness (currently $168/168$
 across all configurations), guard refusal behavior (currently 1.0 on all four
@@ -236,7 +236,7 @@ The lead (Zaki) built and operates the full pipeline end to end: the
 fine-tuning harness, the tensor-compression kernel stack with its certificate
 algebra, the benchmark/ledger infrastructure with pre-registered gates, and
 the formal-methods integration --- evidenced by the public repository's
-measured results, 80-test suite, and reproducible artifact chain. Working
+measured results, 84-test suite, and reproducible artifact chain. Working
 practice follows the discipline the reviewers will look for: every reported
 number resolves to a run directory with environment snapshot; evaluation
 splits are frozen and hashed before experiments; negative results are
@@ -250,7 +250,7 @@ and the experiment log records what was run, when, and why for every entry.
 \section*{Enclosures}
 \begin{itemize}
 \item \textbf{Public repository:} \url{https://github.com/ZakLr/qicert}
---- README quickstart, pinned environment, 80-test suite, benchmark harness,
+--- README quickstart, pinned environment, 84-test suite, benchmark harness,
 experiment log, and every artifact behind the numbers above.
 \item \textbf{Technical report (7 pages):} \texttt{docs/technical-report-v2.pdf}
 in the repository --- method, theory, measured results incl.\ the negative
