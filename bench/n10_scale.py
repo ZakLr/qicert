@@ -1,7 +1,7 @@
 # ============================================================================
-# N10 - LLM-backbone compression scale probe (Qwen2.5-1.5B, the ~B-param arm)
+# LLM-backbone compression scale probe (Qwen2.5-1.5B)
 # ============================================================================
-# Why this exists (PHASE2-CASE.md L3): the Phase-1 collapse at 2.5x happened
+# Why this exists (the scale hypothesis): the collapse at 2.5x happened
 # on a 0.5B LoRA-tuned LLM whose weight spectra are flat — every parameter
 # carries unique signal, the worst case for low-rank compression. Larger
 # backbones are typically more overparameterized with lower-rank spectra, so
@@ -132,7 +132,7 @@ def _spectral_decay(W: np.ndarray, k: int = 32) -> float:
 
     Higher (less negative) = flatter spectrum = worse for low-rank
     compression. This is the direct measurement of the flat-spectra
-    hypothesis (PHASE2-CASE.md L3).
+    hypothesis (flatter spectra compress worse at fixed ratio).
     """
     s = np.linalg.svd(W, compute_uv=False)[:k]
     s = np.clip(s, 1e-12, None)
@@ -303,9 +303,9 @@ def _run_scale_probe(out: list[str], ctx=None) -> None:
     out.append("* N10 measures the WEIGHT-SPACE collapse predictor at the")
     out.append("* ~1B scale on the same compression machinery. If mean recon")
     out.append("* error drops well below the 0.5B anchors at the same frac,")
-    out.append("* the scale hypothesis (PHASE2-CASE.md L3) is supported at")
-    out.append("* the weight level and the Phase-2 full-VLA scale-up is the")
-    out.append("* justified next step; if it does not, scale alone does not")
+    out.append("* the scale hypothesis is supported at the weight level and")
+    out.append("* a full-VLA scale-up is the justified next step; if it does")
+    out.append("* not, scale alone does not")
     out.append("* rescue TT+residual and the Phase-2 case must lean on")
     out.append("* trained repair (N9) instead. Either result is decision-")
     out.append("* relevant and honest to report.")

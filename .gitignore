@@ -23,6 +23,7 @@ build_cpp/
 lean/.lake/
 lean/.elan/
 lean/build/
+site/
 
 # Local artifacts
 *.log

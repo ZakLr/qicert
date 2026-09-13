@@ -1,0 +1,35 @@
+site_name: qicert
+site_description: Certified quantum-inspired compression for vision-language-action models.
+site_author: The qicert Team
+repo_url: https://github.com/ZakLr/qicert
+
+theme:
+  name: material
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+
+docs_dir: site-docs
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [python]
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Pipeline: pipeline.md
+  - Certificates: certificates.md
+  - Runtime guard: guard.md
+  - Reproducibility: reproducibility.md
+  - API reference:
+      - Compress: api/compress.md
+      - Certificates: api/certify.md
+      - Safety: api/safety.md
+      - Monitor: api/monitor.md
+      - Calibration: api/calibrate.md
+      - Bench suite: api/bench.md
