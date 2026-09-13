@@ -166,7 +166,12 @@ def run_cmd(name: str, cmd: list[str], env: dict, expect_minutes: int,
 
 
 def n2r2_verdict() -> dict:
-    """Best completed full-split N2R2 weighted point -> GO/NO-GO + details."""
+    """Best completed full-split N2R2 weighted point -> GO/NO-GO + details.
+
+    Schema note (audit 2026-09-13): RunRecorder stores the config in the
+    sibling config.json and mirrors its fields inside run.json["results"];
+    run.json has NO top-level "config" key (earlier code read one).
+    """
     best = None
     root = REPO / "results" / "N2R2"
     if root.exists():
@@ -175,10 +180,11 @@ def n2r2_verdict() -> dict:
                 r = json.loads(rj.read_text())
             except Exception:
                 continue
-            cfg, res = r.get("config", {}), r.get("results", {})
-            if (cfg.get("fit_mode") == "weighted" and r.get("status") == "completed"
+            res = r.get("results", {}) or {}
+            if (res.get("fit_mode") == "weighted"
+                    and r.get("status") == "completed"
                     and "full-split" in str(res.get("eval_scope", ""))
-                    and cfg.get("mixed_allocation") is not True):
+                    and res.get("mixed_allocation") is not True):
                 ratio, acc = res.get("ratio"), res.get("eval_acc")
                 if ratio and acc and acc == acc and (best is None
                                                      or acc > best["acc"]):
@@ -221,9 +227,10 @@ def done_n2r2_mixed() -> bool:
             r = json.loads(rj.read_text())
         except Exception:
             continue
-        cfg = r.get("config", {})
-        if (cfg.get("mixed_allocation") is True and r.get("status") == "completed"
-                and "full-split" in str(r.get("results", {}).get("eval_scope", ""))):
+        res = r.get("results", {}) or {}
+        if (res.get("mixed_allocation") is True
+                and r.get("status") == "completed"
+                and "full-split" in str(res.get("eval_scope", ""))):
             return True
     return False
 
@@ -271,10 +278,12 @@ def _candidate_provgo(dir_path: Path):
 def _candidate_best_acc(dir_path: Path):
     try:
         j = json.loads((dir_path / "run.json").read_text())
+        acc = j.get("results", {}).get("search_acc")
     except Exception:
-        return None
-    r = j.get("results", {})
-    return r.get("search_acc")
+        return -1.0
+    if acc is None or acc != acc:          # None or NaN
+        return -1.0
+    return float(acc)
 
 
 def _confirmation_candidate():
@@ -295,13 +304,20 @@ def _confirmation_candidate():
         j = json.loads((best / "run.json").read_text())
     except Exception:
         return None
-    cfg = j.get("config", {})
+    # Search runs store the candidate config inside results["config"];
+    # the sibling config.json carries the same dict under {"config": ...}.
+    cfg = (j.get("results", {}) or {}).get("config")
+    if not cfg:
+        try:
+            cfg = json.loads((best / "config.json").read_text()).get("config", {})
+        except Exception:
+            cfg = {}
     return {
         "plan": str(cfg.get("plan_fraction")),
         "rrank": str(cfg.get("residual_rank_cap")),
         "mode": str(cfg.get("fit_mode", "weighted")),
-        "mixed": str(cfg.get("mixed_allocation", False)),
-        "stat": str(cfg.get("calib_stat", "mean") or "mean"),
+        "mixed": bool(cfg.get("mixed_allocation", False)),
+        "stat": str(cfg.get("calib_stat") or "mean"),
         "tt_split": str(cfg.get("tt_split", 0.6)),
         "source_dir": str(best),
     }
@@ -316,12 +332,11 @@ def _confirmation_done():
             r = json.loads(rj.read_text())
         except Exception:
             continue
-        cfg = r.get("config", {})
-        res = r.get("results", {})
-        if (cfg.get("fit_mode") == _confirm_mode()
-                and cfg.get("plan_fraction") == float(_confirm_plan())
-                and cfg.get("residual_rank_cap") == int(_confirm_rrank())
-                and cfg.get("mixed_allocation") == (_confirm_mixed() == "1")
+        res = r.get("results", {}) or {}
+        if (res.get("fit_mode") == _confirm_mode()
+                and res.get("plan_fraction") == float(_confirm_plan())
+                and res.get("residual_rank_cap") == int(_confirm_rrank())
+                and bool(res.get("mixed_allocation")) == bool(_confirm_mixed())
                 and r.get("status") == "completed"
                 and "full-split" in str(res.get("eval_scope", ""))):
             return True
