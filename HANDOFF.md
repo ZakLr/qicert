@@ -1,6 +1,13 @@
 # HANDOFF.md — read this first if you are a new model/session taking over
 
-**Last verified:** 2026-09-13, commit `5400b7f` on `main` (pushed).
+**Last verified:** 2026-09-13 ~13:07 UTC, commit `40519a4` on `main`.
+**Session rule:** update this file at the end of every work session (and mention
+it in `README.md`) so the next model/session starts here, not from chat history.
+**Live now:** user ran the full queue solo 13:22–15:10 UTC — COMPLETE.
+Summary `results/QUEUE-SUMMARY.json` (15:10:51 UTC): N2R2 NO-GO (best
+full-split 0.1640 @2.536x), N5 5 points + predictor present, seeds 1–2 still
+missing. Prior 13 N2R2 sweep dirs remain archived in
+`results/_archive_20260913_meansearch/` with `MANIFEST.json`.
 **Machine:** Windows laptop, RTX 5060 8 GB, Git Bash. Python: `.venv312/Scripts/python.exe`.
 **Rule zero:** every number below was read directly from `results/*/run.json` on this
 date. Do not trust numbers from chat history — re-read the artifacts.
@@ -52,10 +59,75 @@ sound on every compressed layer.
    Also flagged: the earlier full-split run `45a8d6f5...weighted-mixed` is invalid
    as mixed evidence (identical ratio/acc to its non-mixed twin) but remains a
    valid plain weighted point.
-2. **N5 degradation curve + predictor** (stage `n5-plain`, `n5-weighted`,
-   `n5-predictor`) — predicts max safe compression from cheap probes. These stages
-   crashed on launch last session; the crash (`harness._split_stream` NoneType +
-   `dense_params` KeyError) is now fixed, but **no N5 results exist yet**.
+   **UPDATE 2026-09-13 ~13:00 UTC:** that whole mean-stat sweep is now archived —
+   all 13 N2R2 dirs (10 mean-stat search/search-prefix rows + 3 full-split absmax
+   rows incl. the INVALID-mixed one, renamed with an `INVALID-mixed-kept0`
+   prefix) moved to `results/_archive_20260913_meansearch/N2R2/` with
+   `MANIFEST.json` (sha + per-row summary); the 5 empty `results/N2R-search/`
+   stubs moved alongside and the folder removed. Proven numbers are untouched in
+   `results/ledger.csv`, `results/EXPERIMENT-LOG.md`, and the report. A fresh
+   queue was launched (`--only
+   n2r2-search,n2r2-confirm,n2r2-weighted,n2r2-mixed,n5-plain,n5-weighted,n5-predictor
+   --exclude calib`, PID 792): the new search runs with `STAT=absmax` (current
+   runner default — the user's pasted skip-log showing `mean` candidates is from
+   the pre-fix code) and repaired mixed semantics, so expect higher search acc
+   and a different confirm target. The pasted `--only n2r2-search,n2r2-confirm`
+   run did zero work — both stages reported "already complete" and only
+   regenerated `QUEUE-SUMMARY.json`.
+   **CRASH 2026-09-13 ~13:10 UTC (no result invalidated):** the background queue
+   above and a second foreground queue the user started at 13:06 ran
+   CONCURRENTLY (two VLA loads + two full test suites) and both died in
+   `n2r2-search` at the same candidate with `_ArrayMemoryError: Unable to
+   allocate 4.84 MiB ... float64` in `tt_matvec` (`operator_norm_tight` via
+   `layer_report`) followed by `rc=3221225477`. A 5 MB alloc failing means host
+   RAM was exhausted by contention, not by the N2R2 fix — the kernels are
+   byte-identical to the successful 11:41 search. `results/N2R2/` holds no
+   partial dirs (failure precedes recording); archive + ledger untouched.
+   Recovery: run ONE queue at a time (machine rule, §6), confirm
+   `nvidia-smi` is idle first, then rerun the same command. Note: the
+   "configuration plan" printout shows `mean` because it reads the runner's
+   base env before stages; the actual `n2r2-search` stage env sets
+   `STAT=absmax` — verify in the stage log header, not the plan print.
+   **FRESH RUN 2026-09-13 15:10 UTC (post-archive, solo, all-absmax):**
+   search 5/5 completed, every row `cfg_stat=absmax` (the stat fix verified in
+   `config.json`); mixed rows now genuine (`kept=96`, `sound=72/72`, ratios
+   2.35–2.99x instead of the invalid 2.86–4.07x). Search acc: weighted
+   rr32/rr64 @0.50 → 0.1222/0.1222 (mean-stat was 0.0312/0.1151 — absmax
+   confirmed ~4x better at rr32), mixed 0.1222/0.0781/0.0994; nothing near the
+   0.30 provisional bar. Confirm re-ran weighted rr64/0.50 full-split →
+   **0.1640 @2.536x, exact replication of the archived 0.1640** (deterministic
+   pipeline). Mixed at matched ratio scores LOWER than non-mixed (0.078–0.122
+   vs 0.122 search-prefix) — keeping attention layers full-precision does not
+   rescue accuracy; the collapse is backbone-wide, not attention-localized.
+   Verdict unchanged: **NO-GO** (needs ≥0.3968). N5: 5 points collected but the
+   agreement curve is NON-MONOTONIC (plain 0.50→0.555, 0.33→0.190,
+   0.25→0.580; weighted 0.50→0.109, 0.33→0.580) so the linear predictor is
+   vacuous (`R²=0.16`, `LOO R²=-1.21`, safe-ratio `NaN`) — the "design tool"
+   claim cannot ship on this evidence. Audit flags: (a) each search candidate
+   is recorded TWICE under mirrored tags (`search-0_*` + `n2r2-weighted[-mixed]*`,
+   identical numbers — bookkeeping quirk, inflates ledger rows, changes no
+   number); (b) RESOLVED 2026-09-13 post-queue: the exact equality (0.57994 = 584/1007 on
+   both `weighted-0.33` and `plain-0.25`) is NOT a ref-cache coincidence — it is
+   **mode collapse to the modal action token**. The reference stream's modal
+   token `151515` occupies exactly 584/1007 positions; a collapsed model that
+   emits only that token agrees on exactly those. Same signature in the search:
+   three distinct configs all scored exactly 86/704 = 0.1221590909… (the count
+   of ground-truth modal tokens in the fixed search prefix). All deep-compression
+   accuracies sit at the modal base rate: the models collapsed, they did not
+   gracefully degrade. Full analysis in `results/EXPERIMENT-LOG.md`
+   (2026-09-13 post-queue entry).
+2. **N5 degradation curve + predictor** — DONE 2026-09-13: 5 points
+   (`results/lyapunov/degradation_seed0.json`) + predictor
+   (`results/lyapunov/predictor.json`). Verdict: the linear predictor is
+   VACUOUS (R²=0.16, LOO R²=−1.21, safe-ratio NaN) and that is now understood
+   to be the honest outcome — the agreement curve is bimodal because deep
+   compression causes mode collapse (see audit flag (b) above), which a linear
+   model cannot fit by construction. Do NOT ship the predictor as a design
+   tool; ship the curve + collapse mechanism as the degradation analysis.
+   Caveat: the N5 protocol's break condition caps the probe at ~1007 tokens
+   (token-floor `n_batches*2` triggers after ~57 real batches of the 500
+   requested) — small-sample agreement, fine for collapse detection, too
+   small for precise partial-degradation estimates.
 3. **N1v2 baseline seeds 1 & 2** — challenge requires ≥3 independent runs, mean ± std.
    Only seed 0 exists. Stage `n1v2` (~1–2 h on the 5060) trains seeds 1,2 (batch 2,
    1200 steps). A prior bug (−-seeds never wired → seed1.pt was a byte-duplicate of
@@ -152,7 +224,13 @@ time — two concurrent GPU jobs froze this machine before.
   `mean_abs`; regenerated by stage `calib-topup`).
 - `results/N2R-search/` — search candidates (created by `n2r2-search`; each has
   `run.json` with `results.search_acc`, `results.provisional_go`, and
-  `results.config` = the candidate config).
+  `results.config` = the candidate config). Currently absent (archived; the
+  fresh search writes here again under `--exp-id N2R2` rows).
+- `results/_archive_20260913_meansearch/` — pre-rerun archive (13 N2R2 dirs +
+  5 empty N2R-search stubs + `MANIFEST.json`). Read-only; never feed back into
+  the queue globs.
+- `results/logs/queue/manual-rerun-20260913.log` — live log of the fresh queue
+  (PID 792); per-stage logs in `results/logs/queue/<stage>.log`.
 - `results/lyapunov/degradation_seed0.json`, `predictor.json` — N5 outputs (do not
   exist yet).
 - `results/EXPERIMENT-LOG.md` — chronological what/why/result per experiment. APPEND

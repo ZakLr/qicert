@@ -621,3 +621,54 @@ that was the configuration error, not the pipeline.
 
 Nothing run before today is invalidated by this; the invalid rows are only
 the mixed-semantics ones flagged in the previous entry.
+
+---
+
+## 2026-09-13 (post-queue analysis) — mode-collapse mechanism identified (reinterpretation, no numbers changed)
+
+**Trigger:** the fresh post-archive queue (solo run 12:22–15:10 UTC) produced
+N2R2 search 5/5 absmax + confirm 0.1640 @2.536x (exact replication of the
+archived absmax point — pipeline deterministic) + N5 5 points with a
+NON-MONOTONIC agreement curve and a vacuous predictor (R2=0.16, LOO R2=-1.21,
+safe-ratio NaN). The handoff flagged two anomalies: mirrored run rows
+(bookkeeping) and an exact agreement equality (0.57994) on two different
+N5 configs.
+
+**Finding (verified against artifacts):** the equality is NOT a caching bug —
+it is the signature of **mode collapse to the modal action token**.
+
+Evidence:
+- `results/lyapunov/refpred_seed0.npz`: 1007 reference tokens, 6 unique
+  values; modal token `151515` occupies exactly **584** positions.
+- N5 plain-0.25 and weighted-0.33 both agree with the reference on exactly
+  584/1007 = 0.57994 positions — i.e., the compressed model emits `151515`
+  at EVERY position and matches the reference exactly where the reference
+  itself emitted it.
+- Same mechanism in the N2R2 search stream: three distinct configs
+  (weighted rr32, rr64, mixed rr32) scored **correct = 86/704 =
+  0.1221590909…** — identical to 10 decimal places. 86 is the count of
+  ground-truth modal tokens in the fixed 704-token search prefix; a
+  degenerate always-modal predictor scores exactly that.
+
+**Interpretation (changes meaning, not numbers):**
+1. All measured deep-compression accuracies (0.122 search-prefix, 0.164
+   full-split, 0.078–0.099 mixed) sit at or barely above the modal base
+   rate. The TT+residual model is not "partially degraded" — it has
+   **collapsed**: sound certificates, zero output diversity, no
+   task-relevant behavior. The FT baseline (0.4468) is genuinely varied.
+2. The N5 agreement curve is bimodal, not noisy: partial preservation near
+   2.9x (0.555 plain) vs collapse floor (0.58 ≈ modal frequency) beyond
+   ~4x. The apparent "improvement" at 5.05x is the collapse floor, not
+   signal. A linear predictor over these points is misspecified by
+   construction — the vacuous R2 is the honest outcome, not a bug.
+3. Consequence for the safety narrative: a Lipschitz certificate on a
+   collapsed model is sound but vacuous — the guard never refuses because
+   the model only ever "predicts" one action. Certificates must therefore
+   be paired with an **output-diversity diagnostic** at certification time.
+   This upgrades the report's degradation story from "accuracy collapsed"
+   to "accuracy collapsed via a specific, detectable mechanism."
+
+**Actions:** predictor stays UNREPORTED as a design tool (negative result);
+report N5 as curve + collapse analysis; add mode-collapse diagnostic to
+future-work and mention as post-hoc analysis. HANDOFF audit flag (b) is
+RESOLVED by this entry (not a ref-cache coincidence).

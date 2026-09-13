@@ -9,6 +9,13 @@ python -m qicert.bench.all     # reproduces every table in the report
 python -m qicert.bench.all --rows=smoke   # CI smoke set (tiny, fast)
 ```
 
+## Session entry point
+
+New model or new session: read `HANDOFF.md` first. It holds the verified
+state, artifact map, bug log, and remaining work. Rule: update `HANDOFF.md`
+at the end of every work session so the next session starts from artifacts,
+not chat history.
+
 ## One-liner
 
 Certified quantum-inspired compression for Vision-Language-Action Models: compress into
