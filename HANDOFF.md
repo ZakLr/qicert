@@ -40,13 +40,18 @@ sound on every compressed layer.
 
 ### ⚠️ Open items (what's actually left)
 
-1. **N2R2 configuration search + confirm** — the live experiment. Search over
-   plan/residual-rank/mixed/repair-stat configs with a cheap fixed-budget eval
-   (40 batches), then confirm the best candidate on the full protocol. This decides
-   whether ANY configuration reaches acc ≥ 0.3968 at ratio ≥ 2. If NO-GO again, the
-   submission leans fully on the safety/certificate story + honest degradation
-   characterization (challenge §5.5 explicitly does not penalize degradation that is
-   "clearly characterized" — we characterize it with curves + predictor).
+1. **N2R2 confirm stage** — the live experiment. The configuration search
+   COMPLETED 2026-09-13 (5 candidates, 50 min, 840/840 certificate-sound; rows in
+   `results/N2R2/*search-*`; table in `results/EXPERIMENT-LOG.md`). No candidate
+   reached the provisional GO bar (0.30); best search accuracy 0.122 at 4.07x
+   (INVALID mixed row) and 0.115 at 2.54x (valid weighted). The queue's selection
+   rule picked frac0.33/rr32/weighted/mixed for the full-protocol confirm.
+   NOTE: the search's mixed rows are INVALID (kept=0 bug below); the confirm runs
+   with repaired mixed semantics, so its true ratio will be lower (~2.3x) and
+   accuracy possibly higher. Decide only on the confirm row.
+   Also flagged: the earlier full-split run `45a8d6f5...weighted-mixed` is invalid
+   as mixed evidence (identical ratio/acc to its non-mixed twin) but remains a
+   valid plain weighted point.
 2. **N5 degradation curve + predictor** (stage `n5-plain`, `n5-weighted`,
    `n5-predictor`) — predicts max safe compression from cheap probes. These stages
    crashed on launch last session; the crash (`harness._split_stream` NoneType +
@@ -108,7 +113,17 @@ time — two concurrent GPU jobs froze this machine before.
    one full N2R2 point ~27 min (11.5 compress + 15 eval), search ~1 h (4–5 compress
    passes + seconds-eval each), N5-plain ~45 min (3 plans), N5-weighted ~30 min
    (2 plans), n1v2 seeds 1+2 ~1–2 h. Updated in the runner docstring + STAGES.
-6. Earlier session (already committed at `6b47326`): `--seeds` was parsed but never
+8. **Mixed-allocation no-op (2026-09-13)** — `_llm_linear_keys` yields dashed
+   layer types (`self_attn-q_proj`) while `keep_types` held bare `q_proj`, so
+   `layer_type in keep_types` was always False and every "mixed" run kept 0
+   layers, silently duplicating the non-mixed arm. Fixed with `_is_kept()`
+   (suffix match) in `n2r2_sweep` + both `n2r_search` stages. All mixed rows
+   produced before this fix are invalid as mixed evidence.
+9. **Candidate selector scanned the wrong directory** — search rows are recorded
+   under `results/N2R2/` (stage shares `--exp-id N2R2`), not `results/N2R-search/`;
+   selection now identifies search rows by their `search_acc` field, which also
+   prevents confirm rows being mistaken for candidates.
+10. Earlier session (already committed at `6b47326`): `--seeds` was parsed but never
    wired in `bench/all.py` (silent duplicate seeds); `lyapunov_curve._collect_preds`
    called `harness._split_stream` when None; `n2r2_sweep._record_n2r2_point` had a
    `ttsplit` NameError.
