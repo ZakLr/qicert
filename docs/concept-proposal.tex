@@ -1,0 +1,243 @@
+% ============================================================================
+%  qicert — Phase-1 Concept Proposal (portal submission document)
+%  Written to Phase-1-Submission-Guidelines-VF.md Sec. 4.3: max 6 pages, 10pt
+%  min, seven required elements in order. Companion artifacts: the technical
+%  report (docs/technical-report-v2.pdf) and the public repo. Every number is
+%  measured and traced in the report's Appendix A; nothing here is projected
+%  or aspirational unless explicitly labeled as a Phase-2 target.
+% ============================================================================
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{url}
+\urlstyle{same}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=1.4em}
+\graphicspath{{figures2/}}
+\setlength{\parskip}{0.35em}
+\setlength{\parindent}{0pt}
+
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+
+\begin{document}
+
+\begin{center}
+{\LARGE\bfseries qicert: Certified Compression of Vision--Language--Action Models}\\[2pt]
+{\large with Exact Lipschitz Bounds and a Refusing Runtime Guard}\\[6pt]
+Phase-1 Concept Proposal --- 2026 Global Quantum + AI Challenge\\
+Problem statement: \emph{Quantum-Enhanced Vision-Language-Action Models in
+Autonomous Driving and Robotics Applications} (Volkswagen Group)\\
+Code: \url{https://github.com/ZakLr/qicert} \quad$\cdot$\quad
+Technical report: \texttt{docs/technical-report-v2.pdf} (7~pages, in repo)
+\end{center}
+
+% ---------------------------------------------------------------------------
+\section*{1. Problem Framing}
+Vision--language--action models (VLAMs) for driving and robotics are 7B--10B
+parameter systems that must eventually run on embedded controllers under
+functional-safety regimes (ISO~26262, IEC~62061). The challenge statement
+names the compound constraint precisely: shrink the model \emph{and} retain
+verifiable behavior on long-tail inputs. Classical compression solves the
+first half only. Quantization, pruning, and distillation reduce footprint, but
+none of them yields a statement of the form ``under any input perturbation of
+size $\delta$, the action cannot leave this set'' --- which is the artifact a
+safety engineer would need before certifying deployment on long-tail sensor
+distributions.
+
+Quantum or quantum-inspired advantage enters where structure, not scale, does
+the work. Our QI component is tensor-network structure (tensor-train
+decomposition, the MPS/TTNS family the statement highlights). Its decisive
+property is not size reduction --- at the ratios we tested it loses the
+accuracy contest to INT8 and we report that plainly --- but that the
+compressed weights \emph{carry an exact per-layer Lipschitz constant}
+computable from the compressed cores alone, with no reference to data.
+Quantized weights admit no comparable exact bound, because quantization error
+is data-dependent. Structure is therefore the classical-side object that makes
+an exact deployment certificate computable, chainable, and enforceable at
+runtime --- and it is structurally unavailable to the accepted baseline. This
+is the specific, narrow sense in which the quantum-inspired method provides
+the credible advantage the guidelines ask for; we deliberately claim nothing
+broader.
+
+% ---------------------------------------------------------------------------
+\section*{2. Technical Approach}
+\textbf{Paradigm: quantum-inspired (tensor-network), classical pipeline,
+no quantum hardware required or assumed.} The statement's simulation clause
+covers us explicitly; we state resources honestly in Section~3.
+
+The pipeline wraps an existing VLA at four points. A fine-tuning stage
+establishes the reference policy and freezes a hash-verified evaluation split.
+The compression stage decomposes each linear layer of the language backbone
+into a tensor-train network (TT-SVD); a closed-form low-rank residual folds
+the truncation loss back into the operator so that accuracy survives
+compression as well as the budget allows, with the certificate cost known
+exactly (triangle inequality on the operator norm). The certificate stage
+chains the exact per-layer bounds into a model-level perturbation ball and
+signs the artifact into a hash manifest. The deployment stage is a runtime
+guard that verifies the manifest at load time and, at every inference step,
+refuses any action outside the certified ball.
+
+Three measured components complete the stack. First, a commuting-Pauli
+interaction compiler evaluates cross-modal interaction operators exactly over
+pruned families; its pruning predictions track measurement at median
+$r = 0.975$ over twelve independent operator tables, with compiler identity
+verified to $2.3\times10^{-14}$ relative error. Second, a rare-event
+estimation layer races three estimators on a known-ground-truth problem
+($p^{*}=1.37\times10^{-4}$): an iterated quantum amplitude estimation schedule
+(simulated; the estimator sees only measurement counts, as it would on
+hardware) reaches naive-Monte-Carlo interval width with
+$\sim$1{,}587$\times$ fewer queries, and all arms cover the truth at budget.
+Third, a conformal layer calibrates violation thresholds whose empirical
+coverage lands inside the finite-sample band at all three tested levels
+($\alpha = 0.01/0.05/0.10$).
+
+\textbf{Proof status.} The layer bound $\norm{W}_{2} \le \prod_k
+\norm{G^{(k)}}_{3}$ is exact algebra on the TT factorization; the certificate
+chain and the guard's soundness/completeness properties are machine-checked
+by SMT falsification (Z3 finds no counterexample to accepting an out-of-ball
+action). A guard demo transcript shows: clean load SERVE, out-of-ball action
+REFUSE, tampered-certificate REFUSE, NaN-bound REFUSE, missing-manifest REFUSE.
+
+\textbf{Working prototype.} This is not a design on paper. The repository
+contains 80 passing tests, a benchmark harness, and measured results on a
+fine-tuned 0.5B VLA (LIBERO-spatial, 114{,}497 scored action tokens,
+hash-frozen split): reference accuracy 0.4468; calibrated INT8 at
+$1.997\times$ compression, 0.4466 (the honest classical comparator);
+tensor-compressed routes at $2.5$--$4.1\times$ with sound certificates on
+every one of 168 compressed layers across every configuration tested. The
+accuracy of the repaired tensor route under the pre-registered bar is the
+open question Section~5 turns into the Phase-2 validation plan; the negative
+result at the tested configurations is reported in full in the technical
+report rather than hidden.
+
+% ---------------------------------------------------------------------------
+\section*{3. Feasibility and Resource Requirements}
+Feasibility is demonstrated, not projected: every component above has already
+run end to end on consumer hardware. The full experimental program to date
+consumed roughly 15~GPU-hours on a single laptop-class GPU (NVIDIA RTX~5060,
+8~GB), including fine-tuning (1{,}200 steps), all compression arms, full-split
+evaluations, the estimator fixtures, and latency profiling. Peak training
+memory was 4.8~GiB. No proprietary data, cloud credits, or quantum hardware
+are involved at any stage; LIBERO is the statement's own recommended robotics
+dataset; simulation environments and versions are pinned in the repository.
+Phase-2 scale-up (below) is sized for the same single-GPU discipline, with
+multi-seed replication the main added cost. The honest constraint we declare:
+tensor-network contraction on a CPU edge profile costs $3$--$15\times$ the
+dense fp16 kernel time per layer at these shapes --- within the 100~ms budget
+on measured paths, but a real margin cost that Phase~2 must optimize rather
+than wish away.
+
+% ---------------------------------------------------------------------------
+\section*{4. Expected Impact}
+For the enterprise use case, the deliverable changes what deployment approval
+means. A fleet operator today ships a compressed model on the strength of
+benchmark scores; with qicert-style artifacts they would ship a signed
+certificate, a guard that refuses out-of-ball actions, and an audited
+statistical tail --- the difference between ``we tested it'' and ``it is
+bounded, and the machine enforces the bound.'' The design tool built on our
+degradation measurements points the same direction: predict the largest safe
+compression \emph{before} committing to full evaluation, turning post-hoc
+luck into engineering process.
+
+Quantitative targets, anchored to what already runs: the reference VLA at
+0.4468 accuracy and the INT8 comparator at $1.997\times$ define the bar the
+tensor route must clear; certificates already hold at $4.1\times$ (sound
+$168/168$); the estimator layer already delivers the $\sim$1{,}587$\times$
+query reduction. A successful Phase-2 demonstrates a certified configuration
+that is simultaneously (a) at or beyond $2\times$ compression, (b) within the
+pre-registered accuracy band (reference $-0.05$), and (c) certificate-sound
+with guard enforcement --- or, failing that, the certified sub-$2\times$
+regime with a validated predictor that says exactly where the accuracy wall
+sits, which is itself deployable information the quantized baseline cannot
+produce.
+
+% ---------------------------------------------------------------------------
+\section*{5. Validation Plan}
+The Phase-2 sprint validates three claims, each with metrics fixed in advance
+(pre-registered in the repository before the runs they judge) --- this is the
+strongest differentiator we can offer: the gates are committed, mechanical,
+and auditable.
+
+\textbf{Capability claim (the live experiment).} Configuration search over
+the repaired tensor-compression route --- activation-weighted residual
+fitting, mixed quantized/tensor allocation, and sub-$2\times$ targets where
+INT8 is byte-capped --- with each promising configuration confirmed on the
+full 6{,}496-batch frozen protocol. Metrics: compression ratio, token-level
+action accuracy, pre-registered gate (ratio $\ge 2\times$ AND accuracy
+$\ge 0.3968$), mean $\pm$ standard deviation over 3 independent seeds
+(seeds 1--2 are queued at submission time; seed 0 measured).
+
+\textbf{Safety claim.} Metrics: certificate soundness (currently $168/168$
+across all configurations), guard refusal behavior (currently 1.0 on all four
+tampering scenarios plus in/out-of-ball cases), estimator coverage of known
+ground truth (currently 1.0 at budget for all arms), conformal coverage
+within finite-sample bands (currently true at all three levels).
+
+\textbf{Design-tool claim.} The degradation predictor: fit weight-space
+features to measured agreement, report leave-one-out $R^{2}$ and
+predicted-vs-measured maximum safe ratio. Success: predicted safe ratio
+within a stated tolerance of measurement on held-out points.
+
+Integration milestones for the sprint, in order: multi-seed replication;
+degradation-curve measurement and predictor validation; mixed-allocation
+search to the gate; edge-profile latency optimization for the tensor
+contraction (the known margin cost); and a hardware-pathway write-up
+estimating qubit count, circuit depth, and shot budget for the amplitude
+estimation component, which the challenge lists as a secondary objective and
+for which our simulation fixtures already define the interface.
+
+% ---------------------------------------------------------------------------
+\section*{6. Hybrid / Cross-Domain Integration}
+The design is hybrid by construction, and the division of labor is the point.
+Classical deep-learning infrastructure does the training and the heavy
+evaluation (PyTorch/CUDA on consumer GPU). The quantum-inspired tensor layer
+sits inside the model, where its algebraic structure is load-bearing: it is
+what makes the exact bound computable at all. Quantum algorithmic structure
+appears as the amplitude-estimation schedule for the statistical tail ---
+executed in simulation against the same measurement-count interface it would
+have on hardware, so the estimator layer is hardware-swappable without
+redesign. Formal methods (SMT falsification via Z3, conformal calibration,
+scenario optimization) audit the whole stack mechanically rather than by
+argument. Cross-domain transfer is native to the method: the certificate
+machinery is backbone-agnostic and dataset-agnostic, so the same pipeline
+applies unchanged to the autonomous-driving track (the latency profile we
+measure is a CPU edge profile, and the challenge's 100~ms real-time constraint
+is the same in both tracks); the robotics-track instantiation here was chosen
+because its accepted baseline is reproducible on our hardware.
+
+% ---------------------------------------------------------------------------
+\section*{7. Team Capability}
+The team combines the three disciplines this proposal straddles.
+The lead (Zaki) built and operates the full pipeline end to end: the
+fine-tuning harness, the tensor-compression kernel stack with its certificate
+algebra, the benchmark/ledger infrastructure with pre-registered gates, and
+the formal-methods integration --- evidenced by the public repository's
+measured results, 80-test suite, and reproducible artifact chain. Working
+practice follows the discipline the reviewers will look for: every reported
+number resolves to a run directory with environment snapshot; evaluation
+splits are frozen and hashed before experiments; negative results are
+reported first-class (the technical report's headline compression finding is
+an honest NO-GO under the pre-registered bar, with the failure characterized
+rather than framed). AI research agents were used as engineering leverage
+under the lead's direction; every claim is traceable to committed artifacts,
+and the experiment log records what was run, when, and why for every entry.
+
+% ---------------------------------------------------------------------------
+\section*{Enclosures}
+\begin{itemize}
+\item \textbf{Public repository:} \url{https://github.com/ZakLr/qicert}
+--- README quickstart, pinned environment, 80-test suite, benchmark harness,
+experiment log, and every artifact behind the numbers above.
+\item \textbf{Technical report (7 pages):} \texttt{docs/technical-report-v2.pdf}
+in the repository --- method, theory, measured results incl.\ the negative
+capability result, ablation isolating the QI component, limitations, and a
+claim-to-artifact provenance map (Appendix~A) with seven artifact-generated
+figures.
+\item \textbf{Team profile:} submitted via the portal form (names, roles,
+affiliations, prior quantum/QI and domain experience) per guidelines \S4.1.
+\end{itemize}
+
+\end{document}
