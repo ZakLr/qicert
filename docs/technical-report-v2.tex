@@ -336,14 +336,30 @@ that makes an exact deployment certificate computable and enforceable.''
 \section{Limitations}
 \label{sec:limits}
 
-Five limitations are part of the result. (1) Most rows are single-seed; the
+Six limitations are part of the result. (1) Most rows are single-seed; the
 challenge asks for mean $\pm$ standard deviation over three independent
 runs, the remaining baseline seeds are queued, and no multi-seed number is
-claimed here. (2) The repaired TT route fails the accuracy bar at
-$2.5$--$2.9\times$ on the configurations tested; the configuration search
-and its full-protocol confirmation are the running experiment, and the
-honest expectation is that plain post-hoc repair does not close a
-0.28-accuracy gap at these ratios. (3) TT contraction is $3$--$15\times$
+claimed here. (2) The repaired TT route fails the pre-registered accuracy
+bar at $2.5$--$2.9\times$: the configuration search (five candidates, all
+absmax-weighted) and its full-protocol confirmation measured a best point
+of $0.1640$ accuracy at $2.536\times$, against the required $0.3968$. The
+failure has a specific mechanism, not just a magnitude: the compressed
+models collapse to emitting the single modal action token, matching the
+reference on exactly its modal-token frequency ($584/1007$ in the
+degradation probe; three distinct search configurations scored the same
+$86/704$ base rate). A certificate on a collapsed model is sound but
+vacuous --- the guard never refuses because the model never strays --- so
+structural certification must be paired with an output-diversity check,
+a requirement this Phase-1 work surfaced and Phase 2 adopts. Three levers
+that would plausibly close the gap were untestable in a 15~GPU-hour,
+one-laptop budget and are costed for Phase 2: training-based repair of the
+compressed weights (our repair is closed-form, one-shot, and provably
+weaker than trained repair), activation-aware rank allocation, and a
+larger backbone whose weight spectra carry actual redundancy (at $2.5\times$
+a 3B model retains more absolute capacity than the present model has in
+total). Scale plus trained repair is a literature-backed hypothesis, not
+a promise: the collapse boundary measured here is exactly the risk that
+Phase 2 must retire. (3) TT contraction is $3$--$15\times$
 slower than dense fp16 per layer on the CPU profile; the latency benchmark
 passes, but the margin comes from the profile, not from TT being fast.
 (4) The rare-event race runs on a demo oracle with known ground truth;
@@ -378,14 +394,18 @@ suite with one command from the repository README.
 
 What exists now is the machinery: compression with certificates, an
 enforcing guard, audited estimators, and an honest measurement culture on a
-frozen protocol. What a Phase-2 sprint would demonstrate is the claim this
-Phase-1 report has refused to fake: whether a configuration of the repaired
-TT route (activation-weighted fitting, mixed quantized/TT allocation,
-sub-$2\times$ targets where INT8 is byte-capped) reaches the pre-registered
-accuracy bar while keeping certificates sound. Success metrics are already
-fixed---the gate of Section~3 for the capability claim, soundness
-$168/168$ and guard refusal rate 1.0 for the safety claim, and the
-degradation predictor's leave-one-out $R^{2}$ for the design-tool claim.
+frozen protocol. The Phase-1 configuration search is complete and its
+verdict is in: no training-free configuration of the repaired TT route
+reaches the accuracy bar at $\ge 2\times$, and the degradation predictor
+fitted to the measured agreement curve is vacuous ($R^2 = 0.16$,
+leave-one-out $R^2 = -1.21$) because the curve is bimodal --- partial
+preservation near $2.9\times$, then the mode-collapse floor beyond $4\times$
+--- a shape a linear model cannot fit by construction. Phase 2 therefore
+pulls the three levers of Section~\ref{sec:limits} in cost order: trained
+repair of the compressed weights (single GPU, days), activation-aware rank
+allocation, and backbone scale (cloud), against the same pre-registered
+gate with certificates re-derived from the final deployed weights at every
+step --- a post-hoc certification cost of one SVD per layer, not a redesign.
 The failure mode is also informative: if the search confirms that no
 configuration reaches the bar, the deliverable stands as the certified
 sub-$2\times$ regime with a predictor that says exactly where the wall is,

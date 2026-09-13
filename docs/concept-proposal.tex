@@ -161,14 +161,22 @@ The Phase-2 sprint validates three claims, each with metrics fixed in advance
 strongest differentiator we can offer: the gates are committed, mechanical,
 and auditable.
 
-\textbf{Capability claim (the live experiment).} Configuration search over
-the repaired tensor-compression route --- activation-weighted residual
-fitting, mixed quantized/tensor allocation, and sub-$2\times$ targets where
-INT8 is byte-capped --- with each promising configuration confirmed on the
-full 6{,}496-batch frozen protocol. Metrics: compression ratio, token-level
-action accuracy, pre-registered gate (ratio $\ge 2\times$ AND accuracy
-$\ge 0.3968$), mean $\pm$ standard deviation over 3 independent seeds
-(seeds 1--2 are queued at submission time; seed 0 measured).
+\textbf{Capability claim (Phase-1 experiment completed; Phase-2 escalation).}
+The Phase-1 configuration search over the repaired tensor route finished
+under the pre-registered gate (ratio $\ge 2\times$ AND accuracy $\ge 0.3968$):
+best certified point $0.1640$ at $2.536\times$ --- NO-GO, with the failure
+mechanism identified (mode collapse to the modal action token; the
+agreement-vs-compression curve is bimodal, not gradual). Phase 2 pulls the
+three levers this diagnosis isolated, in cost order: trained repair of the
+compressed weights (a low-rank adapter on the compressed model --- expected
+to recover the largest fraction, since the same $4.4$M-parameter budget
+lifted the base model from $0.11$ to $0.4468$; certificates re-derived from
+the final weights at a cost of one SVD per layer), activation-aware rank
+allocation, and backbone scale (a $1.5$--$7$B backbone, whose weights carry
+the redundancy a $0.5$B LoRA-tuned model lacks --- at $2.5\times$ a $3$B
+model retains more absolute capacity than the present model has in total).
+Metrics unchanged: pre-registered gate, mean $\pm$ standard deviation over
+3 independent seeds (seeds 1--2 queued at submission time; seed 0 measured).
 
 \textbf{Safety claim.} Metrics: certificate soundness (currently $168/168$
 across all configurations), guard refusal behavior (currently 1.0 on all four
@@ -176,10 +184,13 @@ tampering scenarios plus in/out-of-ball cases), estimator coverage of known
 ground truth (currently 1.0 at budget for all arms), conformal coverage
 within finite-sample bands (currently true at all three levels).
 
-\textbf{Design-tool claim.} The degradation predictor: fit weight-space
-features to measured agreement, report leave-one-out $R^{2}$ and
-predicted-vs-measured maximum safe ratio. Success: predicted safe ratio
-within a stated tolerance of measurement on held-out points.
+\textbf{Design-tool claim (Phase-1 negative result reported).} The linear
+degradation predictor fitted to Phase-1's measured agreement curve is
+vacuous ($R^{2} = 0.16$) because the curve is bimodal --- a mode-collapse
+signature, not a smooth degradation. Phase 2 replaces the linear model with
+a collapse-boundary detector (classify safe/collapsed rather than regress
+agreement) and revalidates on the scaled backbone; the Phase-1 curve and
+its mechanism are reported as the measurement that motivated this redesign.
 
 Integration milestones for the sprint, in order: multi-seed replication;
 degradation-curve measurement and predictor validation; mixed-allocation
