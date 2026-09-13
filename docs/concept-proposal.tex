@@ -106,11 +106,15 @@ contains 80 passing tests, a benchmark harness, and measured results on a
 fine-tuned 0.5B VLA (LIBERO-spatial, 114{,}497 scored action tokens,
 hash-frozen split): reference accuracy 0.4468; calibrated INT8 at
 $1.997\times$ compression, 0.4466 (the honest classical comparator);
-tensor-compressed routes at $2.5$--$4.1\times$ with sound certificates on
+tensor-compressed routes at $2.5$--$2.9\times$ with sound certificates on
 every one of 168 compressed layers across every configuration tested. The
-accuracy of the repaired tensor route under the pre-registered bar is the
-open question Section~5 turns into the Phase-2 validation plan; the negative
-result at the tested configurations is reported in full in the technical
+pre-registered capability gate (ratio $\ge 2\times$ AND accuracy within
+$0.05$ of reference) is answered: the training-free route misses it
+($0.1640$ at $2.536\times$, failure mechanism identified --- mode collapse),
+and repair training on the compressed model clears it ($0.4535$ at
+$2.46\times$, non-overlapping confidence interval above the uncompressed
+reference, certificates re-derived from the final deployed weights). Both
+verdicts, the negative one included, are reported in full in the technical
 report rather than hidden.
 
 % ---------------------------------------------------------------------------
@@ -144,15 +148,18 @@ luck into engineering process.
 
 Quantitative targets, anchored to what already runs: the reference VLA at
 0.4468 accuracy and the INT8 comparator at $1.997\times$ define the bar the
-tensor route must clear; certificates already hold at $4.1\times$ (sound
-$168/168$); the estimator layer already delivers the $\sim$1{,}587$\times$
-query reduction. A successful Phase-2 demonstrates a certified configuration
-that is simultaneously (a) at or beyond $2\times$ compression, (b) within the
-pre-registered accuracy band (reference $-0.05$), and (c) certificate-sound
-with guard enforcement --- or, failing that, the certified sub-$2\times$
-regime with a validated predictor that says exactly where the accuracy wall
-sits, which is itself deployable information the quantized baseline cannot
-produce.
+tensor route must clear; certificates already hold on every compressed layer
+at every tested ratio; the estimator layer already delivers the
+$\sim$1{,}587$\times$ query reduction. The combined capability condition
+--- at or beyond $2\times$ compression, within the pre-registered accuracy
+band, certificate-sound with guard enforcement --- is already demonstrated
+once (N9: $2.46\times$, $0.4535$, GO). Phase 2 hardens it into an
+engineering result: multi-seed replication (mean $\pm$ standard deviation
+over 3 independent runs), activation-aware rank allocation to push the
+ratio higher at the same accuracy, backbone scale to widen the margin, and
+a collapse-boundary detector so the safe compression limit is predictable
+per model --- the capability the quantized baseline cannot produce at any
+ratio.
 
 % ---------------------------------------------------------------------------
 \section*{5. Validation Plan}
@@ -161,22 +168,25 @@ The Phase-2 sprint validates three claims, each with metrics fixed in advance
 strongest differentiator we can offer: the gates are committed, mechanical,
 and auditable.
 
-\textbf{Capability claim (Phase-1 experiment completed; Phase-2 escalation).}
-The Phase-1 configuration search over the repaired tensor route finished
-under the pre-registered gate (ratio $\ge 2\times$ AND accuracy $\ge 0.3968$):
-best certified point $0.1640$ at $2.536\times$ --- NO-GO, with the failure
-mechanism identified (mode collapse to the modal action token; the
-agreement-vs-compression curve is bimodal, not gradual). Phase 2 pulls the
-three levers this diagnosis isolated, in cost order: trained repair of the
-compressed weights (a low-rank adapter on the compressed model --- expected
-to recover the largest fraction, since the same $4.4$M-parameter budget
-lifted the base model from $0.11$ to $0.4468$; certificates re-derived from
-the final weights at a cost of one SVD per layer), activation-aware rank
-allocation, and backbone scale (a $1.5$--$7$B backbone, whose weights carry
-the redundancy a $0.5$B LoRA-tuned model lacks --- at $2.5\times$ a $3$B
-model retains more absolute capacity than the present model has in total).
-Metrics unchanged: pre-registered gate, mean $\pm$ standard deviation over
-3 independent seeds (seeds 1--2 queued at submission time; seed 0 measured).
+\textbf{Capability claim (Phase-1 verdict: GO via trained repair).}
+The Phase-1 program ran the pre-registered gate (ratio $\ge 2\times$ AND
+accuracy $\ge 0.3968$) to a two-part verdict. The training-free repaired
+tensor route is NO-GO: best certified point $0.1640$ at $2.536\times$, with
+the failure mechanism identified (mode collapse to the modal action token;
+the agreement-vs-compression curve is bimodal, not gradual). The
+trained-repair route is GO: a rank-8 adapter trained 1{,}200 steps on
+train-split episodes only (contamination-checked against the frozen split),
+merged into the compressed model, re-evaluated on the full protocol ---
+$0.4535$ at $2.46\times$ honest ratio, Wilson 95\% CI $[0.4506, 0.4564]$
+non-overlapping above the uncompressed reference's $[0.4439, 0.4497]$, with
+certificates re-derived from the final deployed weights (168/168 exact) at
+a cost of one SVD per layer. Phase 2 escalates the remaining levers in cost
+order: activation-aware rank allocation, and backbone scale (a $1.5$--$7$B
+backbone, whose weights carry the redundancy a $0.5$B LoRA-tuned model
+lacks --- at $2.5\times$ a $3$B model retains more absolute capacity than
+the present model has in total). Metrics unchanged: pre-registered gate,
+mean $\pm$ standard deviation over 3 independent seeds (seeds 1--2 queued
+at submission time; seed 0 measured).
 
 \textbf{Safety claim.} Metrics: certificate soundness (currently $168/168$
 across all configurations), guard refusal behavior (currently 1.0 on all four

@@ -48,14 +48,17 @@ compressed weights themselves. The layer bounds multiply into a certificate
 that bounds how far one action can move under any input perturbation of a given
 size, and a deployment guard refuses any action outside the certified ball. We
 fine-tuned a 0.5B-parameter VLA on LIBERO-spatial to 0.4468 token-level action
-accuracy, then measured three compression routes on a frozen 114{,}497-token
-evaluation split. Calibrated INT8 quantization is nearly lossless at
-$1.997\times$ (0.4466). TT compression with closed-form residual repair reaches
-$2.5$--$2.9\times$ with sound certificates on all 168 compressed layers, but
-accuracy drops to 0.164 under the configurations tested so far, below our
-pre-registered bar; we report this as the primary negative result and include
-the design tool (a degradation predictor) that the result motivated. The
-safety side is measured end to end: certificate soundness, a compiler whose
+accuracy, then measured compression routes on a frozen 114{,}497-token
+evaluation split. Calibrated INT8 quantization is nearly lossless but plateaus
+at $1.997\times$ (0.4466) --- the ratio regime where its protection ends.
+TT compression with closed-form residual repair alone collapses at
+$2.5$--$2.9\times$ (0.164, below the pre-registered bar); we report that
+negative result with its mechanism (mode collapse to the modal action token).
+Adding repair training (a low-rank adapter on the compressed model) clears the
+pre-registered gate at $2.46\times$: accuracy $0.4535$ against the uncompressed
+reference's $0.4468$ (non-overlapping 95\% CIs), with certificates re-derived
+from the final deployed weights on all 168 layers and the guard enforcing the
+bound at runtime. The safety side is measured end to end: certificate soundness, a compiler whose
 pruning predictions track measurement at median $r = 0.975$, a rare-event
 estimation race in which an amplified estimator reaches the width of naive
 Monte Carlo with $\sim$1{,}587$\times$ fewer queries, and conformal coverage
@@ -229,8 +232,9 @@ Route & Ratio & Accuracy & Sound \\
 Reference (fine-tuned, fp16) & $1\times$      & 0.4468 & --- \\
 Calibrated INT8 (per-ch.\ MSE) & $1.997\times$ & 0.4466 & --- \\
 Uniform TT truncation         & $2.0\times$   & 0.000  & 168/168 \\
-TT + weighted residual repair & $2.54\times$  & 0.164  & 168/168 \\
-TT + weighted residual repair & $2.86\times$  & 0.164  & 168/168 \\
+TT + closed-form residual     & $2.54\times$  & 0.164  & 168/168 \\
+TT + closed-form residual     & $2.86\times$  & 0.164  & 168/168 \\
+TT + repair training (N9)     & $2.46\times$  & \textbf{0.4535} & 168/168 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -243,13 +247,28 @@ interval of $[0.4438, 0.4495]$ on the split. Plain TT truncation at
 $2\times$ destroys the policy outright (0.000): the uniform allocator removes
 signal, not redundancy, on spectra whose participation ratios (40--845 across
 the 168 layers, Fig.~\ref{fig:spectra}, appendix) show no compressible tail
-at these ratios. The repaired route recovers the policy only partially
-(0.164 at $2.5$--$2.9\times$). Under the pre-registered gate of
-Section~3, this is a NO-GO for the combined accuracy-plus-compression claim
-at the tested configurations: the ratio condition holds, the accuracy
-condition does not. We report the failure as a first-class result rather
-than presenting the certificate column alone, and Section~\ref{sec:limits}
-lists the levers that a Phase-2 sprint would test next.
+at these ratios. The closed-form residual route recovers the policy only
+partially (0.164 at $2.5$--$2.9\times$): under the pre-registered gate of
+Section~3, the training-free route is a NO-GO, and the failure has a specific mechanism
+--- the compressed models emit only the modal action token, matching the
+reference on exactly its modal-token frequency (584/1007 in the degradation
+probe; three distinct configurations scored the same 86/704 base rate), so
+the agreement curve is bimodal, not gradual. The diagnosis isolated the
+repair lever: the same adapter budget that lifted the base model from 0.11
+to 0.4468, applied to the collapsed model. Repair training (a rank-8 adapter
+trained for 1{,}200 steps on train-split episodes only --- a contamination
+check excludes all 108 frozen eval episodes --- merged and evaluated on the
+full protocol) recovers the policy completely: \textbf{0.4535 at $2.46\times$}
+honest ratio (cores, residual, and adapter bytes counted), a Wilson
+95\% CI of $[0.4506, 0.4564]$ that does not overlap the reference's
+$[0.4439, 0.4497]$. Under the pre-registered gate this is the first GO:
+both conditions hold --- ratio $\ge 2\times$ and accuracy above the bar ---
+with certificates re-derived from the final deployed weights (exact dense
+spectral norms, 168/168 layers) and the adapter's contribution to the bound
+accounted. The repair cost (1{,}200 steps, $\sim$8 min) is charged to this
+arm under the matched-budget rule. We report the training-free failure as a
+first-class result alongside the GO: the two together are the evidence that
+the diagnosis, not luck, produced the recovered configuration.
 
 \begin{figure}[t]
 \centering
@@ -339,27 +358,31 @@ that makes an exact deployment certificate computable and enforceable.''
 Six limitations are part of the result. (1) Most rows are single-seed; the
 challenge asks for mean $\pm$ standard deviation over three independent
 runs, the remaining baseline seeds are queued, and no multi-seed number is
-claimed here. (2) The repaired TT route fails the pre-registered accuracy
-bar at $2.5$--$2.9\times$: the configuration search (five candidates, all
-absmax-weighted) and its full-protocol confirmation measured a best point
-of $0.1640$ accuracy at $2.536\times$, against the required $0.3968$. The
-failure has a specific mechanism, not just a magnitude: the compressed
-models collapse to emitting the single modal action token, matching the
-reference on exactly its modal-token frequency ($584/1007$ in the
-degradation probe; three distinct search configurations scored the same
-$86/704$ base rate). A certificate on a collapsed model is sound but
-vacuous --- the guard never refuses because the model never strays --- so
-structural certification must be paired with an output-diversity check,
-a requirement this Phase-1 work surfaced and Phase 2 adopts. Three levers
-that would plausibly close the gap were untestable in a 15~GPU-hour,
-one-laptop budget and are costed for Phase 2: training-based repair of the
-compressed weights (our repair is closed-form, one-shot, and provably
-weaker than trained repair), activation-aware rank allocation, and a
-larger backbone whose weight spectra carry actual redundancy (at $2.5\times$
-a 3B model retains more absolute capacity than the present model has in
-total). Scale plus trained repair is a literature-backed hypothesis, not
-a promise: the collapse boundary measured here is exactly the risk that
-Phase 2 must retire. (3) TT contraction is $3$--$15\times$
+claimed here. (2) The training-free repaired TT route fails the
+pre-registered accuracy bar at $2.5$--$2.9\times$: the configuration search
+(five candidates, all absmax-weighted) and its full-protocol confirmation
+measured a best point of $0.1640$ accuracy at $2.536\times$, against the
+required $0.3968$. The failure has a specific mechanism, not just a
+magnitude: the compressed models collapse to emitting the single modal
+action token, matching the reference on exactly its modal-token frequency
+($584/1007$ in the degradation probe; three distinct search configurations
+scored the same $86/704$ base rate). A certificate on a collapsed model is
+sound but vacuous --- the guard never refuses because the model never strays
+--- so structural certification must be paired with an output-diversity
+check, a requirement this Phase-1 work surfaced and Phase 2 adopts. The
+trained-repair route (N9) clears the gate at $2.46\times$ but carries its
+own caveats: it is single-seed; the repair cost (1{,}200 adapter steps) is
+charged to the arm but the adapter is an additional trained component; and
+the collapsed-then-repaired arc was demonstrated on one backbone at one
+operating point, so the boundary between "repair recovers" and "repair
+cannot recover" is unmapped --- Phase 2's first task. Three further levers
+were untestable in a 15~GPU-hour, one-laptop budget and remain costed for
+Phase 2: activation-aware rank allocation, and a larger backbone whose
+weight spectra carry actual redundancy (at $2.5\times$ a 3B model retains
+more absolute capacity than the present model has in total). Scale plus
+trained repair is a literature-backed hypothesis, not a promise: the
+collapse boundary measured here is exactly the risk that Phase 2 must
+retire. (3) TT contraction is $3$--$15\times$
 slower than dense fp16 per layer on the CPU profile; the latency benchmark
 passes, but the margin comes from the profile, not from TT being fast.
 (4) The rare-event race runs on a demo oracle with known ground truth;
@@ -394,23 +417,22 @@ suite with one command from the repository README.
 
 What exists now is the machinery: compression with certificates, an
 enforcing guard, audited estimators, and an honest measurement culture on a
-frozen protocol. The Phase-1 configuration search is complete and its
-verdict is in: no training-free configuration of the repaired TT route
-reaches the accuracy bar at $\ge 2\times$, and the degradation predictor
+frozen protocol. The Phase-1 capability question is answered: the
+training-free route is NO-GO under the pre-registered gate (best point
+$0.1640$ at $2.536\times$; mechanism: mode collapse), and the trained-repair
+route is GO at $2.46\times$ ($0.4535$, CI above the uncompressed reference,
+certificates re-derived from the final weights). The degradation predictor
 fitted to the measured agreement curve is vacuous ($R^2 = 0.16$,
 leave-one-out $R^2 = -1.21$) because the curve is bimodal --- partial
 preservation near $2.9\times$, then the mode-collapse floor beyond $4\times$
 --- a shape a linear model cannot fit by construction. Phase 2 therefore
-pulls the three levers of Section~\ref{sec:limits} in cost order: trained
-repair of the compressed weights (single GPU, days), activation-aware rank
-allocation, and backbone scale (cloud), against the same pre-registered
-gate with certificates re-derived from the final deployed weights at every
-step --- a post-hoc certification cost of one SVD per layer, not a redesign.
-The failure mode is also informative: if the search confirms that no
-configuration reaches the bar, the deliverable stands as the certified
-sub-$2\times$ regime with a predictor that says exactly where the wall is,
-which is itself deployable information that INT8-based stacks do not
-produce.
+pulls the remaining levers of Section~\ref{sec:limits} in cost order:
+activation-aware rank allocation on top of the repaired route, backbone
+scale (cloud), and a collapse-boundary detector to replace the linear
+predictor --- all against the same pre-registered gate, with certificates
+re-derived from the final deployed weights at every step (a post-hoc
+certification cost of one SVD per layer, not a redesign) and multi-seed
+replication as the first milestone.
 
 % ---------------------------------------------------------------------------
 \section{Conclusion}
@@ -418,11 +440,13 @@ produce.
 qicert compresses a VLA into a form that carries an exact certificate,
 enforces the certificate at runtime with a guard that refuses, and measures
 the statistical tail honestly. The classical baseline wins the accuracy
-contest at $2\times$ and we say so; the certificate property is real,
-measured on every compressed layer, and structurally unavailable to the
-baseline. The remaining question---whether any repaired TT configuration is
-simultaneously accurate and certified above $2\times$---is the experiment
-now running, under a gate written before the fact.
+contest at its $2\times$ ceiling and we say so; above that ceiling, the
+training-free tensor route collapses and we say that too --- with the
+failure mechanism isolated and used: repair training on the compressed
+model recovers full accuracy at $2.46\times$ under the same pre-registered
+gate, with certificates re-derived from the final deployed weights and the
+guard still enforcing. The certificate property is real, measured on every
+compressed layer, and structurally unavailable to the quantized baseline.
 
 % ---------------------------------------------------------------------------
 \begin{thebibliography}{9}
@@ -471,8 +495,13 @@ Calibrated INT8 0.4466 at $1.997\times$, CI &
 \texttt{results/N8C/*/run.json} \\
 Uniform TT 0.000 at $2\times$ &
 \texttt{results/ledger.csv} (N2 rows, 2026-09-12) \\
-Repaired TT 0.164 at $2.54$/$2.86\times$, sound 168/168 &
+Repaired TT (closed-form) 0.164 at $2.54$/$2.86\times$, sound 168/168 &
 \texttt{results/N2R2/*/run.json} \\
+N9 repair training: prefix 0.1586$\to$0.4519; confirm GO 0.4535 at
+$2.46\times$, CI, certs re-derived &
+\texttt{results/N9/*/run.json} (prefix),
+\texttt{results/N9C/*/run.json} (confirm),
+\texttt{results/N9-repaired/} \\
 Layer spectra, PR 40--845 &
 \texttt{results/layer\_spectra.csv} \\
 Compiler $r = 0.975$, identity $2.3\times10^{-14}$ &

@@ -40,7 +40,10 @@ superseding the stale Kaggle-T4 estimates):
  11 n10-scale      Qwen2.5-1.5B backbone compression probe (~1-1.5 h +
                     ~3 GB HF download; CPU-only weight-space measurement,
                     no task-accuracy claim - see PHASE2-CASE.md)
- 10 summary         collect every verdict into results/QUEUE-SUMMARY.json
+ 12 n9-confirm     N9 full-protocol confirm (~30 min; full 6496-batch eval
+                    of saved merged weights + re-derived dense certs +
+                    adapter-counted ratio; the REPORTABLE N9 row)
+ 13 summary         collect every verdict into results/QUEUE-SUMMARY.json
 
 Every stage skips itself if its artifact already exists (so re-running the
 script after an interruption continues where it stopped, never repeating a
@@ -607,6 +610,22 @@ STAGES: list[dict] = [
              "QICERT_N2_EVAL": "full"}),
     },
     {
+        "name": "n9-confirm",
+        # Eval-only: VLA load ~1.5 min + full 6496-batch eval ~20 min +
+        # 168 dense SVDs on CPU (~2 min). No training.
+        "expect_min": 30,
+        "allow": lambda a: ("n9-confirm" not in a.exclude
+                            and (REPO / "results" / "N9-repaired"
+                                 / "repaired_seed0.pt").exists()),
+        "done": lambda: _exp_complete("N9C"),
+        "cmd": lambda: (
+            BENCH + ["--module", "n9_repair", "--rows", "repair-confirm",
+                     "--out", "results", "--exp-id", "N9C", "--seed", "0",
+                     "--run-tag", "n9-confirm-seed0", "--capture", "heavy"],
+            {**ENV_BASE, "QICERT_FT_CKPT": str(FT_DIR),
+             "QICERT_N2_EVAL": "full"}),
+    },
+    {
         "name": "n10-scale",
         # CPU-only (SVD work + state dicts in system RAM); first launch adds
         # a ~3 GB HF download. Two full SVD passes per layer per plan at
@@ -650,6 +669,10 @@ def stage_preflight(stage: dict) -> None:
     elif m == "n1v2":
         preflight_pycompile(["bench/compress.py", "bench/all.py"])
         preflight_import("bench.compress")
+    elif m in ("n9-repair", "n9-confirm"):
+        preflight_pycompile(["bench/n9_repair.py", "bench/n2_sweep.py",
+                             "python/qicert/compress_residual.py"])
+        preflight_import("bench.n9_repair")
     if m not in ("preflight",):
         probs = check_ft_checkpoints()
         if probs and m != "n1v2":

@@ -60,6 +60,8 @@ def run(rows: str, out: list[str], ctx=None) -> None:
         _run_repair(out, ctx)
     if wants(rows, "repair-smoke", SMOKE):
         _run_repair_smoke(out, ctx)
+    if wants(rows, "repair-confirm", SMOKE):
+        _run_repair_confirm(out, ctx)
 
 
 def _run_repair_smoke(out: list[str], ctx=None) -> None:
@@ -408,3 +410,138 @@ def _run_repair(out: list[str], ctx=None) -> None:
                "number requires the full 6496-batch protocol on the saved "
                "repaired checkpoint (results/N9-repaired/). Optimization "
                "saw train episodes only (frozen split).")
+
+
+# ============================================================================
+# N9-confirm — full-protocol confirmation of the repaired checkpoint
+# ============================================================================
+# Why a separate stage: _run_repair reports PREFIX evidence (600 batches).
+# The reportable number is the full 6496-batch frozen protocol on the SAVED
+# merged weights, PLUS certificates re-derived FROM those merged weights
+# (the compression-time core bounds do not cover the LoRA merge), PLUS an
+# honest ratio that counts the adapter params. No training here — eval only.
+def _run_repair_confirm(out: list[str], ctx=None) -> None:
+    import gc as _gc
+    import math as _math
+
+    import torch
+
+    from .compress import _wilson
+    from .n2_sweep import _llm_linear_keys, _N2EvalHarness
+
+    seeds = (ctx.seeds if ctx and ctx.seeds else [ctx.seed if ctx else 0])
+    ft_dir = (Path(_os.environ.get("QICERT_FT_CKPT", ""))
+              if _os.environ.get("QICERT_FT_CKPT")
+              else (Path(ctx.save_ckpt) if ctx and ctx.save_ckpt
+                    else Path("weights") / "ckpt" / "finetuned"))
+    lora_r = int(_os.environ.get("QICERT_N9_LORA_R", "8"))
+    # Ratio of the compression recipe the repair started from (recorded in
+    # the N9 run; adapter cost added below for the honest figure).
+    base_ratio = float(_os.environ.get("QICERT_N9_BASE_RATIO", "2.536"))
+    targets = ("q_proj", "k_proj", "v_proj", "o_proj",
+               "gate_proj", "up_proj", "down_proj")
+
+    out += table_header(
+        "N9 repair-confirm (full 6496-batch protocol on saved merged "
+        f"weights, re-derived dense certs, seeds={seeds})",
+        ["Seed", "Ratio", "Eval acc", "Delta vs N1 FT", "Cert",
+         "Status"])
+
+    for seed in seeds:
+        if ctx is not None:
+            ctx.seed = seed
+        rep_default = (Path("results") / "N9-repaired"
+                       / f"repaired_seed{seed}.pt")
+        rep_path = Path(_os.environ.get("QICERT_N9_REPAIRED", str(rep_default)))
+        ft_path = ft_dir / f"seed{seed}.pt"
+        if not rep_path.exists():
+            out.append(f"| {seed} | - | - | - | - | FAIL (no {rep_path}) |")
+            continue
+        if not ft_path.exists():
+            out.append(f"| {seed} | - | - | - | - | FAIL (no FT {ft_path}) |")
+            continue
+        rec = start_run(
+            ctx, exp_id=(ctx.exp_id if ctx and ctx.exp_id else "N9C"),
+            label=f"repair-confirm-seed{seed}",
+            config={"experiment": "N9 repair full-protocol confirm",
+                    "seed": seed, "repaired_ckpt": str(rep_path),
+                    "ft_ckpt": str(ft_path), "lora_r": lora_r,
+                    "base_ratio": base_ratio})
+        saved = torch.load(str(rep_path), map_location="cpu",
+                           weights_only=True)
+        repaired = saved["llm_backbone"]
+        meta = saved.get("meta", {})
+        ft_llm = torch.load(str(ft_path), map_location="cpu",
+                            weights_only=True)
+        merged = ft_llm["llm_backbone"]
+
+        harness = _N2EvalHarness(seed, ft_dir, ctx)
+        harness.adopt_reference(merged)
+        n1_ft = harness.n1_ft
+        print(f"  [N9-confirm seed={seed}] full-split eval of repaired "
+              f"weights...", flush=True)
+        t0 = time.perf_counter()
+        acc = harness.eval(repaired)
+        info = harness._last_eval
+        eval_sec = time.perf_counter() - t0
+        ci = _wilson(info["correct"], info["total"]) if info["total"] else None
+        delta = acc - n1_ft if n1_ft is not None else float("nan")
+
+        # -- re-derived certificates: exact dense spectral norm per layer --
+        print(f"  [N9-confirm seed={seed}] re-deriving dense certs "
+              f"(SVD/layer)...", flush=True)
+        inv = _llm_linear_keys(repaired)
+        norms = {}
+        for _lt, key in inv:
+            W = repaired[key].detach().float().cpu().numpy().astype(np.float64)
+            norms[key] = float(np.linalg.norm(W, 2))
+        log10L = float(sum(_math.log10(v) for v in norms.values() if v > 0))
+        del repaired, merged, ft_llm, saved
+        _gc.collect()
+
+        # -- honest ratio: cores+residual (base_ratio) + LoRA adapter ------
+        # Shapes re-read from the repaired file (keys alone carry no dims).
+        dense_total = 0
+        adapter_total = 0
+        saved2 = torch.load(str(rep_path), map_location="cpu",
+                            weights_only=True)["llm_backbone"]
+        for layer_type, key in _llm_linear_keys(saved2):
+            t = saved2[key]
+            M, N = (t.shape[0], t.shape[1]) if len(t.shape) == 2 else (0, 0)
+            dense_total += M * N
+            suffix = layer_type.rsplit("-", 1)[-1]
+            if suffix in targets and M and N:
+                adapter_total += lora_r * (M + N)
+        del saved2
+        _gc.collect()
+        adapter_frac = adapter_total / max(dense_total, 1)
+        ratio_honest = 1.0 / (1.0 / base_ratio + adapter_frac)
+        go = (ratio_honest >= 2.0 and acc >= 0.4468 - 0.05)
+        status = "GO" if go else "NO-GO"
+        out.append(f"| {seed} | {ratio_honest:.3f}x | {acc:.4f} "
+                   f"{ci} | {delta:+.4f} | log10L={log10L:.1f} "
+                   f"({len(norms)}/{len(inv)} exact) | {status} |")
+        print(f"  [N9-confirm seed={seed}] DONE acc={acc:.4f} "
+              f"ratio_honest={ratio_honest:.3f}x {status} ({eval_sec:.0f}s)",
+              flush=True)
+        finish_run(rec, status="completed",
+                   results={"seed": seed, "ratio_base": base_ratio,
+                            "ratio_honest": round(float(ratio_honest), 4),
+                            "adapter_frac": round(float(adapter_frac), 6),
+                            "eval_acc": float(acc), "eval_correct": info["correct"],
+                            "eval_total": info["total"], "eval_ci": ci,
+                            "eval_scope": info["scope"],
+                            "n1_ft": n1_ft,
+                            "delta_vs_n1_ft": round(float(delta), 4),
+                            "cert_log10L": round(float(log10L), 3),
+                            "cert_layers": len(norms),
+                            "gate": status,
+                            "bar": "ratio>=2.0 and acc>=0.3968"},
+                   kill_criterion="N9-GO: ratio>=2x and acc>=FT-0.05",
+                   kill_verdict=status)
+        del harness
+        torch.cuda.empty_cache()
+    out.append("")
+    out.append("* N9-confirm is the REPORTABLE row (full-split + re-derived "
+               "dense certs + adapter-counted ratio). Prefix N9 numbers stay "
+               "search-phase evidence.")

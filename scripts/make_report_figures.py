@@ -130,6 +130,16 @@ def fig_compression_plane():
                 pts.append(("TT + weighted residual repair", s["ratio"], s["eval_acc"],
                             C_BLUE, "D", 55))
 
+    # N9C: repaired (LoRA) TT route, full split, re-derived dense certs —
+    # the GO row.  Ratio is the honest figure (cores+residual+adapter bytes).
+    for rj in glob.glob(str(REPO / "results" / "N9C" / "*" / "run.json")):
+        r = json.loads(Path(rj).read_text())
+        s = r.get("results", {})
+        if (r.get("status") == "completed" and "full-split" in str(s.get("eval_scope", ""))
+                and s.get("gate") == "GO"):
+            pts.append(("TT + repair training (N9, GO)", s["ratio_honest"], s["eval_acc"],
+                        C_ORANGE, "*", 140))
+
     fig, ax = plt.subplots(figsize=(5.2, 3.1))
     gate = b["eval_acc_finetuned"] - 0.05
     ax.axhspan(gate, 1.0, xmin=0, xmax=1, color=C_GREEN, alpha=0.07)
