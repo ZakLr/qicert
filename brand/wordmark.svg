@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 132" fill="none" role="img" aria-label="qicert — certified tensor-train compression">
+  <!-- soft paper card so the wordmark reads on any background (GitHub light/dark) -->
+  <rect x="2" y="2" width="416" height="128" rx="20" fill="#f4f1ea" stroke="#0b1215" stroke-opacity="0.14" stroke-width="2"/>
+  <text x="210" y="88" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="64" letter-spacing="-1.5" fill="#0b1215">qi<tspan fill="#1da99c">cert</tspan></text>
+</svg>

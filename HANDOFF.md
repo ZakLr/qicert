@@ -19,7 +19,7 @@ regenerated. **Docs hosted at `/docs/`** (the mkdocs API site copied from
 qicert-clean/site/ — fully relative links, works under the subpath) and **PDFs at
 `/papers/`** (technical-report-v2.pdf + concept-proposal.pdf from clean).
 (4) **Branches:** `main` = fallback working branch (rebrand commit `9ead310` on top of
-`267a7f5`; nothing else changed; pushed) + `clean/docs-release` = the clean scrubbed
+`267a7f5`; nothing else changed; pushed) + `clean` = the clean scrubbed
 docs branch (worktree `../qicert-clean`, pushed to origin). Merge of clean → main still
 pending and still recommended before deadline.
 (5) Not yet done: GitHub Pages enablement (user, 30 s), N10 scale probe (optional),
@@ -33,7 +33,7 @@ vs its FT 0.4520 — holds parity-ish below a strong baseline, still GO over
 the 0.3968 bar). Repair mean **0.4496 ± 0.0137** vs baseline mean **0.4319
 ± 0.0303** (seeds 0.4468/0.3970/0.4520). Honest claim: match-or-beat with
 certificates, 2 of 3 above own baseline — NOT domination. Reports on
-`clean/docs-release` carry mean±std (8pp+3pp, 0 errors); resource ledger 66
+`clean` carry mean±std (8pp+3pp, 0 errors); resource ledger 66
 scored / 10.19 GPU-h. Training-free route NO-GO (0.164 @2.536×, mode collapse) kept
 as the honest middle. Both docs now tell this story: `docs/technical-
 report-v2.pdf` (8 pp) and `docs/concept-proposal.pdf` (3 pp) freshly

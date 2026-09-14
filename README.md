@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="brand/banner-light.png" alt="qicert — a smaller robot brain that carries a proof" width="100%"/>
+<img src="brand/wordmark.png" alt="qicert" width="300"/>
 
 # Certified compression for robot brains.
 
@@ -9,9 +9,10 @@
 [![clean-env smoke](https://github.com/ZakLr/qicert/actions/workflows/ci.yml/badge.svg)](https://github.com/ZakLr/qicert/actions/workflows/ci.yml)
 [![Lean 4 proofs](https://img.shields.io/badge/Lean%204-lake%20build%20clean-2ec4b6)](lean/)
 [![Verdict](https://img.shields.io/badge/verdict-3%2F3%20seeds%20GO-e35d33)](results/EXPERIMENT-LOG.md)
-[![License](https://img.shields.io/badge/license-Apache%202.0-0b1215)](LICENSE)
+[![License](https://img.shields.io/badge/code%20license-Apache%202.0-0b1215)](LICENSE)
 
-[Website](https://zaklr.github.io/qicert-website) · [Documentation](https://zaklr.github.io/qicert-website/docs/) · [Technical report (PDF)](https://zaklr.github.io/qicert-website/papers/technical-report-v2.pdf) · [Team — AIQ Community](https://www.aiqcommunity.org/)
+📖 **For a beautiful read of our solution — with interactive demos, diagrams, and the full paper — visit [qicert.vercel.app](https://qicert.vercel.app/).**
+[Website](https://qicert.vercel.app/) · [Documentation](https://qicert.vercel.app/docs/) · [Technical report (PDF)](https://qicert.vercel.app/papers/technical-report-v2.pdf) · [Team — AIQ Community](https://www.aiqcommunity.org/)
 
 </div>
 
@@ -20,7 +21,7 @@
 > [!NOTE]
 > **In one sentence.** We compressed a vision–language–action model — the AI that turns a camera frame and a spoken instruction into robot actions — to **2.46× smaller**, and it still acts like the original. Unlike standard compression, every layer comes with an **exact, verifiable math bound** on how much its behavior can change, and a runtime guard that refuses any action the bound doesn't cover.
 
-**Why it matters:** compression usually ships with a shrug — "we tested it, seems fine." That's a guess, not a guarantee, and nobody puts guesses on robots. `qicert` replaces the shrug with a certificate: a number computed from the deployed weights themselves, machine-checked in Lean 4, falsified daily by a Z3 test-suite, enforced at runtime.
+**Why it matters:** compression usually ships with a shrug — "we tested it, seems fine." That's a guess, not a guarantee, and nobody puts guesses on robots. `qicert` replaces the shrug with a certificate: a number computed from the deployed weights themselves, machine-checked in **Lean 4**, falsified daily by a Z3 test-suite, enforced at runtime.
 
 ---
 
@@ -58,6 +59,22 @@ Pre-registered gate: **compression ≥ 2.0× AND accuracy ≥ 0.3968** (within 0
 
 ---
 
+## 🧠 Where Lean 4 comes in
+
+Most "safe AI" projects test their claims. **We formalize them.** [Lean 4](https://lean-lang.org/) is a proof assistant — the same class of tool mathematicians use to verify theorems that no human can check by hand. Our core safety property is written as a theorem and verified by Lean's kernel with **zero `sorry`** (Lean's marker for an unfinished proof):
+
+- **`prod_le_prod_of_pointwise`** — the composition theorem: the certified bound of a chain of layers is the product of the per-layer bounds. This is the mathematical spine of every certificate we ship.
+- **`guard_sound`** — the runtime guard never accepts an action outside the certified safety ball.
+- **`guard_complete`** — and it never rejects a safe action.
+
+Lean doesn't trust our code, our tests, or us — it checks the mathematics itself, mechanically. Alongside it: **84 pytest tests including Z3, an SMT solver actively trying to falsify the guard** (it finds no counterexample), and a runtime guard demo transcript. Three independent checkers, three formalisms, one conclusion.
+
+```bash
+cd lean && lake build   # verifies every theorem above — no computer algebra, pure logic
+```
+
+---
+
 ## 🔧 How it works
 
 <div align="center">
@@ -78,15 +95,9 @@ Pre-registered gate: **compression ≥ 2.0× AND accuracy ≥ 0.3968** (within 0
                          is the product of its core norms.
 ```
 
-The bound is **exact** (no looser-than-necessary hand-waving), computable **from the compressed cores alone** (never materialize the big matrix), and holds **after repair** (re-derive from merged weights). This is what INT8 cannot state: quantization error has no such factorization.
+The bound is **exact** (no looser-than-necessary hand-waving), computable **from the compressed cores alone** (never materialize the big matrix), holds **after repair** (re-derive from merged weights) — and its composition is **machine-checked in Lean 4**. This is what INT8 cannot state: quantization error has no such factorization.
 
-### What's actually verified — three independent checkers
-
-- 🧪 **84 pytest tests** — including Z3, an SMT prover, actively *trying to break* the guard logic (searching for counterexamples; it finds none)
-- 🛡️ **Runtime guard demo** — transcript of the deployed guard refusing out-of-ball actions, on the edge latency profile
-- 🔬 **Lean 4, `lake build` clean, zero `sorry`** — bound composition (the chaining step above) and guard soundness/completeness, machine-checked
-
-Three checkers, three formalisms, one conclusion. Plus the shadow-syndrome monitor: **0.0000 false-alarm rate** over 4,000 null trials, **1.000** bit-flip detection over 500 injections, **0.35 ms** added latency per step.
+Plus the shadow-syndrome monitor: **0.0000 false-alarm rate** over 4,000 null trials, **1.000** bit-flip detection over 500 injections, **0.35 ms** added latency per step.
 
 ---
 
@@ -149,6 +160,30 @@ brand/              logo + banner source (SVG) and exports (PNG)
 
 ---
 
+## 📄 Licensing — what applies to what
+
+**The code in this repository is Apache 2.0** (see [LICENSE](LICENSE)). Third-party building blocks carry their own licenses, listed here so you don't have to dig:
+
+| Component | Role | License | Conflict with Apache-2.0? |
+|---|---|---|---|
+| `qicert` code, Lean proofs, docs | ours | **Apache 2.0** | — |
+| MiniVLA checkpoint + Prismatic backbone (`Stanford-ILIAD`, HF) | base model we fine-tune & compress | MIT | none |
+| Qwen2.5-0.5B (`Qwen/Qwen2.5-0.5B`, HF) | LLM backbone | Apache 2.0 | none |
+| LIBERO benchmark (Lifelong-Robot-Learning) | training/eval episodes | MIT | none |
+| timm DINOv2 ViT-L weights (`vit_large_patch14_reg4_dinov2.lvd142m`) | vision tower inside the backbone | **CC-BY-NC 4.0** ⚠️ | **non-commercial** |
+| SigLIP ViT-SO400M weights (timm/OpenCLIP) | second vision tower | Apache 2.0 | none |
+| PyTorch, Transformers, PEFT, NumPy/SciPy | training stack | BSD / Apache 2.0 / MIT | none |
+| tntorch, quimb, PennyLane | tensor-network & QML reference paths | MIT / Apache 2.0 | none |
+| NVIDIA CUDA-Q | quantum estimator simulation | Apache 2.0 | none |
+| Z3 (SMT solver), Lean 4 + Batteries | verification toolchain | MIT | none |
+
+> [!WARNING]
+> **The one thing to know:** the DINOv2 vision tower inside the base model is **CC-BY-NC 4.0** — non-commercial. Everything *we* produced (compression machinery, certificates, guard, proofs) is genuinely Apache 2.0, but any **commercial deployment of the full fine-tuned model inherits that NC restriction from the vision tower**. This is a property of the upstream checkpoint, not of our method — the method is backbone-agnostic and was also validated against Apache-2.0 components (SigLIP, Qwen). Research and evaluation use: fully clear.
+
+The brand assets in [`brand/`](brand/) are ours — reuse with attribution.
+
+---
+
 ## 🗺️ Phase 2 roadmap
 
 | Lever | Status |
@@ -166,16 +201,10 @@ brand/              logo + banner source (SVG) and exports (PNG)
 Built by **[AIQ Community](https://www.aiqcommunity.org/)** for The Quantum Insider's Global Quantum + AI Challenge (Volkswagen track, robotics) — Phase 1, September 2026.
 
 - 📫 **Zakaria** — [zakaria@aiqcommunity.org](mailto:zakaria@aiqcommunity.org)
-- 🌐 [aiqcommunity.org](https://www.aiqcommunity.org/) · [Project website](https://zaklr.github.io/qicert-website) · [Docs](https://zaklr.github.io/qicert-website/docs/)
-
----
-
-## 📄 License
-
-Apache 2.0 — see [LICENSE](LICENSE). The brand assets in [`brand/`](brand/) are yours to reuse with attribution.
+- 🌐 [aiqcommunity.org](https://www.aiqcommunity.org/) · [Project website](https://qicert.vercel.app/) · [Docs](https://qicert.vercel.app/docs/)
 
 <div align="center">
-<img src="brand/logo-mark.svg" width="72" alt="qicert mark"/>
+<img src="brand/wordmark.png" width="150" alt="qicert"/>
 <br/>
 <sub><i>a smaller model, with a proof.</i></sub>
 </div>
