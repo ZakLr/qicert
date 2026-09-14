@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 48" fill="none" role="img" aria-label="qicert mark — tensor-train chain with sealed certificate core">
+  <!-- connector wires with contraction dots -->
+  <line x1="26" y1="24" x2="40" y2="24" stroke="#0b1215" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="33" cy="24" r="2" fill="#0b1215" opacity="0.55"/>
+  <line x1="62" y1="24" x2="76" y2="24" stroke="#0b1215" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="69" cy="24" r="2" fill="#0b1215" opacity="0.55"/>
+
+  <!-- core 1: the weight tensor (grid texture) -->
+  <rect x="4" y="12" width="22" height="24" rx="7" stroke="#0b1215" stroke-width="3"/>
+  <line x1="10" y1="18" x2="20" y2="18" stroke="#0b1215" stroke-width="1.6" opacity="0.45"/>
+  <line x1="10" y1="24" x2="20" y2="24" stroke="#0b1215" stroke-width="1.6" opacity="0.45"/>
+  <line x1="10" y1="30" x2="20" y2="30" stroke="#0b1215" stroke-width="1.6" opacity="0.45"/>
+
+  <!-- core 2: the compressed TT core (contraction diagonals) -->
+  <rect x="40" y="12" width="22" height="24" rx="7" stroke="#0b1215" stroke-width="3"/>
+  <line x1="45" y1="31" x2="57" y2="17" stroke="#0b1215" stroke-width="1.8" opacity="0.5"/>
+  <line x1="45" y1="25" x2="53" y2="17" stroke="#0b1215" stroke-width="1.8" opacity="0.5"/>
+
+  <!-- core 3: the certificate seal (closed + checked) -->
+  <rect x="76" y="12" width="24" height="24" rx="7" fill="#2ec4b6" fill-opacity="0.14" stroke="#1da99c" stroke-width="3"/>
+  <path d="M82.5 24.5l4 4 7.5-8" stroke="#1da99c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

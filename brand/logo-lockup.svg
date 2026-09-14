@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 64" fill="none" role="img" aria-label="qicert — certified tensor-train compression">
+  <!-- TT-chain mark -->
+  <line x1="30" y1="32" x2="48" y2="32" stroke="#0b1215" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="39" cy="32" r="2" fill="#0b1215" opacity="0.55"/>
+  <line x1="76" y1="32" x2="94" y2="32" stroke="#0b1215" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
+  <circle cx="85" cy="32" r="2" fill="#0b1215" opacity="0.55"/>
+
+  <rect x="4" y="18" width="26" height="28" rx="8" stroke="#0b1215" stroke-width="3"/>
+  <line x1="11" y1="26" x2="23" y2="26" stroke="#0b1215" stroke-width="1.6" opacity="0.45"/>
+  <line x1="11" y1="32" x2="23" y2="32" stroke="#0b1215" stroke-width="1.6" opacity="0.45"/>
+  <line x1="11" y1="38" x2="23" y2="38" stroke="#0b1215" stroke-width="1.6" opacity="0.45"/>
+
+  <rect x="48" y="18" width="26" height="28" rx="8" stroke="#0b1215" stroke-width="3"/>
+  <line x1="54" y1="39" x2="68" y2="25" stroke="#0b1215" stroke-width="1.8" opacity="0.5"/>
+  <line x1="54" y1="32" x2="64" y2="25" stroke="#0b1215" stroke-width="1.8" opacity="0.5"/>
+
+  <rect x="94" y="18" width="28" height="28" rx="8" fill="#2ec4b6" fill-opacity="0.14" stroke="#1da99c" stroke-width="3"/>
+  <path d="M101.5 32.5l4 4 8-9" stroke="#1da99c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- wordmark: 'qi' ink · 'cert' cert-teal -->
+  <text x="136" y="45" font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="38" letter-spacing="-1" fill="#0b1215">qi<tspan fill="#1da99c">cert</tspan></text>
+</svg>

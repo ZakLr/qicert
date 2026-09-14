@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none" role="img" aria-label="qicert favicon — sealed TT core">
+  <rect x="3" y="3" width="42" height="42" rx="11" fill="#0b1215"/>
+  <rect x="8" y="12" width="20" height="24" rx="6" stroke="#f4f1ea" stroke-width="2.6"/>
+  <line x1="13" y1="18" x2="23" y2="18" stroke="#f4f1ea" stroke-width="1.5" opacity="0.5"/>
+  <line x1="13" y1="24" x2="23" y2="24" stroke="#f4f1ea" stroke-width="1.5" opacity="0.5"/>
+  <line x1="13" y1="30" x2="23" y2="30" stroke="#f4f1ea" stroke-width="1.5" opacity="0.5"/>
+  <line x1="28" y1="24" x2="33" y2="24" stroke="#f4f1ea" stroke-width="2.4" stroke-linecap="round" opacity="0.6"/>
+  <rect x="32" y="12" width="11" height="24" rx="5" fill="#2ec4b6" fill-opacity="0.2" stroke="#2ec4b6" stroke-width="2.6"/>
+  <path d="M35 24.5l2.5 2.5 4.5-5" stroke="#2ec4b6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
