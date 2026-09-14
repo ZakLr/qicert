@@ -5,8 +5,11 @@ Use this while filling the portal form. Deadline: **15 Sep 2026**.
 ## Documents ready
 
 - [x] Concept proposal PDF: `docs/concept-proposal.pdf` (3 pages, guidelines §4.3, all 7 elements)
-- [x] Technical report (enclosure, in repo): `docs/technical-report-v2.pdf` (7 pages, claim-to-artifact provenance in Appendix A)
-- [x] Public repo: <https://github.com/ZakLr/qicert> (README quickstart, pinned env, 80 tests, experiment log, all artifacts)
+- [x] Technical report (enclosure, in repo): `docs/technical-report-v2.pdf` (8 pages, claim-to-artifact provenance in Appendix A)
+- [x] Public repo: <https://github.com/ZakLr/qicert> (README quickstart, pinned env, 84 tests, experiment log, all artifacts)
+- [x] N9 GO folded into report (Table 1 N9 row, abstract, limitations, Appendix A)
+- [x] Lean proofs + diversity gate + monitor in report and repo
+- [ ] Per-seed mean±std (pipeline running ~4h) → final report table update + PDF rebuild
 
 ## Portal form fields (guidelines §4)
 
@@ -38,8 +41,10 @@ Use this while filling the portal form. Deadline: **15 Sep 2026**.
       (`pdflatex concept-proposal.tex` twice), re-upload
 - [ ] Team profile §4.1 fields completed above
 - [ ] Repo is public and the README renders (last check: `bf1da9e`)
-- [ ] The confirm-stage result is folded into the technical report §4
-      (compression table) — if not yet, note the pending row is labeled as such
+- [ ] Per-seed mean±std folded into report Table 1 after pipeline lands
+      (seed-0 GO row already in; seeds 1–2 pending)
+- [ ] Resource declaration regenerated after final runs (`scripts/export_resource_declaration.py`)
+- [ ] Repo is public and the README renders (badge + Lean section added; re-check)
 - [ ] Repo contains no confidential third-party information (guidelines §3/§4.4)
 
 ## Where each guidelines element lives in the proposal
