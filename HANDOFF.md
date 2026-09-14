@@ -1,6 +1,29 @@
 # HANDOFF.md — read this first if you are a new model/session taking over
 
 **Last verified:** 2026-09-13 ~22:10 UTC — pipeline COMPLETE, all 3 confirms GO.
+**SESSION 2026-09-14 — packaging & brand (no science touched, main's experiment code untouched):**
+(1) **Brand created** in `brand/`: TT-chain-seal logo (mark + lockup, light/dark), hero
+banner light+dark (1200×240 PNG exports via headless Chrome — command in git history),
+favicon.svg, and `pipeline.svg` (6-step README diagram with measured-number chips).
+Palette = the website's (Ink/Paper/Signal #e35d33/Cert #1da99c). Wordmark: serif `qi`+`cert`.
+(2) **README.md REPLACED entirely** (user-approved): hero banner → honest results table
+→ jargon decoder → pipeline → the core inequality → three-checkers verification box →
+quickstart → repo map → provenance rule → honest-limitations details → Phase-2 roadmap →
+team (AIQ Community + zakaria@aiqcommunity.org) → Apache-2.0. Every number traces to
+ledger/run dirs; old README recoverable at commit `267a7f5~1`.
+(3) **Website pushed to https://github.com/ZakLr/qicert-website** (fresh git init,
+source-only, `output: "export"` in next.config.ts; user hosts — Pages or any static host;
+if Pages: enable on main root). Minimal allowed touches only: nav gained Docs + Report
+links, footer gained team/email/docs links, `src/app/icon.svg` = brand favicon, favicon.ico
+regenerated. **Docs hosted at `/docs/`** (the mkdocs API site copied from
+qicert-clean/site/ — fully relative links, works under the subpath) and **PDFs at
+`/papers/`** (technical-report-v2.pdf + concept-proposal.pdf from clean).
+(4) **Branches:** `main` = fallback working branch (rebrand commit `9ead310` on top of
+`267a7f5`; nothing else changed; pushed) + `clean/docs-release` = the clean scrubbed
+docs branch (worktree `../qicert-clean`, pushed to origin). Merge of clean → main still
+pending and still recommended before deadline.
+(5) Not yet done: GitHub Pages enablement (user, 30 s), N10 scale probe (optional),
+user identity pass on docs/portal per REVIEW-LIST.md.
 **HEADLINE — replicated GO at 3 seeds:** N9 repair (LoRA r=8, 1200 steps,
 train-split only) on the compressed model, full-protocol confirms @2.459×
 honest ratio, 168/168 re-derived certs each: seed 0 — **0.4535** (CI
