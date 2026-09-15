@@ -1,4 +1,4 @@
-# Q17 — Exact Lipschitz-Product Theorem (Layer-1 certificate)
+# Q17: Exact Lipschitz-Product Theorem (Layer-1 certificate)
 
 **Owner:** tensor-network-architect. **Status:** resolved 2026-08-09 (0 GPU-h).
 **Purpose:** the load-bearing Layer-1 statement (submission/03 L1a). Half-page
@@ -25,7 +25,7 @@ constant of the composed map F is
 
     L(F)  =  prod_l prod_i ||G_i^l||_2,     (exact for linear layers)
 
-computed in O(sum_l sum_i r_i^2 n_i) — the SVD of each small core, with no
+computed in O(sum_l sum_i r_i^2 n_i): the SVD of each small core, with no
 dependence on the layer's dense size.
 
 ### Proof sketch (one paragraph, for the appendix)
@@ -34,13 +34,13 @@ dependence on the layer's dense size.
    contractions; operator norms are submultiplicative under composition, so
    ||W||_2 <= prod_i ||G_i||_2. (Equality is achieved when the cores are in
    canonical left-orthogonal form and the flattened core is a column-orthogonal
-   matrix — the bound is tight in the TT-format sense.)
+   matrix: the bound is tight in the TT-format sense.)
 2. **Composition rule.** Lip(f o g) = Lip(f) * Lip(g) for linear maps (spectral
    norm of the product); each activation is 1-Lipschitz, so it contributes
    nothing.
 3. **Chaining.** Apply (1) per layer, (2) across layers. The product is exact
    for the linear backbone and a conservative (but computable) bound through
-   activations — never an estimate, never data-dependent.
+   activations: never an estimate, never data-dependent.
 
 ## Safe-set certificate (Layer-1 output)
 
@@ -56,7 +56,7 @@ set by the control specification (Lyapunov basin / STL predicate thresholds).
 
 Quantization error q(W) depends on the input distribution (per-block scales,
 activations), so no function of the quantized weights alone bounds the
-induced perturbation. Our error is an exact function of the cores — the
+induced perturbation. Our error is an exact function of the cores: the
 asymmetry that makes the report's INT8-0%-line structural, not empirical.
 
 ## Which layers become TT-linear first (Q17b)
@@ -64,11 +64,11 @@ asymmetry that makes the report's INT8-0%-line structural, not empirical.
 Order by (safety-sensitivity x size), matching the bond allocator's signal #1
 (submission/07):
 
-1. **Action head layers** — smallest, safety-relevant, highest certificate value;
+1. **Action head layers**: smallest, safety-relevant, highest certificate value;
    certify these first.
-2. **Cross-modal output projections** — the single seam feeding the compiler
+2. **Cross-modal output projections**: the single seam feeding the compiler
    (04); compressing here couples cleanly with Pillar B.
-3. **Q/K/V and FFN projections** — largest, headline compression ratio; done
+3. **Q/K/V and FFN projections**: largest, headline compression ratio; done
    after 1-2 certify.
 
 ## Verification hook (N3)

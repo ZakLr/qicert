@@ -1,4 +1,4 @@
-# Run Data Register — everything we capture on every benchmark run
+# Run Data Register: everything we capture on every benchmark run
 
 **Decision 2026-08-16 (user):** benchmarks and fine-tunes are NEVER re-run to fetch
 missing data. Every run records everything now, so plots, ablations, tables, and
@@ -20,7 +20,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 
 ## Captured by default (the load-bearing set)
 
-### 0. Identity & provenance — every artifact starts with these
+### 0. Identity & provenance: every artifact starts with these
 
 | Field | Example | Why it matters |
 |---|---|---|
@@ -38,7 +38,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | `command_line` | full `qicert.bench` invocation + args | exact reproducibility string |
 | `qicert_version` | `0.1.0.dev0` | package version |
 
-### 1. Hardware (host + GPU) — `system.json`
+### 1. Hardware (host + GPU): `system.json`
 
 | Field | Source |
 |---|---|
@@ -55,7 +55,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | container flag (true for Docker runs) | env probe |
 | full nvidia-smi JSON snapshot (all GPUs) | nvidia-smi |
 
-### 2. Software environment — `env.json` (the pins)
+### 2. Software environment: `env.json` (the pins)
 
 | Field |
 |---|
@@ -63,14 +63,14 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | torch version + cuda build tag (`2.13.0+cu130`) + arch list |
 | transformers, peft, accelerate, safetensors, sentencepiece, huggingface_hub |
 | numpy, scipy, pytest |
-| NumPy amplification-model parameters (IQAE scoring) — CUDA-Q pinned in the container for Phase-2, not used in Phase-1 |
+| NumPy amplification-model parameters (IQAE scoring): CUDA-Q pinned in the container for Phase-2, not used in Phase-1 |
 | CUDA toolkit runtime version reachable in the runtime (nvml) |
-| bitsandbytes presence (must be absent in v1 — record if it ever appears) |
+| bitsandbytes presence (must be absent in v1: record if it ever appears) |
 | attn_implementation (sdpa/eager/flash_attention_2) availability |
 | pip freeze (full dump), environment.yml hash, Dockerfile digest |
 | cudnn version if reported by torch |
 
-### 3. Model / backbone — part of `config.json`
+### 3. Model / backbone: part of `config.json`
 
 | Field |
 |---|
@@ -84,12 +84,12 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | processor/tokenizer: name, padding, max_length |
 | per-component load times (vision / LLM / head) |
 
-### 4. Data / task — part of `config.json`
+### 4. Data / task: part of `config.json`
 
 | Field |
 |---|
 | dataset id, split, version, license (exact string), download timestamp |
-| slice definition (task subset / episode filter) — the exact filter that selects rows |
+| slice definition (task subset / episode filter): the exact filter that selects rows |
 | n_train / n_val / n_test instances, n_episodes |
 | shuffle/split seed |
 | sequence stats: obs length, action dim, chunk size, image shape, dtype |
@@ -97,7 +97,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | num_workers, prefetch_factor, persistent_workers |
 | data load time (first epoch), cache size |
 
-### 5. Training configuration — part of `config.json` (resolved, no defaults hidden)
+### 5. Training configuration: part of `config.json` (resolved, no defaults hidden)
 
 | Field |
 |---|
@@ -113,7 +113,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | determinism flags (torch.use_deterministic_algorithms, cudnn.benchmark) |
 | device placement, pin_memory, non_blocking |
 
-### 6. Training dynamics — `metrics.jsonl`, one JSON line per logged step/interval
+### 6. Training dynamics: `metrics.jsonl`, one JSON line per logged step/interval
 
 | Field | Frequency |
 |---|---|
@@ -131,7 +131,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | checkpoint events: path, size, timestamp | on save |
 | warnings/errors captured with step tag | on occurrence |
 
-### 7. Results / outcomes — `run.json` `results` block + bench table
+### 7. Results / outcomes: `run.json` `results` block + bench table
 
 | Field |
 |---|
@@ -166,7 +166,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 
 ---
 
-## Cheap extras (`--capture extra`) — negligible cost, still valuable
+## Cheap extras (`--capture extra`): negligible cost, still valuable
 
 - Per-layer grad norm summaries every K steps (bucketed by module group)
 - Weight/activation histogram snapshots, downsampled (every ~500 steps, 16 bins)
@@ -180,7 +180,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 - Per-step learning-rate curve saved as raw array (for exact replotting)
 - Any stderr warning lines with step tags
 
-## Heavy opt-ins (`--capture heavy`) — real cost, only when explicitly wanted
+## Heavy opt-ins (`--capture heavy`): real cost, only when explicitly wanted
 
 - Full per-sample loss arrays per epoch
 - Full optimizer state dumps at checkpoints
@@ -208,9 +208,9 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 ## The no-re-run guarantee (how this stays true)
 
 1. `config.json` (resolved, hashed) + `git_commit` + `seed_spec` = exact reproduction triple.
-2. `metrics.jsonl` is append-only and covers the full trajectory — any plot is a 5-line script away.
+2. `metrics.jsonl` is append-only and covers the full trajectory: any plot is a 5-line script away.
 3. `system.json` + `env.json` + ledger row tie every number to hardware, pins, and the pre-registered experiment row.
-4. If a field is missing, it's added to the *register and the recorder*, and the run is re-launched — never silently backfilled from memory.
+4. If a field is missing, it's added to the *register and the recorder*, and the run is re-launched: never silently backfilled from memory.
 
 **Ledger rule:** a bench module that runs a real experiment MUST open a recorder
 (`bench._base.start_run`) and close it (`finish_run`); the machine ledger

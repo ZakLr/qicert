@@ -1,5 +1,5 @@
 % ============================================================================
-%  qicert — Phase-1 Concept Proposal (portal submission document)
+%  qicert: Phase-1 Concept Proposal (portal submission document)
 %  Written to Phase-1-Submission-Guidelines-VF.md Sec. 4.3: max 6 pages, 10pt
 %  min, seven required elements in order. Companion artifacts: the technical
 %  report (docs/technical-report-v2.pdf) and the public repo. Every number is
@@ -27,11 +27,11 @@
 \begin{center}
 {\LARGE\bfseries qicert: Certified Compression of Vision--Language--Action Models}\\[2pt]
 {\large with Exact Lipschitz Bounds and a Refusing Runtime Guard}\\[6pt]
-Phase-1 Concept Proposal --- 2026 Global Quantum + AI Challenge\\
+Phase-1 Concept Proposal. 2026 Global Quantum + AI Challenge\\
 Problem statement: \emph{Quantum-Enhanced Vision-Language-Action Models in
 Autonomous Driving and Robotics Applications} (Volkswagen Group)\\
 Code: \url{https://github.com/ZakLr/qicert} \quad$\cdot$\quad
-Technical report: \texttt{docs/technical-report-v2.pdf} (7~pages, in repo)
+Technical report: \texttt{docs/technical-report-v2.pdf} (8~pages, in repo)
 \end{center}
 
 % ---------------------------------------------------------------------------
@@ -43,21 +43,21 @@ names the compound constraint precisely: shrink the model \emph{and} retain
 verifiable behavior on long-tail inputs. Classical compression solves the
 first half only. Quantization, pruning, and distillation reduce footprint, but
 none of them yields a statement of the form ``under any input perturbation of
-size $\delta$, the action cannot leave this set'' --- which is the artifact a
+size $\delta$, the action cannot leave this set,'' which is the artifact a
 safety engineer would need before certifying deployment on long-tail sensor
 distributions.
 
 Quantum or quantum-inspired advantage enters where structure, not scale, does
 the work. Our QI component is tensor-network structure (tensor-train
 decomposition, the MPS/TTNS family the statement highlights). Its decisive
-property is not size reduction --- at the ratios we tested it loses the
-accuracy contest to INT8 and we report that plainly --- but that the
+property is not size reduction: at the ratios we tested it loses the
+accuracy contest to INT8 and we report that plainly, but that the
 compressed weights \emph{carry an exact per-layer Lipschitz constant}
 computable from the compressed cores alone, with no reference to data.
 Quantized weights admit no comparable exact bound, because quantization error
 is data-dependent. Structure is therefore the classical-side object that makes
 an exact deployment certificate computable, chainable, and enforceable at
-runtime --- and it is structurally unavailable to the accepted baseline. This
+runtime, and it is structurally unavailable to the accepted baseline. This
 is the specific, narrow sense in which the quantum-inspired method provides
 the credible advantage the guidelines ask for; we deliberately claim nothing
 broader.
@@ -111,7 +111,7 @@ tensor-compressed routes at $2.5$--$2.9\times$ with sound certificates on
 every one of 168 compressed layers across every configuration tested. The
 pre-registered capability gate (ratio $\ge 2\times$ AND accuracy within
 $0.05$ of reference) is answered: the training-free route misses it
-($0.1640$ at $2.536\times$, failure mechanism identified --- mode collapse),
+($0.1640$ at $2.536\times$, failure mechanism identified as mode collapse),
 and repair training on the compressed model clears it ($0.4535$ at
 $2.46\times$, non-overlapping confidence interval above the uncompressed
 reference, certificates re-derived from the final deployed weights). Both
@@ -132,7 +132,7 @@ dataset; simulation environments and versions are pinned in the repository.
 Phase-2 scale-up (below) is sized for the same single-GPU discipline, with
 multi-seed replication the main added cost. The honest constraint we declare:
 tensor-network contraction on a CPU edge profile costs $3$--$15\times$ the
-dense fp16 kernel time per layer at these shapes --- within the 100~ms budget
+dense fp16 kernel time per layer at these shapes: within the 100~ms budget
 on measured paths, but a real margin cost that Phase~2 must optimize rather
 than wish away.
 
@@ -142,7 +142,7 @@ For the enterprise use case, the deliverable changes what deployment approval
 means. A fleet operator today ships a compressed model on the strength of
 benchmark scores; with qicert-style artifacts they would ship a signed
 certificate, a guard that refuses out-of-ball actions, and an audited
-statistical tail --- the difference between ``we tested it'' and ``it is
+statistical tail: the difference between ``we tested it'' and ``it is
 bounded, and the machine enforces the bound.'' The design tool built on our
 degradation measurements points the same direction: predict the largest safe
 compression \emph{before} committing to full evaluation, turning post-hoc
@@ -153,20 +153,20 @@ Quantitative targets, anchored to what already runs: the reference VLA at
 tensor route must clear; certificates already hold on every compressed layer
 at every tested ratio; the estimator layer already delivers the
 $\sim$1{,}587$\times$ query reduction. The combined capability condition
---- at or beyond $2\times$ compression, within the pre-registered accuracy
-band, certificate-sound with guard enforcement --- is already demonstrated
+(at or beyond $2\times$ compression, within the pre-registered accuracy
+band, certificate-sound with guard enforcement) is already demonstrated
 once (N9: $2.46\times$, $0.4535$, GO). Phase 2 hardens it into an
 engineering result: multi-seed replication (mean $\pm$ standard deviation
 over 3 independent runs), activation-aware rank allocation to push the
 ratio higher at the same accuracy, backbone scale to widen the margin, and
 a collapse-boundary detector so the safe compression limit is predictable
-per model --- the capability the quantized baseline cannot produce at any
+per model, a capability the quantized baseline cannot produce at any
 ratio.
 
 % ---------------------------------------------------------------------------
 \section*{5. Validation Plan}
 The Phase-2 sprint validates three claims, each with metrics fixed in advance
-(pre-registered in the repository before the runs they judge) --- this is the
+(pre-registered in the repository before the runs they judge); this is the
 strongest differentiator we can offer: the gates are committed, mechanical,
 and auditable.
 
@@ -178,14 +178,14 @@ the failure mechanism identified (mode collapse to the modal action token;
 the agreement-vs-compression curve is bimodal, not gradual). The
 trained-repair route is GO: a rank-8 adapter trained 1{,}200 steps on
 train-split episodes only (contamination-checked against the frozen split),
-merged into the compressed model, re-evaluated on the full protocol ---
+merged into the compressed model, re-evaluated on the full protocol:
 $0.4535$ at $2.46\times$ honest ratio, Wilson 95\% CI $[0.4506, 0.4564]$
 non-overlapping above the uncompressed reference's $[0.4439, 0.4497]$, with
 certificates re-derived from the final deployed weights (168/168 exact) at
 a cost of one SVD per layer. Phase 2 escalates the remaining levers in cost
 order: activation-aware rank allocation, and backbone scale (a $1.5$--$7$B
 backbone, whose weights carry the redundancy a $0.5$B LoRA-tuned model
-lacks --- at $2.5\times$ a $3$B model retains more absolute capacity than
+lacks: at $2.5\times$ a $3$B model retains more absolute capacity than
 the present model has in total). Metrics unchanged: pre-registered gate,
 mean $\pm$ standard deviation over 3 seeds (seed~1 $0.3970$, seed~2 running).
 
@@ -197,7 +197,7 @@ within finite-sample bands (currently true at all three levels).
 
 \textbf{Design-tool claim (Phase-1 negative result reported).} The linear
 degradation predictor fitted to Phase-1's measured agreement curve is
-vacuous ($R^{2} = 0.16$) because the curve is bimodal --- a mode-collapse
+vacuous ($R^{2} = 0.16$) because the curve is bimodal, a mode-collapse
 signature, not a smooth degradation. Phase 2 replaces the linear model with
 a collapse-boundary detector (classify safe/collapsed rather than regress
 agreement) and revalidates on the scaled backbone; the Phase-1 curve and
@@ -218,7 +218,7 @@ Classical deep-learning infrastructure does the training and the heavy
 evaluation (PyTorch/CUDA on consumer GPU). The quantum-inspired tensor layer
 sits inside the model, where its algebraic structure is load-bearing: it is
 what makes the exact bound computable at all. Quantum algorithmic structure
-appears as the amplitude-estimation schedule for the statistical tail ---
+appears as the amplitude-estimation schedule for the statistical tail,
 executed in simulation against the same measurement-count interface it would
 have on hardware, so the estimator layer is hardware-swappable without
 redesign. Formal methods (SMT falsification via Z3, conformal calibration,
@@ -236,7 +236,7 @@ The team combines the three disciplines this proposal straddles.
 The lead (Zaki) built and operates the full pipeline end to end: the
 fine-tuning harness, the tensor-compression kernel stack with its certificate
 algebra, the benchmark/ledger infrastructure with pre-registered gates, and
-the formal-methods integration --- evidenced by the public repository's
+the formal-methods integration, evidenced by the public repository's
 measured results, 84-test suite, and reproducible artifact chain. Working
 practice follows the discipline the reviewers will look for: every reported
 number resolves to a run directory with environment snapshot; evaluation
@@ -251,10 +251,10 @@ and the experiment log records what was run, when, and why for every entry.
 \section*{Enclosures}
 \begin{itemize}
 \item \textbf{Public repository:} \url{https://github.com/ZakLr/qicert}
---- README quickstart, pinned environment, 84-test suite, benchmark harness,
-experiment log, and every artifact behind the numbers above.
+(README quickstart, pinned environment, 84-test suite, benchmark harness,
+experiment log, and every artifact behind the numbers above).
 \item \textbf{Technical report (8 pages):} \texttt{docs/technical-report-v2.pdf}
-in the repository --- method, theory, measured results incl.\ the negative
+in the repository: method, theory, measured results incl.\ the negative
 capability result, ablation isolating the QI component, limitations, and a
 claim-to-artifact provenance map (Appendix~A) with artifact-generated
 figures.
