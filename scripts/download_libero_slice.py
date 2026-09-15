@@ -3,14 +3,14 @@
 Suite chosen: libero_spatial_no_noops (1.91 GB) — one of the four suites
 MiniVLA-1B was fine-tuned on; a *slice* per N1's pre-registration
 (submission/08-experiments.md: "fine-tune on a LIBERO slice"). License:
-MIT (HF card, recorded here + docs/licenses.md).
+MIT (HF card, recorded here + docs/submission/licenses.md).
 
 Usage (container, weights mounted):
     python scripts/download_libero_slice.py
 
 Writes:
     weights/libero_spatial_no_noops/   RLDS/TFDS dataset dir
-    docs/licenses.md                   appended license row
+    docs/submission/licenses.md                   appended license row
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ _LEGACY_WS = Path("/workspace")
 WEIGHTS = Path(os.environ.get("QICERT_WEIGHTS") or (
     "/workspace/weights" if _LEGACY_WS.exists() else str(_REPO_ROOT / "weights")))
 DOCS = Path(os.environ.get("QICERT_DOCS") or (
-    "/workspace/qicert/docs" if _LEGACY_WS.exists() else str(_REPO_ROOT / "docs")))
+    "/workspace/qicert/docs/submission" if _LEGACY_WS.exists() else str(_REPO_ROOT / "docs" / "submission")))
 
 
 def main() -> int:

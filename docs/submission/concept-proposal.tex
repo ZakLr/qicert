@@ -2,7 +2,7 @@
 %  qicert — Phase-1 Concept Proposal (portal submission document)
 %  Written to Phase-1-Submission-Guidelines-VF.md Sec. 4.3: max 6 pages, 10pt
 %  min, seven required elements in order. Companion artifacts: the technical
-%  report (docs/technical-report-v2.pdf) and the public repo. Every number is
+%  report (docs/submission/technical-report-v2.pdf) and the public repo. Every number is
 %  measured and traced in the report's Appendix A; nothing here is projected
 %  or aspirational unless explicitly labeled as a Phase-2 target.
 % ============================================================================
@@ -31,7 +31,7 @@ Phase-1 Concept Proposal --- 2026 Global Quantum + AI Challenge\\
 Problem statement: \emph{Quantum-Enhanced Vision-Language-Action Models in
 Autonomous Driving and Robotics Applications} (Volkswagen Group)\\
 Code: \url{https://github.com/ZakLr/qicert} \quad$\cdot$\quad
-Technical report: \texttt{docs/technical-report-v2.pdf} (7~pages, in repo)
+Technical report: \texttt{docs/submission/technical-report-v2.pdf} (7~pages, in repo)
 \end{center}
 
 % ---------------------------------------------------------------------------
@@ -126,9 +126,10 @@ report rather than hidden.
 \section*{3. Feasibility and Resource Requirements}
 Feasibility is demonstrated, not projected: every component above has already
 run end to end on consumer hardware. The full experimental program to date
-consumed roughly 15~GPU-hours on a single laptop-class GPU (NVIDIA RTX~5060,
-8~GB), including fine-tuning (1{,}200 steps), all compression arms, full-split
-evaluations, the estimator fixtures, and latency profiling. Peak training
+consumed 10.19~GPU-hours of scored wall-clock on a single laptop-class GPU
+(NVIDIA RTX~5060, 8~GB), including fine-tuning (1{,}200 steps), all
+compression arms, full-split evaluations, the estimator fixtures, and latency
+profiling (full accounting in the repository's resource declaration). Peak training
 memory was 4.8~GiB. No proprietary data, cloud credits, or quantum hardware
 are involved at any stage; LIBERO is the statement's own recommended robotics
 dataset; simulation environments and versions are pinned in the repository.
@@ -255,7 +256,7 @@ traceable to committed artifacts.
 \item \textbf{Public repository:} \url{https://github.com/ZakLr/qicert}
 --- README quickstart, pinned environment, 84-test suite, benchmark harness,
 experiment log, and every artifact behind the numbers above.
-\item \textbf{Technical report (8 pages):} \texttt{docs/technical-report-v2.pdf}
+\item \textbf{Technical report (8 pages):} \texttt{docs/submission/technical-report-v2.pdf}
 in the repository --- method, theory, measured results incl.\ the negative
 capability result, ablation isolating the QI component, limitations, and a
 claim-to-artifact provenance map (Appendix~A) with seven artifact-generated

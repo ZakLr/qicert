@@ -7,7 +7,7 @@ gating, resume/skip logic, and a final machine-readable summary.
 
 Designed to be launched in a terminal and left alone overnight:
 
-    cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert"
+    cd "<repo>"
     .venv312/Scripts/python.exe scripts/run_remaining_experiments.py
 
 Useful flags:

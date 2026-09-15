@@ -15,7 +15,7 @@ does not come from a file in results/.  This script reads:
   results/layer_spectra.csv                        -> Fig. spectra (Lipschitz inputs)
   results/E7-int8-ablation/*/run.json              -> Fig. INT8 calibration ablation
 
-Output: docs/figures2/*.pdf (vector, 300-dpi-equivalent), printed inventory.
+Output: docs/submission/figures2/*.pdf (vector, 300-dpi-equivalent), printed inventory.
 Run:    .venv312/Scripts/python.exe scripts/make_report_figures.py
 """
 from __future__ import annotations
@@ -32,7 +32,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 REPO = Path(__file__).resolve().parents[1]
-OUT = REPO / "docs" / "figures2"
+OUT = REPO / "docs" / "submission" / "figures2"
 OUT.mkdir(parents=True, exist_ok=True)
 
 # Okabe-Ito palette (colorblind-safe)

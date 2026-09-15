@@ -2,73 +2,79 @@
 
 [![clean-env smoke](https://github.com/ZakLr/qicert/actions/workflows/ci.yml/badge.svg)](https://github.com/ZakLr/qicert/actions/workflows/ci.yml)
 
-**Certified quantum-inspired compression for VLAMs, with exact bounds, provable
-interaction pruning, and formal safety tails — everything reproducible from one
-`pip install`.**
+**Certified quantum-inspired compression for vision--language--action models
+(VLAMs): exact per-layer bounds, a refusing runtime guard, and audited
+safety statistics — everything reproducible from one `pip install`.**
 
 ```
-python -m qicert.bench.all     # reproduces every table in the report
+python -m qicert.bench.all                # reproduces every report table
 python -m qicert.bench.all --rows=smoke   # CI smoke set (tiny, fast)
 ```
 
-## Machine-checked core claims
+## What this is
 
-`lean/` holds Lean 4 proofs (`lake build` clean, zero `sorry`): bound
-composition (`prod_le_prod_of_pointwise`, the report's Eq. 1 chaining step)
-and guard soundness/completeness (`guard_sound`, `guard_complete`),
-mirroring the Z3 checks in `tests/test_certify_guard.py`. Scope boundary
-stated in `lean/README.md`.
+VLAMs (models that turn camera images plus a language instruction into robot
+actions) are too large for embedded controllers, and standard compression
+(quantization, pruning) shrinks them without saying anything about what the
+smaller model may still do. qicert compresses with tensor-train (TT)
+structure instead: each linear layer becomes a chain of small tensor cores,
+and the spectral norms of those cores multiply into an **exact per-layer
+Lipschitz bound** — computable from the compressed weights alone, with no
+reference to data. Quantized weights admit no comparable bound, because
+quantization error is data-dependent. A deployment guard verifies the
+certificate manifest at load time and refuses any action outside the
+certified ball at every inference step.
 
-## Session entry point
+Headline result (full frozen protocol, 114,497 action tokens): the
+repair-trained compressed model holds **0.4535 accuracy at 2.46× honest
+compression** against the uncompressed reference's 0.4468 (non-overlapping
+confidence intervals), with certificates re-derived from the deployed
+weights on all 168 layers. The training-free route is reported as an honest
+negative (0.164 with a diagnosed collapse mechanism), not hidden. Details,
+caveats, and the full ablation are in `docs/submission/technical-report-v2.pdf`.
 
-New model or new session: read `HANDOFF.md` first. It holds the verified
-state, artifact map, bug log, and remaining work. Rule: update `HANDOFF.md`
-at the end of every work session so the next session starts from artifacts,
-not chat history.
-
-## One-liner
-
-Certified quantum-inspired compression for Vision-Language-Action Models: compress into
-QTT tensor networks, compile cross-modal interactions into commuting-Pauli families,
-certify what remains with a three-layer certificate stack (exact Lipschitz bounds, SOS
-local proofs, STL tail bounds), and guard deployment with a syndrome-shadow monitor.
-
-The INT8 baseline can match our accuracy at matched ratio. It **cannot** match our
-certificates — quantization error is data-dependent and unfactorizable; ours are exact
-properties of the compressed cores.
-
-## Status
-
-**Phase-0 skeleton.** Interfaces, packaging, and the bench-suite contract are live;
-experiments have not run yet. GPU/CUDA-Q kernels land with the pinned environment
-(open question Q19). No table in the report exists until its bench module runs ≥3 seeds.
-
-## Layout (per `submission/11-package-spec.md` of the plan workspace)
+## Layout
 
 ```
 include/qicert/   C++ kernel interfaces: tt_cross, pauli_family, iqae, shadow_monitor
-src/              C++ stubs (CUDA-Q linking when the env is pinned)
+src/              C++ stubs (CUDA-Q linking once the GPU env is pinned)
+cpp/              self-tested C++ contraction skeleton (scope in cpp/README)
 python/qicert/    PyTorch layers, compress, certify, safety, monitor, oracle, backbones
-bench/            the bench suite — one module per report table (--rows contract)
+bench/            the bench suite — one module per report table (--rows selects rows)
 cert/             certificate JSON templates (Lipschitz table, pruning certificates)
-tests/            unit + integration; CI runs the smoke bench
-docs/             builds from the report
+tests/            unit + integration (84 tests); CI runs the smoke bench
+lean/             Lean 4 proofs of bound composition + guard properties
+docs/             the reports (PDF) plus method notes
 .github/workflows/ci.yml   clean-env build + smoke bench on every push
 ```
 
 ## The bench contract
 
-- Every report table maps to a bench module: `compress` (N2, N2′, N3),
-  `certify_layers12` (N4, N5), `safety` (N6), `compiler` (N7), `monitor` (N10),
-  `training` (N11, N12), `cross_track` (N13), `latency` (≤100 ms profile).
-- Every module takes a `--rows` argument; `qicert.bench.all` runs all modules and prints
-  a Markdown table that drops into the report.
+- Every report table maps to a bench module: `compress` (baseline fine-tune,
+  bit-ordering study, certificate table), `n2_sweep` (uniform compression),
+  `n2r_sweep` / `n2r2_sweep` (residual repair arms), `n8c_int8` (calibrated
+  INT8 reference), `n9_repair` (repair training + full-protocol confirm),
+  `lyapunov_curve` (degradation analysis), `safety` (estimator comparison),
+  `compiler` (Pauli compiler acceptance), `monitor` (runtime monitor),
+  `training` (tensor-native training), `cross_track` (second backbone),
+  `latency` (≤100 ms edge profile).
+- Every module takes a `--rows` argument (`smoke` = tiny fast subset);
+  `qicert.bench.all` runs modules and prints Markdown tables that drop into
+  the report.
 - CI runs `--rows=smoke` on a tiny parameter budget so every commit is verified.
-- The clean-env gate (N14): fresh venv → `pip install qicert` → `bench.all --rows=smoke`
-  succeeds with no manual steps, on a Kaggle T4 image and on the local RTX 5060.
+- Clean-env check: fresh venv → `pip install qicert` →
+  `bench.all --rows=smoke` succeeds with no manual steps.
+
+## Machine-checked core claims
+
+`lean/` holds Lean 4 proofs (`lake build` clean, zero `sorry`): bound
+composition (the report's Eq. 1 chaining step) and guard
+soundness/completeness, mirroring the Z3 checks in
+`tests/test_certify_guard.py`. Scope boundary stated in `lean/README.md`.
 
 ## Environment
 
-Pins are frozen at the end of Phase 0 (Q19/Q22): CUDA-Q, PennyLane, tntorch (reference
-path only), PyTorch CUDA 12.x, Julia + SumOfSquares.jl behind a small CLI. See
-`environment.yml` and the plan's `REPRODUCE.md`.
+See `environment.yml` for pinned versions (PyTorch CUDA build, transformers,
+numpy/scipy, CUDA-Q for the estimator simulation, Julia reserved for the
+sum-of-squares bridge). The bench runner resolves its own interpreter and
+`PYTHONPATH`; just launch it with the venv python.

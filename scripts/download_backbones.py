@@ -6,7 +6,7 @@ Usage (inside the qicert dev container, repo mounted):
 Writes:
     weights/<kind>/        checkpoints (host-mounted, gitignored)
     weights/_licenses.json exact HF `license` card strings (report §6 needs them)
-    docs/licenses.md       the human-readable compliance table
+    docs/submission/licenses.md       the human-readable compliance table
 """
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ _LEGACY_WS = Path("/workspace")
 WEIGHTS = Path(os.environ.get("QICERT_WEIGHTS") or (
     "/workspace/weights" if _LEGACY_WS.exists() else str(_REPO_ROOT / "weights")))
 DOCS = Path(os.environ.get("QICERT_DOCS") or (
-    "/workspace/qicert/docs" if _LEGACY_WS.exists() else str(_REPO_ROOT / "docs")))
+    "/workspace/qicert/docs/submission" if _LEGACY_WS.exists() else str(_REPO_ROOT / "docs" / "submission")))
 
 # Only checkpoint essentials are needed by Prismatic `load_vla`; the 7.5 GB
 # stage-1 backbone ("backbone" kind) is not (ROADMAP). NOTE: hf_hub's
@@ -81,7 +81,7 @@ def main() -> None:
     (WEIGHTS / "_licenses.json").write_text(
         json.dumps(lic, indent=2, sort_keys=True) + "\n")
 
-    # docs/licenses.md — the report §6 compliance table source
+    # docs/submission/licenses.md — the report §6 compliance table source
     lines = [
         "# Licenses — backbone weights (recorded at download)",
         "",

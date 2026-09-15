@@ -64,7 +64,7 @@ PY
 ```
 
 - [ ] **License rows recorded at download** — capture the `license` card field for
-      every repo into `docs/licenses.md` (the report §6 compliance table needs the
+      every repo into `docs/submission/licenses.md` (the report §6 compliance table needs the
       exact strings, not paraphrases). Include the DINOv2/SigLIP/Qwen2.5 sub-model
       licenses.
 - [ ] **Version pins captured** — record `transformers`/`peft`/`accelerate`/

@@ -12,7 +12,7 @@ advantage** — it is the fidelity/energy context that makes any later quantum
 comparison honest (without it, "our method beats the baseline" has no real zero).
 
 **Hardware:** local NVIDIA RTX 5060 Laptop GPU (8 GB VRAM), single-GPU.
-**Stack (versions in `docs/resource-declaration.md`):** PyTorch 2.14+cu130,
+**Stack (versions in `docs/submission/resource-declaration.md`):** PyTorch 2.14+cu130,
 torchao 0.18, peft 0.14, HF transformers 5.x, the Prismatic/MiniVLA fork at
 `weights/code/`, the checkpoint at
 `weights/ckpt/checkpoints/step-122500-epoch-55-loss=0.0743.pt`.
@@ -147,7 +147,7 @@ ones, with their error strings) — the full history, not just the good runs.
 **To regenerate seed 0 of the baseline locally:**
 
 ```bash
-cd /c/Users/zakil/Desktop/AQC/Quantum\ Insider/challenge/qicert
+cd <repo>
 export PRISMATIC_DATA_ROOT="$(pwd)/weights/data"
 export PYTHONPATH="$(pwd)/python"
 .venv312/Scripts/python.exe -m bench.all \

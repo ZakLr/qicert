@@ -68,3 +68,22 @@ docs/*.aux
 docs/*.log
 docs/*.out
 docs/*.synctex.gz
+
+# --- internal-only files: stay on disk, never pushed to the remote ---
+AGENTS.md
+HANDOFF.md
+SUBMISSION-CHECKLIST.md
+/AGENTS.local.md
+/archive/
+/lit-swarm/
+kaggle/kernel-metadata.json
+docs/WHY-WE-WIN.md
+docs/website-plan.md
+docs/pitch.html
+docs/technical-report.tex
+docs/technical-report.pdf
+results/N2/
+docs/submission/*.aux
+docs/submission/*.log
+docs/submission/*.out
+docs/submission/*.synctex.gz

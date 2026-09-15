@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Export the Resource Declaration (docs/resource-declaration.md).
+"""Export the Resource Declaration (docs/submission/resource-declaration.md).
 
 AGENTS.md §4/§6 requires every reported number to carry its resource context:
 wall-clock, GPU-h, shots/circuit-evals (N/A here — this is the classical ML
@@ -21,7 +21,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 LEDGER = REPO / "results" / "ledger.csv"
-OUT = REPO / "docs" / "resource-declaration.md"
+OUT = REPO / "docs" / "submission" / "resource-declaration.md"
 
 
 def _load_run_extras(run_dir: Path) -> dict:

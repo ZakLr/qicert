@@ -28,7 +28,7 @@ Per-run figures are regenerated from those directories by
 
 ## Resource declaration
 
-`scripts/export_resource_declaration.py` (produces `docs/resource-declaration.md`)
+`scripts/export_resource_declaration.py` (produces `docs/submission/resource-declaration.md`)
 collects every completed run's wall time, GPU name, and status from
 `results/ledger.csv` — the paper's resource table is not hand-edited.
 
