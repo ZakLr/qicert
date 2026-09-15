@@ -4,18 +4,18 @@ Everything the judges need, in one folder.
 
 | File | What it is |
 |---|---|
-| `technical-report-v2.pdf` | **The technical report** — 8 pages. Method, measured results (3-seed headline), certificates, guard, safety suite, honest limitations, claim-to-artifact provenance (Appendix A). |
-| `concept-proposal.pdf` | **The concept proposal** — 3 pages, built to the portal's §4.3 element list (problem framing, approach, feasibility, impact, validation plan, hybrid integration, team). |
+| `technical-report-v2.pdf` | **The technical report** (8 pages). Method, measured results (3-seed headline), certificates, guard, safety suite, honest limitations, claim-to-artifact provenance (Appendix A). |
+| `concept-proposal.pdf` | **The concept proposal** (3 pages), built to the portal's §4.3 element list (problem framing, approach, feasibility, impact, validation plan, hybrid integration, team). |
 | `resource-declaration.md` | Compute accounting: 66 scored runs, **10.19 GPU-h** total, machine and energy notes, regenerated from `results/ledger.csv`. |
 | `licenses.md` | Component-by-component license table for models, datasets, and dependencies (incl. the flagged CC-BY-NC DINOv2 tower). |
 | `technical-report-v2.tex`, `concept-proposal.tex` | LaTeX sources for both PDFs. Figures come from `figures2/` (regenerate with `python scripts/make_report_figures.py`). |
 
 ## Which files to review before submitting
 
-1. `concept-proposal.tex` — §7 Team Capability still carries a placeholder name;
+1. `concept-proposal.tex` §7 Team Capability still carries a placeholder name;
    replace it with the real author line, then recompile twice
    (`pdflatex concept-proposal.tex`) and re-upload the PDF.
-2. `technical-report-v2.tex` — author block (near line 32) says "The qicert Team".
+2. `technical-report-v2.tex` author block (near line 32) says "The qicert Team".
 3. Recompile both PDFs after any edit; keep the page counts (report ≤ 8 pp with
    appendix, proposal ≤ 6 pp).
 
