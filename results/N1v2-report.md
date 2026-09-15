@@ -147,7 +147,7 @@ ones, with their error strings) — the full history, not just the good runs.
 **To regenerate seed 0 of the baseline locally:**
 
 ```bash
-cd /c/Users/zakil/Desktop/AQC/Quantum\ Insider/challenge/qicert
+cd <repo>
 export PRISMATIC_DATA_ROOT="$(pwd)/weights/data"
 export PYTHONPATH="$(pwd)/python"
 .venv312/Scripts/python.exe -m bench.all \

@@ -153,7 +153,7 @@ only: FT 0.4468). Each seed is a full-train + both-eval-legs run (~8–12 h),
 launched in the CUDA-Q Docker container one seed per invocation, unbuffered,
 with its own per-seed ckpt dir.
 
-    cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert" && \
+    cd "<repo>" && \
     docker run --rm --gpus all -v "$(pwd):/workspace" \\
       -v "$(pwd)/weights:/workspace/weights" -v "$(pwd)/.hf_cache:/root/.cache/huggingface" \
       qicert-dev:cu13-cudaq bash -lc '
@@ -272,7 +272,7 @@ only: FT 0.4468). Each seed is a full-train + both-eval-legs run (~8–12 h),
 launched in the CUDA-Q Docker container (verified path) one seed per invocation,
 unbuffered, with its own per-seed ckpt dir.
 
-    cd "/c/Users/zakil/Desktop/AQC/Quantum Insider/challenge/qicert" && \
+    cd "<repo>" && \
     docker run --rm --gpus all -v "$(pwd):/workspace" \\
       -v "$(pwd)/weights:/workspace/weights" -v "$(pwd)/.hf_cache:/root/.cache/huggingface" \
       qicert-dev:cu13-cudaq bash -lc '
