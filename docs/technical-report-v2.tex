@@ -64,7 +64,8 @@ sketch of the watched latent, median-of-means gate, plus a syndrome check on
 the compiled diagonal tables) whose empirical false-alarm rate over 4{,}000
 null trials is 0.0000 against the 0.01 design budget, whose bit-flip
 detection is 1.000 over 500 injected corruptions, and whose added cost is
-0.35~ms per step. certificate soundness, a compiler whose
+0.35~ms per step. The safety suite closes with certificate soundness re-checked
+on every compressed layer, a compiler whose
 pruning predictions track measurement at median $r = 0.975$, a rare-event
 estimation race in which an amplified estimator reaches the width of naive
 Monte Carlo with $\sim$1{,}587$\times$ fewer queries, and conformal coverage
@@ -96,7 +97,7 @@ quantization error depends on the data distribution, so whatever guarantee
 exists is statistical and model-dependent.
 
 We work on the robotics sub-track, where the accepted baseline (INT8
-quantization of an OpenVLA-class model on LIBERO) is reproducible on our
+quantization of an OpenVLA-class model~\cite{kim24} on LIBERO~\cite{liu23libero}) is reproducible on our
 hardware, and we address the latency benchmark with the CPU edge profile the
 challenge describes. The two claims we make are kept in separate classes
 throughout: a \emph{capability} claim (what the compressed model does) and a
@@ -156,7 +157,7 @@ hash at load time and refuses to load a tampered artifact. At inference, the
 guard checks that the predicted action lies within the certified ball and
 otherwise returns a refuse-to-serve sentinel and logs the event. The checker
 logic is small enough to interrogate mechanically: we encoded its soundness
-and completeness properties in SMT and asked Z3 to produce counterexamples;
+and completeness properties in SMT and asked Z3~\cite{demoura08} to produce counterexamples;
 none exist, so the accept set of the guard is machine-checked against the
 specification rather than argued informally. The same properties plus the
 bound-composition step (Eq.~\eqref{eq:chain} chaining) are additionally
@@ -173,7 +174,7 @@ naive Monte Carlo, an iterated quantum amplitude estimation schedule
 (IQAE~\cite{grinko21}) executed as a simulation whose estimator sees only
 measurement counts, and an extreme-value tail fit (GEV). Their intervals are
 scored for width and for coverage of the truth, and the honest reading is the
-pair (width, coverage), not width alone. A conformal layer
+pair (width, coverage), not width alone. A conformal layer~\cite{vovk05,angelopoulos21}
 calibrates a threshold so that the empirical violation rate on fresh data
 matches a target $1-\alpha$, and a scenario-optimization bound
 (Campi--Garatti~\cite{campi08}) converts calibration-set size into a
@@ -193,8 +194,10 @@ configuration search), the report says so rather than extrapolating.
 \section{Experimental Setup}
 
 \textbf{Model and data.} The backbone is a 0.5B-parameter prismatic VLA
-(DINOv2+SigLIP vision encoder, Qwen2.5-0.5B language backbone) fine-tuned
-with LoRA on LIBERO-spatial (no-noops), the robotics-track reference
+(DINOv2~\cite{oquab23} + SigLIP~\cite{zhai23} vision encoder,
+Qwen2.5-0.5B~\cite{yang24} language backbone; prismatic architecture of
+Karamcheti et al.~\cite{karamcheti24}) fine-tuned
+with LoRA~\cite{hu22} on LIBERO-spatial (no-noops)~\cite{liu23libero}, the robotics-track reference
 dataset family. Fine-tuning ran 1{,}200 steps at batch 2 on one GPU; training
 loss falls from 22.5 to a running median of 2.4--2.8
 (Fig.~\ref{fig:training}, appendix). The reference policy reaches
@@ -305,7 +308,7 @@ we report the slowdown explicitly because it is the honest price of the TT
 route on this profile.
 
 The runtime monitor is the third safety mechanism, aimed at the input stream
-rather than the action. A classical-shadows sketch (64 random projections of
+rather than the action. A classical-shadows sketch~\cite{huang20} (64 random projections of
 the watched latent) feeds a median-of-means gate with a design false-alarm
 rate of 0.01 backed by the concentration theorem; a syndrome check on the
 compiler's diagonal tables catches bit-flip corruption of the watched
@@ -478,22 +481,51 @@ guard still enforcing. The certificate property is real, measured on every
 compressed layer, and structurally unavailable to the quantized baseline.
 
 % ---------------------------------------------------------------------------
-\begin{thebibliography}{9}
+\begin{thebibliography}{16}
 \bibitem{oseledets} I.~V. Oseledets, ``Tensor-Train Decomposition,'' \emph{SIAM
 J.\ Scientific Computing}, 33(5):2295--2317, 2011.
 \bibitem{tomut} A.~Tomut et al., ``CompactifAI: Extreme Compression of Large
 Language Models using Quantum-Inspired Tensor Networks,''
 arXiv:2401.14109, 2024.
-\bibitem{frantar23} E.~Frantar et al., ``GPTQ: Accurate Post-Training
-Quantization for Generative Pre-trained Transformers,'' \emph{ICLR}, 2023.
-\bibitem{grinko21} D.~Grinko, J.~Gacon, C.~Zoufal, S.~Woerner, ``Iterative
-Quantum Amplitude Estimation,'' \emph{npj Quantum Information}, 7:52, 2021.
-\bibitem{campi08} M.~C. Campi, S.~Garatti, ``The Exact Feasibility of
-Randomized Solutions of Uncertain Convex Programs,'' \emph{SIAM J.\
-Optimization}, 19(3):1211--1230, 2008.
 \bibitem{liu24} J.~Liu et al., ``Towards Provably Efficient Quantum Algorithms
 for Large-Scale Machine-Learning Models,'' \emph{Nature Communications},
 15:434, 2024.
+\bibitem{frantar23} E.~Frantar et al., ``GPTQ: Accurate Post-Training
+Quantization for Generative Pre-trained Transformers,'' \emph{ICLR}, 2023.
+\bibitem{grinko21} D.~Grinko, J.~Gacon, C.~Zoufal, S.~Woerner, ``Iterative
+Quantum Amplitude Estimation and its Impact on Quantum Chemical Applications,''
+\emph{npj Quantum Information}, 7:52, 2021.
+\bibitem{campi08} M.~C. Campi and S.~Garatti, ``The Exact Feasibility of
+Randomized Solutions of Uncertain Convex Programs,'' \emph{SIAM J.\
+Optimization}, 19(3):1211--1230, 2008.
+\bibitem{hu22} E.~J. Hu, Y.~Shen, P.~Wallis, Z.~Allen-Zhu, Y.~Li, S.~Wang,
+L.~Wang, and W.~Chen, ``LoRA: Low-Rank Adaptation of Large Language Models,'' \emph{ICLR}, 2022.
+\bibitem{vovk05} G.~Shafer and V.~Vovk, \emph{Algorithmic Learning in a Random
+World}, Springer, 2005.
+\bibitem{angelopoulos21} A.~N. Angelopoulos and S.~Bates, ``A Gentle
+Introduction to Conformal Prediction and Distribution-Free Uncertainty
+Quantification,'' arXiv:2107.07511, 2021.
+\bibitem{huang20} H.-Y. Huang, R.~Kueng, and J.~Preskill, ``Predicting Many
+Properties of a Quantum System from Very Few Measurements,'' \emph{Nature
+Physics}, 16:1050--1057, 2020.
+\bibitem{demoura08} L.~de Moura and N.~Bj{\o}rner, ``Z3: An Efficient SMT
+Solver,'' \emph{TACAS}, LNCS 4963, pp.~337--340, 2008.
+\bibitem{liu23libero} B.~Liu, Y.~Zhu, C.~Gong, H.~Feng, Y.~Liu, Y.~Zhang,
+H.~Fang, Y.~Zhu, and Y.~Zhu, ``LIBERO: Benchmarking Knowledge Transfer for
+Lifelong Robot Learning,'' \emph{NeurIPS}, 2023.
+\bibitem{kim24} M.~J. Kim, K.~Pertsch, S.~Karamcheti, T.~Xiao, A.~Balakrishna,
+S.~Nair, R.~Rafailov, E.~Foster, G.~Lam, P.~Sanketi, Q.~Vuong, T.~Kollar,
+R.~B. Levine, and C.~Finn, ``OpenVLA: An Open-Source Vision-Language-Action
+Model,'' \emph{CoRL}, 2024.
+\bibitem{karamcheti24} S.~Karamcheti, S.~Nair, A.~Balakrishna, P.~Liang,
+T.~Kollar, and C.~Finn, ``Prismatic VLMs: Investigating the Design Space of
+Modularized Vision-Language Models,'' \emph{ICML}, 2024.
+\bibitem{yang24} A.~Yang, B.~Yang, B.~Hui, et al., ``Qwen2.5 Technical
+Report,'' arXiv:2412.15115, 2024.
+\bibitem{oquab23} M.~Oquab, T.~Darcet, T.~Moutakanni, et al., ``DINOv2:
+Learning Robust Visual Features without Supervision,'' \emph{TMLR}, 2024.
+\bibitem{zhai23} X.~Zhai, B.~Mustafa, A.~Kolesnikov, and L.~Beyer, ``Sigmoid
+Loss for Language Image Pre-Training (SigLIP),'' \emph{ICCV}, 2023.
 \end{thebibliography}
 
 % ===========================================================================
@@ -529,8 +561,8 @@ Repaired TT (closed-form) 0.164 at $2.54$/$2.86\times$, sound 168/168 &
 N9 repair training: prefix 0.1586$\to$0.4519; confirm GO 0.4535 at
 $2.46\times$, CI, certs re-derived &
 \texttt{results/N9/*/run.json} (prefix),
-\texttt{results/N9C/*/run.json} (confirm),
-\texttt{results/N9-repaired/} \\
+\texttt{results/N9C/*/run.json} (confirm); merged weights are GB-scale and
+stay out of git, the run artifacts carry the measurements \\
 Layer spectra, PR 40--845 &
 \texttt{results/layer\_spectra.csv} \\
 Compiler $r = 0.975$, identity $2.3\times10^{-14}$ &
@@ -546,8 +578,8 @@ Guard demo (SERVE/REFUSE transcript) &
 Shadow-syndrome monitor (FPR, detection, 0.35 ms/step) &
 \texttt{results/N10MON/*/run.json}, \texttt{bench/monitor.py} \\
 Output-diversity gate (collapse signature tests) &
-\texttt{certify/guard.py} (\texttt{ActionDiversityMonitor}),
-\texttt{test\_certify\_guard.py} \\
+\texttt{python/qicert/certify/guard.py} (\texttt{ActionDiversityMonitor}),
+\texttt{tests/test\_certify\_guard.py} \\
 Lean proofs (composition + guard, zero \texttt{sorry}) &
 \texttt{lean/QicertProofs/Qicert.lean} \\
 INT8 calibration ablation &
@@ -558,6 +590,17 @@ Pre-registered gate text &
 \bottomrule
 \end{tabular}
 \end{table}
+
+\medskip
+
+\noindent\textbf{Reproducing a row.} Each \texttt{run.json} records the
+command line, config hash, seed, environment snapshot (package versions,
+GPU, driver), and start/end timestamps; \texttt{results/ledger.csv} holds one
+row per run. The smoke set reproduces in minutes on a CPU
+(``\texttt{python -m qicert.bench.all --rows=smoke}''); the full rows list
+their expected runtimes in the repository README. Artifacts are JSON/CSV only;
+model weights are reproducible from the pinned checkpoints and scripts and are
+not distributed in the repository.
 
 \section{Additional Figures}
 
