@@ -122,9 +122,10 @@ report rather than hidden.
 \section*{3. Feasibility and Resource Requirements}
 Feasibility is demonstrated, not projected: every component above has already
 run end to end on consumer hardware. The full experimental program to date
-consumed roughly 15~GPU-hours on a single laptop-class GPU (NVIDIA RTX~5060,
-8~GB), including fine-tuning (1{,}200 steps), all compression arms, full-split
-evaluations, the estimator fixtures, and latency profiling. Peak training
+consumed 10.20~GPU-hours of scored wall-clock on a single laptop-class GPU
+(NVIDIA RTX~5060, 8~GB), including fine-tuning (1{,}200 steps), all compression
+arms, full-split evaluations, the estimator fixtures, and latency profiling
+(full accounting in the repository's resource declaration). Peak training
 memory was 4.8~GiB. No proprietary data, cloud credits, or quantum hardware
 are involved at any stage; LIBERO is the statement's own recommended robotics
 dataset; simulation environments and versions are pinned in the repository.

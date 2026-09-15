@@ -1,0 +1,36 @@
+{
+ "capture": "default",
+ "config_hash": "9097ec6a508c803e",
+ "end_utc": "2026-09-15T14:14:18+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "E-comp",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "e1_pass": true,
+  "e1_rel_err": 7.922124032800471e-16,
+  "e2_corr_iqr": [
+   0.9466616918412055,
+   0.9851817960634539
+  ],
+  "e2_corr_median": 0.9747799228065306,
+  "e2_n_tables": 12,
+  "e2_pass": true,
+  "e2_sound": true,
+  "e3_full_table_ms": 0.3018,
+  "e3_pass": true
+ },
+ "run_id": "a4eb681f56b9",
+ "run_tag": "compiler-acceptance-kp4",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-09-15T14:14:07+00:00",
+ "status": "completed",
+ "tolerance_note": null,
+ "wall_sec": 10.19
+}

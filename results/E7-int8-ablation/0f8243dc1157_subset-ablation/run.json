@@ -1,0 +1,77 @@
+{
+ "capture": "default",
+ "config_hash": "6161c6c33d47cf7d",
+ "end_utc": "2026-08-25T18:15:07+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "E7-int8-ablation",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "action_reference_shape": [
+   7
+  ],
+  "arms": {
+   "all|perchannel": {
+    "action_rel_drift": 0.0,
+    "module_drift_max": 0.13751,
+    "module_drift_median": 0.01982,
+    "weight_recon_err_max": 0.01929,
+    "weight_recon_err_mean": 0.00998
+   },
+   "all|pertensor": {
+    "action_rel_drift": 1.08971,
+    "module_drift_max": 0.1566,
+    "module_drift_median": 0.03824,
+    "weight_recon_err_max": 0.13803,
+    "weight_recon_err_mean": 0.03899
+   },
+   "llm+projector|perchannel": {
+    "action_rel_drift": 0.0,
+    "module_drift_max": 0.13751,
+    "module_drift_median": 0.01982,
+    "weight_recon_err_max": 0.01463,
+    "weight_recon_err_mean": 0.00975
+   },
+   "llm+projector|pertensor": {
+    "action_rel_drift": 1.08971,
+    "module_drift_max": 0.1566,
+    "module_drift_median": 0.03824,
+    "weight_recon_err_max": 0.13803,
+    "weight_recon_err_mean": 0.03806
+   },
+   "llm|perchannel": {
+    "action_rel_drift": 0.0,
+    "module_drift_max": 0.13751,
+    "module_drift_median": 0.01982,
+    "weight_recon_err_max": 0.01463,
+    "weight_recon_err_mean": 0.00981
+   },
+   "llm|pertensor": {
+    "action_rel_drift": 1.08971,
+    "module_drift_max": 0.1566,
+    "module_drift_median": 0.03824,
+    "weight_recon_err_max": 0.13803,
+    "weight_recon_err_mean": 0.03857
+   }
+  },
+  "modules": {
+   "llm": 169,
+   "projector": 3,
+   "vision": 209
+  },
+  "verdict": "Compare action drift across rows: the subset that dominates the drift explains N1's whole-model dynamic-int8 number — a quantization-scope effect (which linears were quantized), not an inherent INT8 property."
+ },
+ "run_id": "0f8243dc1157",
+ "run_tag": "subset-ablation",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-08-25T18:11:55+00:00",
+ "status": "completed",
+ "tolerance_note": "documented substitution: exact dynamic-int8 math emulated on the live fp16 model; drift measured on live matched inputs vs original weights",
+ "wall_sec": 192.5
+}

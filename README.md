@@ -154,7 +154,7 @@ brand/              logo + banner source (SVG) and exports (PNG)
 - **Per-layer exact ≠ end-to-end certified.** Chaining 168 exact bounds multiplies into a vacuous number — true of *any* 168-layer model, including the uncompressed one. We ship per-layer exactness + the runtime guard, and we say so.
 - **Repair is a trained component.** 1,200 LoRA steps, cost charged to our arm under matched-budget rules, contamination-guarded.
 - **2-of-3 seeds beat their own baseline** (third holds parity). Mean ± std reported; no seed dropped silently.
-- **No quantum-hardware claims.** The QI component is the tensor-network structure; the estimator simulation uses CUDA-Q; nothing here runs on, or claims speedup from, quantum hardware.
+- **No quantum-hardware claims.** The QI component is the tensor-network structure and the quantum-inspired monitor; the IQAE estimator is scored via a documented NumPy amplification simulation (the estimator sees only measurement counts, exactly as it would on hardware). CUDA-Q is prepared in the container image for Phase-2, not used for any reported number. Nothing here runs on, or claims speedup from, quantum hardware.
 
 </details>
 
@@ -173,8 +173,8 @@ brand/              logo + banner source (SVG) and exports (PNG)
 | timm DINOv2 ViT-L weights (`vit_large_patch14_reg4_dinov2.lvd142m`) | vision tower inside the backbone | **CC-BY-NC 4.0** ⚠️ | **non-commercial** |
 | SigLIP ViT-SO400M weights (timm/OpenCLIP) | second vision tower | Apache 2.0 | none |
 | PyTorch, Transformers, PEFT, NumPy/SciPy | training stack | BSD / Apache 2.0 / MIT | none |
-| tntorch, quimb, PennyLane | tensor-network & QML reference paths | MIT / Apache 2.0 | none |
-| NVIDIA CUDA-Q | quantum estimator simulation | Apache 2.0 | none |
+| tntorch, quimb, PennyLane | optional tensor-network/QML reference paths (not required — our kernels are in-repo NumPy/SciPy) | MIT / Apache 2.0 | not used for any Phase-1 number |
+| NVIDIA CUDA-Q | prepared in container for Phase-2 hardware-pathway work | Apache 2.0 | not used for any Phase-1 number |
 | Z3 (SMT solver), Lean 4 + Batteries | verification toolchain | MIT | none |
 
 > [!WARNING]

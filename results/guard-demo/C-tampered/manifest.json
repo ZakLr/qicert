@@ -1,0 +1,8 @@
+{
+  "run_dir": "C:\\Users\\zakil\\Desktop\\AQC\\Quantum Insider\\challenge\\qicert\\results\\guard-demo\\C-tampered",
+  "created": "1789230293.8204386",
+  "artifacts": {
+    "certificate-layer0.json": "75e7b6e5e9de2de4c2b9cac05ae8f36f746667671828f9f6c10488bc61f9cff3"
+  },
+  "manifest_sha256": "e330f956fe0ec421bb7d1ca7d0dbc8222e74e2983ea298b5c7a7a0b5d0f3f290"
+}

@@ -1,0 +1,48 @@
+{
+ "capture": "default",
+ "config_hash": "5737971232f0fdf8",
+ "end_utc": "2026-09-13T12:49:42+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "N2R2",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "agreement": 0.5866477272727273,
+  "compressed_layers": 168,
+  "config": {
+   "calib_stat": "absmax",
+   "fit_mode": "weighted",
+   "keep_types": [],
+   "mixed_allocation": false,
+   "plan_fraction": 0.5,
+   "reason": "same but larger residual cap (more correction budget)",
+   "residual_rank_cap": 64,
+   "tt_split": 0.6
+  },
+  "correct": 86,
+  "eval_scope": "search-prefix (40 batches, 704 tokens)",
+  "kept_full_layers": 0,
+  "n_batches_used": 40,
+  "provisional_go": false,
+  "ratio": 2.536,
+  "ref_tokens": 704,
+  "search_acc": 0.12215909090909091,
+  "seed": 0,
+  "sound_layers": 168,
+  "total": 704,
+  "wall_sec": 645.02
+ },
+ "run_id": "06e4f5e522f7",
+ "run_tag": "search-0_weighted_frac0.50_rr64",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-09-13T12:49:40+00:00",
+ "status": "completed",
+ "tolerance_note": null,
+ "wall_sec": 1.02
+}

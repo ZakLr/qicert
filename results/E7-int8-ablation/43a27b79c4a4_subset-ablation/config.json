@@ -1,0 +1,14 @@
+{
+ "config": {
+  "calib_forwards": 8,
+  "checkpoint": "<repo>\\weights\\ckpt\\checkpoints\\step-122500-epoch-55-loss=0.0743.pt",
+  "emulation": "weight-only symmetric qint8 (per-channel|per-tensor) + per-token dynamic activation quant",
+  "experiment": "INT8 subset ablation",
+  "note": "diagnoses whether N1's INT8 delta came from quantizing the wrong subsets",
+  "subsets": [
+   "llm",
+   "llm+projector",
+   "all"
+  ]
+ }
+}

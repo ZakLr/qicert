@@ -1,0 +1,5 @@
+{"event": "run_start", "t_wall": 0.0}
+{"action_rel_drift": 0.0, "arm": "llm|perchannel", "module_drift_max": 0.13751, "module_drift_median": 0.01982, "t_mono": 161.7624, "t_wall": 161.7624, "weight_recon_err_max": 0.01463, "weight_recon_err_mean": 0.00981}
+{"action_rel_drift": 1.08971, "arm": "llm|pertensor", "module_drift_max": 0.1566, "module_drift_median": 0.03824, "t_mono": 165.5359, "t_wall": 165.5359, "weight_recon_err_max": 0.13803, "weight_recon_err_mean": 0.03857}
+{"action_rel_drift": 0.0, "arm": "llm+projector|perchannel", "module_drift_max": 0.13751, "module_drift_median": 0.01982, "t_mono": 169.4105, "t_wall": 169.4105, "weight_recon_err_max": 0.01463, "weight_recon_err_mean": 0.00975}
+{"action_rel_drift": 1.08971, "arm": "llm+projector|pertensor", "module_drift_max": 0.1566, "module_drift_median": 0.03824, "t_mono": 173.2664, "t_wall": 173.2664, "weight_recon_err_max": 0.13803, "weight_recon_err_mean": 0.03806}

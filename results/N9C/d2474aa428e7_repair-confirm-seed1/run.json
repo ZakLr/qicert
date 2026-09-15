@@ -1,0 +1,42 @@
+{
+ "capture": "heavy",
+ "config_hash": "31064cf0ce8281ad",
+ "end_utc": "2026-09-13T20:17:02+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "N9C",
+ "kill_criterion": "N9-GO: ratio>=2x and acc>=FT-0.05",
+ "kill_verdict": "GO",
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "adapter_frac": 0.012294,
+  "bar": "ratio>=2.0 and acc>=0.3968",
+  "cert_layers": 168,
+  "cert_log10L": 71.854,
+  "delta_vs_n1_ft": 0.0639,
+  "eval_acc": 0.4609203734595666,
+  "eval_ci": [
+   0.4580344424199842,
+   0.46380892671177504
+  ],
+  "eval_correct": 52774,
+  "eval_scope": "full-split (6496 batches, 114497 tokens)",
+  "eval_total": 114497,
+  "gate": "GO",
+  "n1_ft": 0.39704970435906617,
+  "ratio_base": 2.536,
+  "ratio_honest": 2.4593,
+  "seed": 1
+ },
+ "run_id": "d2474aa428e7",
+ "run_tag": "repair-confirm-seed1",
+ "seed": 1,
+ "seed_spec": {
+  "numpy": 1,
+  "python": 1,
+  "torch": 1
+ },
+ "start_utc": "2026-09-13T20:00:21+00:00",
+ "status": "completed",
+ "tolerance_note": null,
+ "wall_sec": 1001.13
+}

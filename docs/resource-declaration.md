@@ -1,6 +1,6 @@
 # Resource Declaration
 
-_Generated 2026-09-13T21:26:57+00:00_
+_Generated 2026-09-15T14:35:51+00:00_
 
 Every claimed number must be traceable to a
 recorded run with its full resource cost. This table IS that
@@ -83,8 +83,11 @@ trace, regenerated from `results/ledger.csv`.
 | N9C | d2474aa428e7 | 1 | 1001.1 | 16.7 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
 | N9 | a7fb3ae4fb58 | 2 | 1433.6 | 23.9 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
 | N9C | 798d32130bea | 2 | 1116.4 | 18.6 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-13 |
+| E-comp | a4eb681f56b9 | 0 | 10.2 | 0.2 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-15 |
+| E-comp | 3ef7d38ae53f | 0 | 4.1 | 0.1 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-15 |
+| E-comp | 0bf0d6547f5c | 0 | 4.1 | 0.1 | 0.0 | NVIDIA GeForce RTX 5060 Laptop GPU | 2026-09-15 |
 
-**Total scored wall-clock: 10.19 GPU-h**
+**Total scored wall-clock: 10.20 GPU-h**
 
 ## Failed / aborted runs (excluded from claims, kept for provenance)
 

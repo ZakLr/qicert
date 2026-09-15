@@ -1,0 +1,15 @@
+{
+ "config": {
+  "batch": 1,
+  "bonds": [
+   8,
+   16,
+   32
+  ],
+  "dtype": "fp16",
+  "experiment": "E6 latency microbench",
+  "iters": 1000,
+  "timing": "CUDA events",
+  "warm": 100
+ }
+}

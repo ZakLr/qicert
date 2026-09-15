@@ -24,5 +24,5 @@ dependencies:
       # --- Phase-0 pins (freeze at Q19/Q22, then never drift) ---
       # - cuda-quantum==x.y.z      # Kaggle image vs local build — pin on first working install
       # - pennylane==a.b.c
-      # - tntorch==d.e.f           # reference path only; compressed path is our CUDA-Q kernel
+      # - tntorch==d.e.f           # optional reference path; the compressed path is our in-repo NumPy/SciPy kernel
       # Julia + SumOfSquares.jl behind a small CLI (no runtime Julia dependency)

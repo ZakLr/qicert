@@ -1,0 +1,37 @@
+{
+ "capture": "heavy",
+ "config_hash": "5e7d9f53431cc247",
+ "end_utc": "2026-09-12T14:53:45+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "N8C",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "ci_hi": 0.44952187644946723,
+  "ci_lo": 0.4437627505950033,
+  "correct": 51139,
+  "delta_vs_n1_ft": -0.0001,
+  "eval_acc": 0.44664052333248905,
+  "eval_scope": "full-split (6496 batches, 114497 tokens)",
+  "eval_wall_sec": 843.23,
+  "note": "honest comparator; byte-honest ratio",
+  "quant_wall_sec": 106.81,
+  "ratio": 1.997,
+  "scale_mode": "mse",
+  "seed": 0,
+  "total": 114497
+ },
+ "run_id": "7d97bc0c8ae9",
+ "run_tag": "calibrated-int8-mse-seed0",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-09-12T14:53:43+00:00",
+ "status": "completed",
+ "tolerance_note": null,
+ "wall_sec": 1.75
+}

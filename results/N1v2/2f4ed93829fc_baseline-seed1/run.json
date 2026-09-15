@@ -1,0 +1,16 @@
+{
+ "capture": "default",
+ "config_hash": "336b225a2015310b",
+ "experiment_id": "N1v2",
+ "qicert_version": "0.1.0.dev0",
+ "run_id": "2f4ed93829fc",
+ "run_tag": "baseline-seed1",
+ "seed": 1,
+ "seed_spec": {
+  "numpy": 1,
+  "python": 1,
+  "torch": 1
+ },
+ "start_utc": "2026-09-13T18:03:26+00:00",
+ "status": "running"
+}

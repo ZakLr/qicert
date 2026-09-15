@@ -426,8 +426,11 @@ All experiments ran on one NVIDIA RTX~5060 Laptop GPU (8~GB); per-run wall
 times, GPU name, and energy fields are recorded in
 \texttt{results/ledger.csv}, and the cumulative declaration is
 \texttt{docs/resource-declaration.md}. Software: PyTorch (CUDA), NumPy/SciPy,
-the in-repo TT kernels, Z3 for the SMT falsification, CUDA-Q for the
-amplification simulation; pinned versions ship in the repository. Every
+the in-repo TT kernels, Z3 for the SMT falsification, and the NumPy
+amplification model for the simulated IQAE estimator (the simulation regime is
+stated explicitly in the safety-suite section; CUDA-Q is prepared in the
+container image for the Phase-2 hardware-pathway work but was not used to
+produce any number here); pinned versions ship in the repository. Every
 number in this report resolves to a run directory under \texttt{results/}
 via the map in Appendix~A, the experiment log
 (\texttt{results/EXPERIMENT-LOG.md}) records what was run and why for every

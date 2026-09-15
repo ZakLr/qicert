@@ -1,0 +1,44 @@
+{
+ "capture": "default",
+ "config_hash": "030a78f95194fdc4",
+ "end_utc": "2026-09-11T16:25:02+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "N1v2",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "batch": 2,
+  "eval_acc_finetuned": 0.44677153113182005,
+  "eval_acc_int8": 0.0,
+  "eval_batches": 6496,
+  "eval_ft_ci95": [
+   0.44389,
+   0.44965
+  ],
+  "eval_i8_ci95": [
+   0.0,
+   3e-05
+  ],
+  "int8_note": "torchao Int8WeightOnlyConfig (weight-only int8, GPU), 6496 frozen batches",
+  "int8_reference_sec": 1225.7,
+  "seed": 0,
+  "steps": 1200,
+  "train_action_acc_last": 0.3333333432674408,
+  "train_loss_last": 4.265874862670898,
+  "train_sec": 524.21,
+  "verdict": "OK"
+ },
+ "run_id": "75482ddaf556",
+ "run_tag": "baseline-seed0",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-09-11T15:31:14+00:00",
+ "status": "completed",
+ "tolerance_note": "smoke steps unless --steps given; eval is the held-out protocol (--eval-episodes K batches with Wilson 95% CI, K=0 = legacy single batch; shuffled-buffer caveat documented in code); INT8 on CPU",
+ "wall_sec": 3228.12
+}

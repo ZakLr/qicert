@@ -1,0 +1,2 @@
+{"event": "run_start", "t_wall": 0.0}
+{"energy_kwh_cumulative": 0.0, "gpu_power_w": 6.72, "gpu_temp_c": 39.0, "gpu_util_pct": 1, "t_mono": 37.828, "t_wall": 37.8285}
