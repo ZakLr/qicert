@@ -5,7 +5,7 @@
 #   calibrated INT8 @ 2.00x -> 0.4466 (delta -0.0001)  [the comparator]
 #   TT+residual   @ 2.86x   -> 0.1529 (delta -0.2939)  [R1 bar NOT met]
 # The v1 residual fit minimized RAW WEIGHT error (Frobenius).  Literature
-# (GPTQ-intrinsic, lit-swarm L5) says the correction budget must be spent
+# (GPTQ-intrinsic line of work) says the correction budget must be spent
 # where the model ACTUALLY computes: weight the fit by per-input-channel
 # activation statistics collected on TRAIN episodes (never held-out data).
 #

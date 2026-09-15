@@ -58,7 +58,7 @@ Rule: no number appears here unless it is regenerable from its run dir
 - **Commit at launch:** *(this commit)*
 - **Method:** keep the TT reconstruction Ŵ (uniform plan), fit R = W − Ŵ with
   the best rank-r′ truncated SVD, store the factors alongside the cores
-  (QuaSAR-style closed-form compensation, lit-swarm L1/L5). Honest ratio =
+  (QuaSAR-style closed-form compensation). Honest ratio =
   (cores + u + v + scales) vs dense, counted by
   `qicert.compress_residual.compressed_params`. Certificate per layer:
   `lipschitz_bound` = sound product bound over (TT layer, ‖U‖, ‖V‖, scales).

@@ -4,7 +4,7 @@ Why this exists (2026-09-12, post go/no-go): uniform-ratio TT-SVD truncation
 at 2x/3x compression measured eval acc 0.000 (down from FT ref 0.447) — the
 uniform allocator removes signal, not redundancy, on this backbone's flat
 spectra.  The pre-registered repair is closed-form residual compensation
-(QuaSAR-style, arXiv:2608.14149, adopted per lit-swarm L1/L5 findings):
+(QuaSAR-style closed-form residual compensation, cf. arXiv:2608.14149):
 
     keep the TT reconstruction  What = TT(W)
     compute what was lost       R = W - What
