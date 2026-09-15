@@ -8,7 +8,7 @@ EXACT semantics of ``RLDSBatchTransform`` + ``PaddedCollatorForActionPrediction`
 only safe prismatic pieces (tokenizer, ActionTokenizer, image transform,
 prompt builder — all attributes of the loaded VLA or proven-importable).
 
-Documented substitution, not a silent one (AGENTS.md). Feeds from the E8
+Documented substitution, not a silent one. Feeds from the E8
 NPZ episode bridge instead of the RLDS stream.
 """
 from __future__ import annotations

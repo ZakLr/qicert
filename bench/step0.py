@@ -8,7 +8,7 @@ the MiniVLA checkpoint and push it through the qicert kernel pipeline:
     3. INT8 (torch.quantization-style) + SVD at matched ratio (baselines)
     4. compiler identity on one interaction block (commuting-Pauli families)
 
-This is a *toolchain* smoke, NOT a scored experiment (AGENTS.md: noiseless
+This is a *toolchain* smoke, NOT a scored experiment (noiseless
 sanity check — "is the pipeline right", not "does it win"). Scored tables
 are N1/N2/N3; this row exists to catch kernel/wiring bugs on a real layer
 before any GPU-h is spent. No seed variance is claimed; results are for
@@ -150,7 +150,7 @@ def run(rows: str, out: list[str], ctx=None) -> None:
 
     # tolerances: kernel-correctness and certificate-soundness checks only.
     # Compression QUALITY is a scored N2 question — the smoke must not pretend
-    # rank-8 on a real layer is a good operating point (AGENTS.md: noiseless
+    # rank-8 on a real layer is a good operating point (noiseless
     # results are proofs of concept, and this is a toolchain smoke, not a win).
     tol = {
         "compression": 2.0,    # TT-SVD within 2x of matched-budget SVD; cross within 2x of TT-SVD

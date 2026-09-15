@@ -2,7 +2,7 @@
 
 _Generated 2026-09-13T21:26:57+00:00_
 
-Per AGENTS.md: every claimed number must be traceable to a
+Every claimed number must be traceable to a
 recorded run with its full resource cost. This table IS that
 trace, regenerated from `results/ledger.csv`.
 

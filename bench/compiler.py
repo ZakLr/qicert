@@ -97,7 +97,7 @@ def run(rows: str, out: list[str], ctx=None) -> None:
     sound = bool(np.all(pred >= meas - 1e-9))
     # Correlation between the L1 certificate and the true family norm is a
     # RANDOM VARIABLE (depends on the coefficient draw).  Single-table r is
-    # not a result (AGENTS.md: no single-run claims): measure the median
+    # not a result (no single-run claims): measure the median
     # over R independent random tables (random Gaussian coefficients = the
     # cancellation-heavy PESSIMISTIC case for an L1 bound; learned real
     # coefficients are typically sign-coherent, i.e. easier).

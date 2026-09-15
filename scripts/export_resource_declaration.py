@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Export the Resource Declaration (docs/resource-declaration.md).
 
-AGENTS.md §4/§6 requires every reported number to carry its resource context:
+The resource contract: every reported number to carry its resource context:
 wall-clock, GPU-h, shots/circuit-evals (N/A here — this is the classical ML
 side of the hybrid submission), seeds, and software stack. This script walks
 results/ledger.csv + the per-run env.json/system.json artifacts and emits a
@@ -51,7 +51,7 @@ def main() -> int:
     lines.append("")
     lines.append(f"_Generated {datetime.now(timezone.utc).isoformat(timespec='seconds')}_")
     lines.append("")
-    lines.append("Per AGENTS.md: every claimed number must be traceable to a")
+    lines.append("Every claimed number must be traceable to a")
     lines.append("recorded run with its full resource cost. This table IS that")
     lines.append("trace, regenerated from `results/ledger.csv`.")
     lines.append("")

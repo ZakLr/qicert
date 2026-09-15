@@ -105,7 +105,7 @@ def run(rows: str, out: list[str], ctx=None) -> None:
 # bnb is NOT available on sm_120 in the container image (verified), so the
 # INT8 reference uses torch.ao.quantization.quantize_dynamic instead of
 # bitsandbytes 8-bit. Same semantics: same backbone, INT8 weights, matched
-# budget. Documented substitution, not a silent one (AGENTS.md).
+# budget. Documented substitution, not a silent one (documented).
 #
 # Run (container, GPU, weights + repo mounted):
 #   python -m qicert.bench.all --module compress --rows baseline-int8 \
@@ -252,7 +252,7 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
                         "int8": "torch.ao.quantization.quantize_dynamic, "
                                 "weight-only qint8 of the FINE-TUNED model on the "
                                 "same eval batch (bnb unavailable on sm_120; "
-                                "documented substitution, AGENTS.md)",
+                                "documented substitution)",
                         "dtype": "fp16", "device": "cuda",
                         "note": "scored baseline — R1 comparator",
                         "save_ckpt": str(save_dir) if save_dir else None,
@@ -263,7 +263,7 @@ def _run_n1_seed(out: list[str], ctx, seed: int, steps: int, batch: int,
         # NOTE: the fork's prismatic.vla.datasets imports its RLDS pipeline,
         # which hard-requires dlimp -> tensorflow (unavailable on py3.14).
         # N1 native runs feed from the E8 NPZ bridge via the fork-equivalent
-        # local builder instead (documented substitution, AGENTS.md).
+        # local builder instead (documented substitution).
         from peft import LoraConfig, get_peft_model
 
         torch.manual_seed(seed)

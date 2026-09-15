@@ -70,7 +70,7 @@ def _run_three_arm(out: list[str], ctx=None) -> None:
          "Coverage", "Width/naive"])
     rows = []
 
-    # Seeds are the measurement repetition (AGENTS.md: no single-run claims);
+    # Seeds are the measurement repetition (no single-run claims);
     # each arm gets the SAME seed set at each budget.  Median + coverage.
     per_arm: dict[str, list[dict]] = {}
     for nq in budgets:

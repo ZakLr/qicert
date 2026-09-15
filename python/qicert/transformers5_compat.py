@@ -9,7 +9,7 @@ import without ImportError.
 No-op on older transformers where the paths still exist.
 
 IMPORTANT — this file is a dev-local patch. The principal of verifiability
-requires treating this as a documented deviation (AGENTS.md rule 7) in any
+requires treating this as a documented deviation (repo convention) in any
 claim that depends on the prismatic fork path: we report the fork commit plus
 this patch’s hash so a reviewer can reproduce the effective source.
 """
@@ -100,7 +100,7 @@ _ALIASES: list[tuple[str, str]] = [
 _FLASH_NOTICE = (
     "[transformers5_compat] flash_attn not available on this host; "
     "falling back to SDPA attention (mathematically equivalent, fused kernel "
-    "substituted). Recorded as an environment deviation per AGENTS.md §7."
+    "substituted). Recorded as an environment deviation."
 )
 _FLASH_FALLBACK_DONE = False
 

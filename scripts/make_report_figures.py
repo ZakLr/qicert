@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Generate every figure for technical-report-v2.tex from run artifacts.
 
-Reproducibility contract (AGENTS.md): no figure may contain a number that
+Reproducibility contract: no figure may contain a number that
 does not come from a file in results/.  This script reads:
 
   results/N1v2/*/metrics.jsonl                     -> Fig. training curve

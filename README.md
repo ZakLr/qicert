@@ -126,7 +126,7 @@ python scripts/run_remaining_experiments.py --only n9-repair,n9-confirm
 # Everything is sequential + resumable; completed stages auto-skip.
 ```
 
-Full per-stage commands, expected runtimes, and artifact map: [`HANDOFF.md`](HANDOFF.md) and [`results/EXPERIMENT-LOG.md`](results/EXPERIMENT-LOG.md).
+Full per-stage commands, expected runtimes, and artifact map: [`results/EXPERIMENT-LOG.md`](results/EXPERIMENT-LOG.md).
 
 </details>
 

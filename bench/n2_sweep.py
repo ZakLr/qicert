@@ -14,7 +14,7 @@
 #   * Kernel: tt_svd (deterministic reference). tt_cross is the
 #     query-based approximation for the hardware story (Q19); it crashed on
 #     deep splits (fixed in this commit) and is validated separately in
-#     Step 0. Documented substitution, not a silent one (AGENTS.md).
+#     Step 0. Documented substitution, not a silent one (documented).
 #   * Both backbones use the N2' winner (bit-reversed) bit ordering:
 #     TT = d=2 near-square factors, QTT = d=4, factors descending
 #     (least-significant-first semantics).

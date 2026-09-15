@@ -8,7 +8,7 @@ Serves episodes materialized by scripts/materialize_npz.py:
 Design note: pixel NORMALIZATION is deliberately left to the consumer via
 the fork's own ``vision_backbone.get_image_transform()`` (as
 predict_action does) — duplicating normalization constants here would risk
-a second convention drifting from the fork (AGENTS.md rule).
+a second convention drifting from the fork (repo convention).
 
 Self-check (gate E8): ``python -m qicert.data.npz_loader --check`` recomputes
 per-dimension action mean/std from the NPZ files and compares them against
