@@ -1,0 +1,17 @@
+{
+ "config": {
+  "batch": 2,
+  "calib_stat": "absmax",
+  "eval_batches": 600,
+  "experiment": "N9 post-compression LoRA repair",
+  "frac": 0.5,
+  "ft_ckpt": "<repo>\\results\\N1v2-ckpt\\seed2.pt",
+  "lora_r": 8,
+  "lr": 0.0005,
+  "mixed": false,
+  "residual_rank_cap": 64,
+  "seed": 2,
+  "steps": 1200,
+  "tt_split": 0.6
+ }
+}

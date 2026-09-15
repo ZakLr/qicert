@@ -1,0 +1,8 @@
+{"event": "run_start", "t_wall": 0.0}
+{"action_rel_drift": 0.0, "arm": "llm|perchannel", "module_drift_max": 0.13751, "module_drift_median": 0.01982, "t_mono": 157.4982, "t_wall": 157.4982, "weight_recon_err_max": 0.01463, "weight_recon_err_mean": 0.00981}
+{"action_rel_drift": 1.08971, "arm": "llm|pertensor", "module_drift_max": 0.1566, "module_drift_median": 0.03824, "t_mono": 160.3855, "t_wall": 160.3855, "weight_recon_err_max": 0.13803, "weight_recon_err_mean": 0.03857}
+{"action_rel_drift": 0.0, "arm": "llm+projector|perchannel", "module_drift_max": 0.13751, "module_drift_median": 0.01982, "t_mono": 164.3417, "t_wall": 164.3417, "weight_recon_err_max": 0.01463, "weight_recon_err_mean": 0.00975}
+{"action_rel_drift": 1.08971, "arm": "llm+projector|pertensor", "module_drift_max": 0.1566, "module_drift_median": 0.03824, "t_mono": 168.2983, "t_wall": 168.2983, "weight_recon_err_max": 0.13803, "weight_recon_err_mean": 0.03806}
+{"action_rel_drift": 0.0, "arm": "all|perchannel", "module_drift_max": 0.13751, "module_drift_median": 0.01982, "t_mono": 184.095, "t_wall": 184.095, "weight_recon_err_max": 0.01929, "weight_recon_err_mean": 0.00998}
+{"action_rel_drift": 1.08971, "arm": "all|pertensor", "module_drift_max": 0.1566, "module_drift_median": 0.03824, "t_mono": 192.3184, "t_wall": 192.3184, "weight_recon_err_max": 0.13803, "weight_recon_err_mean": 0.03899}
+{"energy_kwh_cumulative": 0.0, "gpu_power_w": 32.72, "gpu_temp_c": 52.0, "gpu_util_pct": 59, "t_mono": 192.5032, "t_wall": 192.5029}

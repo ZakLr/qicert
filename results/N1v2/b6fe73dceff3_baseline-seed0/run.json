@@ -1,0 +1,26 @@
+{
+ "capture": "default",
+ "config_hash": "ce5578044ead7365",
+ "end_utc": "2026-09-10T22:46:14+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "N1v2",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "error": "ImportError: FlashAttention2 has been toggled on, but it cannot be used due to the following error: the package flash_attn seems to be not installed. Please refer to the documentation of https://huggingface.co/docs/transformers/perf_infer_gpu_one#flashattention-2 to install Flash Attention 2.",
+  "seed": 0
+ },
+ "run_id": "b6fe73dceff3",
+ "run_tag": "baseline-seed0",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-09-10T22:45:36+00:00",
+ "status": "failed",
+ "tolerance_note": "environment/toolchain failure — no scored claim",
+ "wall_sec": 37.83
+}

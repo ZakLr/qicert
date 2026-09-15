@@ -1,0 +1,10 @@
+{
+ "config": {
+  "base_ratio": 2.536,
+  "experiment": "N9 repair full-protocol confirm",
+  "ft_ckpt": "<repo>\\results\\N1v2-ckpt\\seed0.pt",
+  "lora_r": 8,
+  "repaired_ckpt": "results\\N9-repaired\\repaired_seed0.pt",
+  "seed": 0
+ }
+}

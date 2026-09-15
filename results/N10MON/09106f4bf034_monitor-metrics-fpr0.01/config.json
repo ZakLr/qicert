@@ -1,0 +1,9 @@
+{
+ "config": {
+  "M": 64,
+  "design_fpr": 0.01,
+  "dim": 32,
+  "experiment": "monitor-alarms",
+  "n_null_trials": 4000
+ }
+}

@@ -1,0 +1,1 @@
+{"seed": 1, "steps": 1200, "eval_acc_finetuned": 0.39704970435906617, "eval_acc_int8": null, "run_tag": "host-seeds12"}

@@ -1,0 +1,18 @@
+{"event": "run_start", "t_wall": 0.0}
+{"gflops": 53.6, "matrix": "self_attn.q_proj", "mode": "dense", "ms": 0.03, "params": 802816, "t_mono": 9.0125, "t_wall": 9.0125}
+{"gflops": 3.5, "matrix": "self_attn.q_proj", "mode": "tt-r8", "ms": 0.4545, "params": 14464, "t_mono": 10.0361, "t_wall": 10.0361, "vs_dense": 15.17}
+{"gflops": 3.9, "matrix": "self_attn.q_proj", "mode": "tt-r16", "ms": 0.4134, "params": 28928, "t_mono": 10.8397, "t_wall": 10.8397, "vs_dense": 13.8}
+{"gflops": 3.9, "matrix": "self_attn.q_proj", "mode": "tt-r32", "ms": 0.4084, "params": 57856, "t_mono": 11.7223, "t_wall": 11.7223, "vs_dense": 13.64}
+{"gflops": 41.7, "matrix": "self_attn.o_proj", "mode": "dense", "ms": 0.0385, "params": 802816, "t_mono": 11.7668, "t_wall": 11.7668}
+{"gflops": 3.9, "matrix": "self_attn.o_proj", "mode": "tt-r8", "ms": 0.4085, "params": 14464, "t_mono": 12.564, "t_wall": 12.564, "vs_dense": 10.61}
+{"gflops": 4.0, "matrix": "self_attn.o_proj", "mode": "tt-r16", "ms": 0.4007, "params": 28928, "t_mono": 13.3757, "t_wall": 13.3757, "vs_dense": 10.4}
+{"gflops": 3.6, "matrix": "self_attn.o_proj", "mode": "tt-r32", "ms": 0.4414, "params": 57856, "t_mono": 14.2044, "t_wall": 14.2044, "vs_dense": 11.46}
+{"gflops": 177.4, "matrix": "mlp.up_proj", "mode": "dense", "ms": 0.0491, "params": 4358144, "t_mono": 14.2742, "t_wall": 14.2742}
+{"gflops": 22.8, "matrix": "mlp.up_proj", "mode": "tt-r8", "ms": 0.3821, "params": 33792, "t_mono": 16.2412, "t_wall": 16.2412, "vs_dense": 7.78}
+{"gflops": 23.3, "matrix": "mlp.up_proj", "mode": "tt-r16", "ms": 0.3737, "params": 67584, "t_mono": 18.0653, "t_wall": 18.0652, "vs_dense": 7.61}
+{"gflops": 20.3, "matrix": "mlp.up_proj", "mode": "tt-r32", "ms": 0.43, "params": 135168, "t_mono": 20.0319, "t_wall": 20.0319, "vs_dense": 8.75}
+{"gflops": 73.5, "matrix": "mlp.down_proj", "mode": "dense", "ms": 0.1185, "params": 4358144, "t_mono": 20.1702, "t_wall": 20.1702}
+{"gflops": 20.9, "matrix": "mlp.down_proj", "mode": "tt-r8", "ms": 0.418, "params": 33792, "t_mono": 21.9859, "t_wall": 21.9859, "vs_dense": 3.53}
+{"gflops": 23.7, "matrix": "mlp.down_proj", "mode": "tt-r16", "ms": 0.367, "params": 67584, "t_mono": 23.8351, "t_wall": 23.8351, "vs_dense": 3.1}
+{"gflops": 23.8, "matrix": "mlp.down_proj", "mode": "tt-r32", "ms": 0.3662, "params": 135168, "t_mono": 25.6605, "t_wall": 25.6605, "vs_dense": 3.09}
+{"energy_kwh_cumulative": 0.0, "gpu_power_w": 11.98, "gpu_temp_c": 46.0, "gpu_util_pct": 7, "t_mono": 25.7544, "t_wall": 25.7544}

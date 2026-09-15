@@ -1,0 +1,25 @@
+{
+ "config": {
+  "backbone": "TT",
+  "calib_stat": "absmax",
+  "eval": "search-prefix (40 batches, 704 tokens)",
+  "experiment": "N2R-search configuration search",
+  "fit_mode": "weighted",
+  "ft_ckpt": "<repo>\\results\\N1v2-ckpt\\seed0.pt",
+  "keep_types": [
+   "k_proj",
+   "o_proj",
+   "q_proj",
+   "v_proj"
+  ],
+  "kernel": "tt_svd + activation-weighted SVD residual",
+  "mixed_allocation": true,
+  "plan_fraction": 0.33,
+  "reason": "deeper compression, mixed, moderate residual cap",
+  "residual_rank_cap": 32,
+  "search_batches": 40,
+  "search_go_bar": 0.3,
+  "seed": 0,
+  "tt_split": 0.6
+ }
+}

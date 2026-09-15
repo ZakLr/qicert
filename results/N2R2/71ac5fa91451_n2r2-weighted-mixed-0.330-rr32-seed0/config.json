@@ -1,0 +1,21 @@
+{
+ "config": {
+  "backbone": "TT",
+  "calib_stat": "absmax",
+  "eval": "search-prefix (40 batches, 704 tokens)",
+  "eval_mode": "search",
+  "experiment": "N2R-v2 activation-weighted residual",
+  "fit_mode": "weighted",
+  "ft_ckpt": "<repo>\\results\\N1v2-ckpt\\seed0.pt",
+  "kernel": "tt_svd + activation-weighted SVD residual",
+  "layers_scope": "all",
+  "matched_batch": true,
+  "mixed_allocation": true,
+  "n_eval_batches": null,
+  "n_eval_tokens": 704,
+  "plan_fraction": 0.33,
+  "residual_rank_cap": 32,
+  "seed": 0,
+  "tt_split": 0.6
+ }
+}

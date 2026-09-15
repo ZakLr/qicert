@@ -63,7 +63,7 @@ enabled with `--capture heavy`. Excluded = deliberately not recorded, with reaso
 | torch version + cuda build tag (`2.13.0+cu130`) + arch list |
 | transformers, peft, accelerate, safetensors, sentencepiece, huggingface_hub |
 | numpy, scipy, pytest |
-| cudaq version |
+| NumPy amplification-model parameters (IQAE scoring) — CUDA-Q pinned in the container for Phase-2, not used in Phase-1 |
 | CUDA toolkit runtime version reachable in the runtime (nvml) |
 | bitsandbytes presence (must be absent in v1 — record if it ever appears) |
 | attn_implementation (sdpa/eager/flash_attention_2) availability |

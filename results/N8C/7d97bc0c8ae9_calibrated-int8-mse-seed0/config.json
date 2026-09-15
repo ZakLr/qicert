@@ -1,0 +1,14 @@
+{
+ "config": {
+  "calib": "<repo>\\results\\N2R\\calib_seed0.npz",
+  "eval": "full-split (6496 batches, 114497 tokens)",
+  "experiment": "N8C calibrated INT8 reference arm",
+  "ft_ckpt": "<repo>\\results\\N1v2-ckpt\\seed0.pt",
+  "n_calib_layers": 376,
+  "n_eval_batches": 6496,
+  "n_eval_tokens": 114497,
+  "scale_mode": "mse",
+  "seed": 0,
+  "storage": "int8 weights + fp16 per-out-channel scales"
+ }
+}

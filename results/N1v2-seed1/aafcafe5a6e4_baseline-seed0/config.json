@@ -1,0 +1,22 @@
+{
+ "config": {
+  "batch": 2,
+  "checkpoint": "<repo>\\weights\\ckpt\\checkpoints\\step-122500-epoch-55-loss=0.0743.pt",
+  "data_root": "<repo>\\weights\\libero_spatial_no_noops",
+  "dataset": "libero_spatial_no_noops",
+  "device": "cuda",
+  "dtype": "fp16",
+  "experiment": "N1 baseline fine-tune + INT8 reference",
+  "int8": "torch.ao.quantization.quantize_dynamic, weight-only qint8 of the FINE-TUNED model on the same eval batch (bnb unavailable on sm_120; documented substitution, AGENTS.md)",
+  "lora": {
+   "alpha": 8,
+   "r": 8,
+   "target_modules": "all-linear"
+  },
+  "model": "minivla-libero90-prismatic (native Prismatic)",
+  "note": "scored baseline — R1 comparator",
+  "save_ckpt": "results\\N1v2-seed1-ckpt",
+  "seed": 0,
+  "steps": 1200
+ }
+}

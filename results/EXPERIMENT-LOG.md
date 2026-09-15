@@ -58,7 +58,7 @@ Rule: no number appears here unless it is regenerable from its run dir
 - **Commit at launch:** *(this commit)*
 - **Method:** keep the TT reconstruction Ŵ (uniform plan), fit R = W − Ŵ with
   the best rank-r′ truncated SVD, store the factors alongside the cores
-  (QuaSAR-style closed-form compensation, lit-swarm L1/L5). Honest ratio =
+  (QuaSAR-style closed-form compensation). Honest ratio =
   (cores + u + v + scales) vs dense, counted by
   `qicert.compress_residual.compressed_params`. Certificate per layer:
   `lipschitz_bound` = sound product bound over (TT layer, ‖U‖, ‖V‖, scales).
@@ -685,3 +685,11 @@ RESOLVED by this entry (not a ref-cache coincidence).
   common-mode drift detection 0.002/0.230/1.000 at 0.5/1/2σ; random-sign drift 0.000 by design (median-test blind spot — the documented complement of the conformal gate + certified ball);
   added latency 0.35 ms/step PASS (<5 ms budget).
 - **Status:** REPORTABLE. Folded into report v2 (abstract + safety section + Appendix A provenance row). Exp-id N10MON to avoid collision with the N10 1.5B scale probe.
+
+## E-2026-09-15-01 — E-comp provenance capture (N7 compiler, CPU)
+
+- **Commit at launch:** `04d2433` (post hygiene pass).
+- **Command:** `python -m bench.all --module compiler --rows=compiler-acceptance|family-pruning|hardware-table --out results --exp-id E-comp --seed 0` (three invocations; `wants()` matches one row per run).
+- **Purpose:** the report's compiler row (r = 0.975, identity 2.3e-14, 100 ms table) cited `results/E-comp/*/run.json`, but that artifact had never been captured — the numbers existed only as terminal output from the 2026-09-12 session. Re-run to create the missing evidence (no numbers changed).
+- **Result:** E-comp-1 rel err 7.92e-16 rel / 2.31e-14 abs (gate 1e-6) PASS; E-comp-2 median predicted-vs-measured r = 0.9748 over 12 tables (IQR 0.947–0.985), sound per-family PASS; E-comp-3 full-table 0.302 ms (CPU edge) PASS; E-comp-4 hardware-table rows computed, noise-sweep self-consistency scoped out (no pinned noise simulator — no fake number). Run dirs: `results/E-comp/{a4eb681f56b9,0bf0d6547f5c,3ef7d38ae53f}_compiler-acceptance-kp4/`.
+- **Artifacts:** 3 run dirs + 3 ledger rows; resource declaration regenerated (69 scored, **10.20 GPU-h** — was 10.19).

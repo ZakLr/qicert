@@ -1,0 +1,37 @@
+{
+ "capture": "default",
+ "config_hash": "fbfbe99ded30dbd8",
+ "end_utc": "2026-09-13T18:04:45+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "N10MON",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "flip_detection_rate": 1.0,
+  "fpr_budget": 0.02,
+  "fpr_empirical": 0.0,
+  "per_step_ms": 0.3502,
+  "shift_detection_common_mode": {
+   "0.5 sigma": 0.002,
+   "1.0 sigma": 0.23,
+   "2.0 sigma": 1.0
+  },
+  "shift_detection_random_sign": {
+   "1.0 sigma": 0.0,
+   "2.0 sigma": 0.0
+  }
+ },
+ "run_id": "09106f4bf034",
+ "run_tag": "monitor-metrics-fpr0.01",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-09-13T18:04:38+00:00",
+ "status": "completed",
+ "tolerance_note": null,
+ "wall_sec": 7.47
+}

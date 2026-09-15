@@ -1,0 +1,16 @@
+{
+  "layer": "demo.llm.layers.0.mlp.down_proj",
+  "m_dims": [
+    16,
+    16
+  ],
+  "n_dims": [
+    16,
+    16
+  ],
+  "lipschitz": 46.54283721971063,
+  "residual_rank": 8,
+  "params": 6656,
+  "dense_params": 65536,
+  "sound": true
+}

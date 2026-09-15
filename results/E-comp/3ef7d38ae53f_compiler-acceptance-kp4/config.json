@@ -1,0 +1,9 @@
+{
+ "config": {
+  "eps_shots": 0.05,
+  "experiment": "compiler-acceptance",
+  "n_families": 11,
+  "n_strings": 48,
+  "register_qubits": 4
+ }
+}

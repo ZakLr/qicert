@@ -1,0 +1,30 @@
+{"event": "run_start", "t_wall": 0.0}
+{"event": "compress", "n_compressed": 168, "n_kept": 0, "ratio": 2.5358, "sound_layers": 168, "t_mono": 664.484, "t_wall": 664.482, "wall_sec": 662.2}
+{"acc": 0.152, "correct": 1612, "event": "eval_pre", "scope": "frozen-split prefix (600 batches, 10603 tokens)", "t_mono": 830.437, "t_wall": 830.4352, "total": 10603}
+{"acc": 0.3889, "event": "train", "loss": 5.3679, "step": 48, "t_mono": 852.562, "t_wall": 852.5628, "wall_sec": 19.5}
+{"acc": 0.5294, "event": "train", "loss": 3.9754, "step": 96, "t_mono": 870.937, "t_wall": 870.9426, "wall_sec": 37.9}
+{"acc": 0.4444, "event": "train", "loss": 4.1342, "step": 144, "t_mono": 889.781, "t_wall": 889.7817, "wall_sec": 56.7}
+{"acc": 0.4444, "event": "train", "loss": 4.1959, "step": 192, "t_mono": 910.781, "t_wall": 910.7824, "wall_sec": 77.7}
+{"acc": 0.5, "event": "train", "loss": 4.5561, "step": 240, "t_mono": 929.843, "t_wall": 929.8351, "wall_sec": 96.8}
+{"acc": 0.3333, "event": "train", "loss": 5.049, "step": 288, "t_mono": 949.968, "t_wall": 949.9706, "wall_sec": 116.9}
+{"acc": 0.5, "event": "train", "loss": 4.0053, "step": 336, "t_mono": 968.875, "t_wall": 968.876, "wall_sec": 135.8}
+{"acc": 0.6111, "event": "train", "loss": 4.133, "step": 384, "t_mono": 988.562, "t_wall": 988.5554, "wall_sec": 155.5}
+{"acc": 0.3889, "event": "train", "loss": 3.421, "step": 432, "t_mono": 1008.078, "t_wall": 1008.0809, "wall_sec": 175.0}
+{"acc": 0.4375, "event": "train", "loss": 6.3365, "step": 480, "t_mono": 1026.703, "t_wall": 1026.7011, "wall_sec": 193.6}
+{"acc": 0.4706, "event": "train", "loss": 4.0769, "step": 528, "t_mono": 1045.922, "t_wall": 1045.9189, "wall_sec": 212.8}
+{"acc": 0.3889, "event": "train", "loss": 4.4214, "step": 576, "t_mono": 1066.922, "t_wall": 1066.9262, "wall_sec": 233.8}
+{"acc": 0.2941, "event": "train", "loss": 4.9157, "step": 624, "t_mono": 1088.125, "t_wall": 1088.1201, "wall_sec": 255.0}
+{"acc": 0.4444, "event": "train", "loss": 4.7212, "step": 672, "t_mono": 1108.156, "t_wall": 1108.1599, "wall_sec": 275.1}
+{"acc": 0.7059, "event": "train", "loss": 3.2154, "step": 720, "t_mono": 1127.515, "t_wall": 1127.5174, "wall_sec": 294.4}
+{"acc": 0.3333, "event": "train", "loss": 4.0147, "step": 768, "t_mono": 1146.312, "t_wall": 1146.3066, "wall_sec": 313.2}
+{"acc": 0.5556, "event": "train", "loss": 4.046, "step": 816, "t_mono": 1165.656, "t_wall": 1165.6586, "wall_sec": 332.6}
+{"acc": 0.4444, "event": "train", "loss": 4.0167, "step": 864, "t_mono": 1186.672, "t_wall": 1186.6699, "wall_sec": 353.6}
+{"acc": 0.4706, "event": "train", "loss": 4.774, "step": 912, "t_mono": 1206.328, "t_wall": 1206.3213, "wall_sec": 373.2}
+{"acc": 0.5, "event": "train", "loss": 3.2273, "step": 960, "t_mono": 1225.89, "t_wall": 1225.8937, "wall_sec": 392.8}
+{"acc": 0.3529, "event": "train", "loss": 4.2223, "step": 1008, "t_mono": 1244.828, "t_wall": 1244.8216, "wall_sec": 411.7}
+{"acc": 0.3333, "event": "train", "loss": 5.4761, "step": 1056, "t_mono": 1264.203, "t_wall": 1264.1991, "wall_sec": 431.1}
+{"acc": 0.625, "event": "train", "loss": 3.1952, "step": 1104, "t_mono": 1283.0, "t_wall": 1282.9993, "wall_sec": 449.9}
+{"acc": 0.3333, "event": "train", "loss": 5.1121, "step": 1152, "t_mono": 1301.843, "t_wall": 1301.8389, "wall_sec": 468.8}
+{"acc": 0.3333, "event": "train", "loss": 4.2424, "step": 1200, "t_mono": 1321.672, "t_wall": 1321.674, "wall_sec": 488.6}
+{"acc": 0.427, "correct": 4527, "delta_repair": 0.2749, "event": "eval_post", "scope": "frozen-split prefix (600 batches, 10603 tokens)", "t_mono": 1430.906, "t_wall": 1430.9086, "total": 10603}
+{"event": "certify", "lora_delta_spectral_max": 4.444995, "n_compressed": 168, "sound_layers": 168, "t_mono": 1430.906, "t_wall": 1430.9086}

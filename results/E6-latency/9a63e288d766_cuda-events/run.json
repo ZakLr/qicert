@@ -1,0 +1,159 @@
+{
+ "capture": "default",
+ "config_hash": "f63f51b26322d70d",
+ "end_utc": "2026-08-25T17:30:55+00:00",
+ "energy_kwh": 0.0,
+ "experiment_id": "E6-latency",
+ "kill_criterion": null,
+ "kill_verdict": null,
+ "qicert_version": "0.1.0.dev0",
+ "results": {
+  "rows": [
+   {
+    "M": 896,
+    "N": 896,
+    "bond": 8,
+    "dense_ms": 0.03,
+    "matrix": "self_attn.q_proj",
+    "params": 14464,
+    "port_rel_err_fp16": 0.0005861743164566512,
+    "tt_ms": 0.4545,
+    "tt_vs_dense": 15.17
+   },
+   {
+    "M": 896,
+    "N": 896,
+    "bond": 16,
+    "dense_ms": 0.03,
+    "matrix": "self_attn.q_proj",
+    "params": 28928,
+    "port_rel_err_fp16": 0.00046259862017746965,
+    "tt_ms": 0.4134,
+    "tt_vs_dense": 13.8
+   },
+   {
+    "M": 896,
+    "N": 896,
+    "bond": 32,
+    "dense_ms": 0.03,
+    "matrix": "self_attn.q_proj",
+    "params": 57856,
+    "port_rel_err_fp16": 0.000800546343005086,
+    "tt_ms": 0.4084,
+    "tt_vs_dense": 13.64
+   },
+   {
+    "M": 896,
+    "N": 896,
+    "bond": 8,
+    "dense_ms": 0.0385,
+    "matrix": "self_attn.o_proj",
+    "params": 14464,
+    "port_rel_err_fp16": 0.0005500814639314607,
+    "tt_ms": 0.4085,
+    "tt_vs_dense": 10.61
+   },
+   {
+    "M": 896,
+    "N": 896,
+    "bond": 16,
+    "dense_ms": 0.0385,
+    "matrix": "self_attn.o_proj",
+    "params": 28928,
+    "port_rel_err_fp16": 0.00038360274574493784,
+    "tt_ms": 0.4007,
+    "tt_vs_dense": 10.4
+   },
+   {
+    "M": 896,
+    "N": 896,
+    "bond": 32,
+    "dense_ms": 0.0385,
+    "matrix": "self_attn.o_proj",
+    "params": 57856,
+    "port_rel_err_fp16": 0.00043176306999207414,
+    "tt_ms": 0.4414,
+    "tt_vs_dense": 11.46
+   },
+   {
+    "M": 4864,
+    "N": 896,
+    "bond": 8,
+    "dense_ms": 0.0491,
+    "matrix": "mlp.up_proj",
+    "params": 33792,
+    "port_rel_err_fp16": 0.00046573400362324497,
+    "tt_ms": 0.3821,
+    "tt_vs_dense": 7.78
+   },
+   {
+    "M": 4864,
+    "N": 896,
+    "bond": 16,
+    "dense_ms": 0.0491,
+    "matrix": "mlp.up_proj",
+    "params": 67584,
+    "port_rel_err_fp16": 0.00045604388318848914,
+    "tt_ms": 0.3737,
+    "tt_vs_dense": 7.61
+   },
+   {
+    "M": 4864,
+    "N": 896,
+    "bond": 32,
+    "dense_ms": 0.0491,
+    "matrix": "mlp.up_proj",
+    "params": 135168,
+    "port_rel_err_fp16": 0.0005181102796397725,
+    "tt_ms": 0.43,
+    "tt_vs_dense": 8.75
+   },
+   {
+    "M": 896,
+    "N": 4864,
+    "bond": 8,
+    "dense_ms": 0.1185,
+    "matrix": "mlp.down_proj",
+    "params": 33792,
+    "port_rel_err_fp16": 0.0004387815414068589,
+    "tt_ms": 0.418,
+    "tt_vs_dense": 3.53
+   },
+   {
+    "M": 896,
+    "N": 4864,
+    "bond": 16,
+    "dense_ms": 0.1185,
+    "matrix": "mlp.down_proj",
+    "params": 67584,
+    "port_rel_err_fp16": 0.0004668572895847272,
+    "tt_ms": 0.367,
+    "tt_vs_dense": 3.1
+   },
+   {
+    "M": 896,
+    "N": 4864,
+    "bond": 32,
+    "dense_ms": 0.1185,
+    "matrix": "mlp.down_proj",
+    "params": 135168,
+    "port_rel_err_fp16": 0.00047175885227193696,
+    "tt_ms": 0.3662,
+    "tt_vs_dense": 3.09
+   }
+  ],
+  "verdict": "TT contraction 3.1-15.2x slower than dense fp16 at these shapes; the 19s decode is a pipeline artifact"
+ },
+ "run_id": "9a63e288d766",
+ "run_tag": "cuda-events",
+ "seed": 0,
+ "seed_spec": {
+  "numpy": 0,
+  "python": 0,
+  "torch": 0
+ },
+ "start_utc": "2026-08-25T17:30:30+00:00",
+ "status": "completed",
+ "tolerance_note": "CUDA-event timing, batch 1, fp16; TT port verified vs numpy reference (<5e-3 rel)",
+ "wall_sec": 25.75
+}
