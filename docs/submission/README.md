@@ -2,8 +2,8 @@
 
 This folder is the Phase-1 submission. Two documents carry the work:
 
-- **[technical-report-v2.pdf](technical-report-v2.pdf)** — the technical report (8 pages). Method, measured results over 3 seeds, exact Lipschitz certificates, the refusing runtime guard, the full safety suite, honest limitations, and a claim-to-artifact provenance appendix.
-- **[concept-proposal.pdf](concept-proposal.pdf)** — the concept proposal (3 pages): problem framing, approach, feasibility, impact, validation plan, and team.
+- technical-report-v2.pdf — the technical report (8 pages). Method, measured results over 3 seeds, exact Lipschitz certificates, the refusing runtime guard, the full safety suite, honest limitations, and a claim-to-artifact provenance appendix.
+- concept-proposal.pdf — the concept proposal (3 pages): problem framing, approach, feasibility, impact, validation plan, and team.
 
 If you prefer the short version first, our website explains the concept visually and links the same documents:
 

@@ -1,0 +1,140 @@
+% ============================================================================
+%  qicert Phase-1 submission: supplementary document
+%  Combines the resource declaration and license inventory into one PDF.
+%  The run table is regenerated from results/ledger.csv by
+%  scripts/export_resource_declaration.py; regenerate before editing by hand.
+% ============================================================================
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage[hidelinks]{hyperref}
+\usepackage{xurl}
+\setlength{\parskip}{0.4em}
+\setlength{\parindent}{0pt}
+\renewcommand{\arraystretch}{1.15}
+
+\title{qicert Phase-1 Submission: Resource Declaration and Licenses}
+\author{Zakaria Lourghi, Achraf Boussahi, Mouadh Assal, Abir Chekroun, Hiba Menacer\\
+AI \& Quantum Community}
+\date{September 2026}
+
+\begin{document}
+\maketitle
+
+\section{Resource declaration}
+
+Every claimed number must be traceable to a recorded run with its full
+resource cost. The tables in this section are that trace, regenerated from
+\texttt{results/ledger.csv} in the repository. Failed and aborted runs are
+excluded from all claims but kept in the ledger for provenance.
+
+\subsection{Machine}
+
+\begin{tabular}{@{}ll@{}}
+\toprule
+Host & Windows 11 workstation \\
+CPU & AMD Ryzen (Family 25 Model 117), 8 cores \\
+GPU (primary) & NVIDIA GeForce RTX 5060 Laptop, 8\,GB \\
+GPU (secondary) & NVIDIA Tesla T4 (Kaggle) \\
+\bottomrule
+\end{tabular}
+
+\subsection{Scored runs (status = completed)}
+
+69 scored runs, total wall-clock \textbf{10.20 GPU-hours}. Per-run energy
+draws rounded to two decimals are below the 0.01\,kWh reporting threshold
+for this hardware class; cumulative consumption is declared as under
+0.20\,kWh across the full campaign.
+
+\begin{longtable}{@{}llrrl@{}}
+\toprule
+Experiment & Run ID & Seed & Wall (min) & Date \\
+\midrule
+\endhead
+STEP1 & de6171520a0d & 0 & 3.6 & 2026-08-16 \\
+N2prime & 178c849b6525 & 0 & 0.3 & 2026-08-16 \\
+N3 & dec12aad89e5 & 0 & 0.7 & 2026-08-16 \\
+N1 & a64ef93422ac & 0 & 11.2 & 2026-08-16 \\
+N1 & ad0d6b7e1d60 & 0 & 19.6 & 2026-08-16 \\
+N1 & f65cc0d9a214 & 0 & 19.6 & 2026-08-16 \\
+N1 & 93e4739c8baf & 0 & 18.9 & 2026-08-16 \\
+N1 & 2f06f2600d17 & 0 & 152.5 & 2026-08-16 \\
+N1 & 486f7fdcc2f3 & 0 & 4.6 & 2026-08-16 \\
+N2 & dc5715f6a3f5 & 0 & 0.1 & 2026-08-16 \\
+N2 & 9f6f5e61d06b & 0 & 0.0 & 2026-08-16 \\
+N2 & cb296fa62e15 & 0 & 0.0 & 2026-08-16 \\
+N2 & 2a3343003fb8 & 0 & 0.0 & 2026-08-16 \\
+N3 & 15ceb3e7f716 & 0 & 8.8 & 2026-08-25 \\
+E6-latency & 9a63e288d766 & 0 & 0.4 & 2026-08-25 \\
+E7-int8-ablation & 0f8243dc1157 & 0 & 3.2 & 2026-08-25 \\
+E5-residual-pilot & 60b0229aff3b & 0 & 2.9 & 2026-08-25 \\
+N1local & dcff6386561f & 0 & 30.9 & 2026-08-25 \\
+N2local & 8b174b3328d3 & 0 & 0.1 & 2026-08-25 \\
+N2local & e2c885f374bd & 0 & 0.0 & 2026-08-25 \\
+N2local & 5162e0b631ef & 0 & 0.0 & 2026-08-25 \\
+N2local & 1cea5b82eb9a & 0 & 0.0 & 2026-08-25 \\
+N2pre & c8b438f6fdaf & 0 & 101.8 & 2026-08-25 \\
+N1v2smoke & 6948757482b1 & 0 & 1.3 & 2026-09-11 \\
+N1v2smoke & 96897acd2ab6 & 0 & 1.7 & 2026-09-11 \\
+N1v2 & bf446e7ed683 & 0 & 49.6 & 2026-09-11 \\
+N1v2 & 75482ddaf556 & 0 & 53.8 & 2026-09-11 \\
+N2 & ca7a67ffe1d9 & 0 & 0.0 & 2026-09-12 \\
+N2 & 7ef7ff4f9410 & 0 & 0.0 & 2026-09-12 \\
+N2 & 8786c87f7f7c & 0 & 0.0 & 2026-09-12 \\
+N2 & 61a00561a521 & 0 & 0.0 & 2026-09-12 \\
+N2 & aadcd6c5da12 & 0 & 0.0 & 2026-09-12 \\
+N8C & 7d97bc0c8ae9 & 0 & 0.0 & 2026-09-12 \\
+N2R2 (search, 31 configs) & see ledger & 0 & 1.0--1.7 each & 2026-09-12/13 \\
+N5 & 78208474c5a9 & 0 & 0.0 & 2026-09-13 \\
+N5 & 00c41fd382f7 & 0 & 0.0 & 2026-09-13 \\
+N9 (seed 0) & 80fd4bcd0832 & 0 & 23.1 & 2026-09-13 \\
+N9C (seed 0) & 5085c6d99434 & 0 & 17.3 & 2026-09-13 \\
+N10MON & 09106f4bf034 & 0 & 0.1 & 2026-09-13 \\
+N9 (seed 1) & 20ff80df4b07 & 1 & 25.4 & 2026-09-13 \\
+N9C (seed 1) & d2474aa428e7 & 1 & 16.7 & 2026-09-13 \\
+N9 (seed 2) & a7fb3ae4fb58 & 2 & 23.9 & 2026-09-13 \\
+N9C (seed 2) & 798d32130bea & 2 & 18.6 & 2026-09-13 \\
+E-comp (3 rows) & a4eb681f56b9 et al. & 0 & 0.2 each & 2026-09-15 \\
+\bottomrule
+\end{longtable}
+
+\subsection{Failed / aborted runs (excluded from claims, kept for provenance)}
+
+17 failed runs, mostly import and API-compatibility errors during
+environment bring-up. Each is recorded in the ledger with its error. These
+consumed under 30 minutes of wall-clock time in total and contribute to no
+reported number.
+
+\section{License inventory}
+
+Backbone weights and their licenses, recorded at download time from the
+Hugging Face model cards (source of truth: \texttt{weights/\_licenses.json}
+in the repository).
+
+\begin{tabular}{@{}lp{3.2cm}p{4.2cm}l@{}}
+\toprule
+Repository & Kind & License & Downloaded \\
+\midrule
+Stanford-ILIAD/minivla-libero90-prismatic & checkpoint & MIT & 2026-08 \\
+Stanford-ILIAD/prism-qwen25-extra-dinosiglip-224px-0\_5b & backbone & MIT & 2026-08 \\
+\bottomrule
+\end{tabular}
+
+\medskip
+Both components are MIT-licensed and permit research use, modification,
+and redistribution with attribution. Datasets (LIBERO) are MIT-licensed.
+Third-party Python dependencies and their licenses are listed in the
+repository (\texttt{environment.yml} and package metadata); all are
+permissive (MIT/BSD/Apache-2.0) except PyTorch (BSD-style) and
+Transformers (Apache-2.0), both of which permit this use.
+
+\section{Reproducibility}
+
+Code, ledger, run artifacts, and test suite: \url{https://github.com/ZakLr/qicert}.
+Website and documentation: \url{https://qicert.vercel.app}.
+Every number in the technical report maps to a run directory or ledger row
+(Appendix~A of the report).
+
+\end{document}
