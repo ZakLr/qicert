@@ -476,19 +476,42 @@ threads this created, in order of expected payoff.
 \textbf{Scale.} The failure we characterized (flat weight spectra leaving
 no compressible tail) is a property of small LoRA-tuned models, and our
 1.5B scale probe is already designed and queued: same protocol, larger
-backbone, spectra compared layer for layer against the 0.5B curves. If the
-spectra flatten more slowly with scale, as the literature on larger
-dense models suggests, the compression margin widens without any change
-to the certificate stack, which is backbone-agnostic by construction.
-Phase 2 cloud compute moves this from a probe to a full 7B study.
+backbone, spectra compared layer for layer against the 0.5B curves. Phase 2
+cloud compute moves this from a probe to a full 7B study.
+
+\textbf{Backbone architecture replacement.} Every row in this report keeps
+the transformer backbone fixed and compresses its weights. Replacing the
+architecture, with a state-space or linear-attention backbone, is the
+complementary lever, and it stays out of Phase 1 deliberately: touching the
+backbone would break the frozen-protocol comparability of every measured
+row. The certificate stack transfers unchanged, since it attaches to linear
+layers wherever an architecture puts them, so Phase 2 can evaluate a
+compressed SSM backbone under the identical protocol.
+
+\textbf{Training on the compressed manifold.} Repair training round-trips
+through the dense weights. An ALS/DMRG-style engine that fine-tunes the TT
+cores directly removes that cost and enables a falsification loop against
+the deployed model itself: generate scenarios the policy fails, fine-tune
+on the failures, re-certify. The commuting-Pauli machinery of the compiler,
+which already predicts pruning error at median $r = 0.975$, extends the
+same way from analysis to training-time guidance.
+
+\textbf{Richer guarantees.} Signal-temporal-logic specs over action
+streams, checked by a seeded reversible scenario oracle, would let the
+guard enforce structured properties rather than a distance ball.
+Sum-of-squares local certificates would tighten per-layer bounds beyond
+spectral norms. And the guard should refuse degenerate outputs directly:
+our own mode-collapse finding showed a certificate on a collapsed model is
+sound but vacuous, so an output-diversity check on the action stream turns
+that negative result into a deployed mechanism.
 
 \textbf{A real quantum estimator.} The amplification simulation that
 backs the IQAE comparisons is a documented NumPy model of the Grover
 schedule; the estimator already sees only measurement counts, so swapping
 in an NVIDIA CUDA-Q kernel inside the prepared container changes the
 substrate, not the interface. The comparison then runs shot-based rather
-than model-based, which is the honest test of whether quantum amplitude
-estimation buys precision per shot on this workload.
+than model-based, with RESTART as a fourth race arm, which is the honest
+test of whether quantum amplitude estimation buys precision per shot here.
 
 \textbf{A compiled contraction kernel.} The TT matvec interface is fixed
 in \texttt{tt\_matvec.hpp} and the Phase-1 latency table shows the Python
